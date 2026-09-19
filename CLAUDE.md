@@ -55,3 +55,26 @@ Scaffold recién generado: estructura de módulos, Gradle (version catalog centr
 - Antes de un PR, revisar el checklist en `.github/PULL_REQUEST_TEMPLATE.md` (fronteras de módulo, no hardcodear estilos, ViewModels sin Compose).
 - Usar Conventional Commits (ver `CONTRIBUTING.md`).
 - Métricas de éxito del producto (para tener en mente al priorizar features): reducción de la brecha entre tiempo estimado y real, y reducción de la tasa de entregas extemporáneas.
+
+## Uso de la skill mobile-android-design
+
+Esta skill (Material Design 3 + Jetpack Compose, de wshobson/agents) se usa
+ÚNICAMENTE para:
+- Patrones estructurales de Compose: layouts (Column/Row, LazyColumn/LazyVerticalGrid),
+  layouts adaptativos, gestos e interacciones
+- Navigation Compose (bottom navigation, drawers, manejo de estado de navegación)
+- Buenas prácticas de state hoisting, recomposición y performance
+- Accesibilidad: content descriptions, touch targets
+
+NO se usa para:
+- Theming, esquemas de color ni tipografía — eso viene EXCLUSIVAMENTE de
+  `core-ui/theme` (Color.kt, Type.kt, Shape.kt, Theme.kt, Glass.kt)
+- Dynamic color / Material You — KRONO no lo implementa, el sistema de diseño
+  es Lumina Glass System: paleta fija (Deep Midnight #121221, magenta
+  #BD00FF/#ECB2FF, cyan #49D9E5), siempre oscuro, sin tema claro
+- Componentes M3 "de catálogo" tal cual (Card, Button, TextField por defecto)
+  sin pasar por los wrappers/tokens de `core-ui`
+
+Regla dura: si un ejemplo de la skill sugiere `MaterialTheme.colorScheme.*` o
+`dynamicColorScheme()`, se descarta esa parte y se reemplaza por los tokens de
+`core-ui`. Cero colores/espaciados hardcodeados sigue aplicando siempre.
