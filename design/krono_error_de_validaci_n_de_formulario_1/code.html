@@ -1,0 +1,251 @@
+<!DOCTYPE html><html class="dark" lang="es"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#121221;color:#e3e0f6;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "primary-container": "#bd00ff", "primary-fixed-dim": "#ecb2ff", "on-surface": "#e3e0f6", "surface-container-high": "#292839", "surface-container-lowest": "#0d0d1c", "surface-tint": "#ecb2ff", "on-primary-container": "#ffffff", "secondary": "#49d9e5", "on-tertiary": "#66002c", "outline-variant": "#514255", "primary-fixed": "#f8d8ff", "tertiary": "#ffb1c3", "on-surface-variant": "#d4c0d7", "primary": "#ecb2ff", "on-background": "#e3e0f6", "outline": "#9d8ba0", "on-error-container": "#ffdad6", "background": "#121221", "secondary-container": "#00b7c3", "tertiary-fixed-dim": "#ffb1c3", "tertiary-container": "#e7006e", "inverse-surface": "#e3e0f6", "on-tertiary-fixed-variant": "#8f0041", "on-secondary": "#00363b", "on-primary": "#520071", "on-secondary-container": "#004347", "on-error": "#690005", "error": "#ffb4ab", "on-primary-fixed-variant": "#74009f", "on-primary-fixed": "#320047", "inverse-on-surface": "#2f2f3f", "surface-container-low": "#1a1a2a", "surface-container-highest": "#343344", "error-container": "#93000a", "on-tertiary-fixed": "#3f0019", "on-secondary-fixed": "#002022", "surface-container": "#1e1e2e", "surface-dim": "#121221", "surface-variant": "#343344", "secondary-fixed": "#7ef4ff", "secondary-fixed-dim": "#49d9e5", "surface": "#121221", "inverse-primary": "#9900cf", "on-tertiary-container": "#ffffff", "tertiary-fixed": "#ffd9e0", "surface-bright": "#383848", "on-secondary-fixed-variant": "#004f55" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "base": "8px", "card-gap": "20px", "container-padding": "24px", "gutter": "16px" }, fontFamily: { "headline-lg": ["Hanken Grotesk"], "headline-lg-mobile": ["Hanken Grotesk"], "body-md": ["Hanken Grotesk"], "display-lg": ["Hanken Grotesk"], "label-sm": ["JetBrains Mono"] }, fontSize: { "headline-lg": ["32px", { lineHeight: "40px", fontWeight: "600" }], "headline-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "600" }], "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }], "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.02em", fontWeight: "700" }], "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500" }] } } } }</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen flex flex-col selection:bg-primary selection:text-on-primary"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_12px_rgba(0,0,0,0.4)]"><div class="h-16 px-container-padding flex items-center justify-between"><div class="flex items-center gap-base"><span class="font-headline-lg-mobile text-headline-lg-mobile font-bold tracking-tight text-on-surface">KRONO</span><span class="font-label-sm text-label-sm text-primary px-2 py-0.5 rounded-full bg-primary/10">Tareas</span></div><div class="flex items-center gap-gutter"><button class="w-11 h-11 flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors"><span class="material-symbols-outlined">notifications</span></button><img alt="Profile" class="w-8 h-8 rounded-full object-cover" src="https://lh3.googleusercontent.com/aida/AEtjO1XjScari8O9j5dy0K8ZpYrSe70v26APaA926FAtq5fg6yAluROKcLEypvPED7jrvSkTgMNY8VUn_SfLZpyNDHySQrDqPm_tH8EPlc8clfgZ5IS44UhLlchrYc78EQsldsqLGMn0VqM7dIJGXPeNKOR2FZhJElscTCnra1IQaNuIe8FRApXq6oXEKOm-WDdIw9jzOpp70kzx96Mv_e7Ghm7gzDD5vdvknBVZeaow9iuZnTeztolbUKRzcqH_k30YSTsq-YebtvM0"></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 bg-surface px-container-padding pb-safe"><div class="flex flex-col w-full pb-8">
+<!-- Subtle ambient cyber glow -->
+<div class="fixed top-20 right-1/4 w-64 h-64 bg-primary-container/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+<div class="fixed top-64 left-1/4 w-72 h-72 bg-error-container/15 rounded-full blur-[110px] pointer-events-none -z-10"></div>
+<!-- Form Header & Status Info -->
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<button class="w-9 h-9 rounded-xl bg-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-on-surface transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+</button>
+<div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface leading-tight">Editar Tarea</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Revisión de parámetros cronológicos</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-error-container/30 text-error shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-pulse"></span>
+<span class="font-label-sm text-label-sm font-semibold tracking-wider">3 ALERTAS</span>
+</div>
+</div>
+<!-- 1. Global Alert Banner: Subtle cyber warning with tactile dismiss -->
+<div class="w-full mb-6 p-3.5 rounded-xl bg-gradient-to-r from-error-container/40 via-surface-container to-surface-container flex items-center gap-3 shadow-md">
+<div class="w-8 h-8 rounded-lg bg-error text-on-error flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(255,180,171,0.35)]">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: &quot;FILL&quot; 1;">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="font-label-md text-label-md text-on-surface font-semibold">Parámetros incompletos</p>
+<p class="font-body-sm text-body-sm text-on-error-container/90 truncate">Por favor, corrige los campos requeridos antes de guardar.</p>
+</div>
+<span class="font-label-sm text-label-sm text-error px-2 py-1 rounded-md bg-surface-container-highest shrink-0">ERR_03</span>
+</div>
+<!-- Main Edit Form Flow -->
+<form class="flex flex-col gap-5 w-full" onsubmit="return false;">
+<!-- 2. Task Title (Field in Error) -->
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-label-md text-on-surface flex items-center gap-1.5">
+<span class="">Nombre de la Tarea</span>
+<span class="text-error font-bold">*</span>
+</label>
+<span class="font-label-sm text-label-sm text-error">Requerido</span>
+</div>
+<div class="relative w-full rounded-xl bg-error-container/20 shadow-[0_0_14px_rgba(255,180,171,0.2)]">
+<div class="flex items-center px-3.5 py-2.5 gap-2.5">
+<span class="material-symbols-outlined text-error text-[20px]">edit_note</span>
+<input class="w-full bg-transparent text-on-surface font-body-md text-body-md placeholder-on-surface-variant/50 focus:outline-none" placeholder="Escribe el nombre de la tarea..." type="text" value="">
+<div class="w-6 h-6 rounded-full bg-error text-on-error flex items-center justify-center shrink-0 text-xs font-bold shadow-sm">
+            !
+          </div>
+</div>
+</div>
+<!-- Explicit error feedback -->
+<div class="flex items-center gap-1.5 px-1 text-error">
+<span class="material-symbols-outlined text-[16px]">error</span>
+<span class="font-body-sm text-body-sm text-error font-medium">El título de la tarea es obligatorio</span>
+</div>
+</div>
+<!-- Category selector -->
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface">Categoría de Enfoque</label>
+<div class="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+<button class="px-3 py-1.5 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 shrink-0 shadow-sm" type="button">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-label-md text-label-md">Ingeniería</span>
+</button>
+<button class="px-3 py-1.5 rounded-xl bg-primary-container text-on-primary-container flex items-center gap-1.5 shrink-0 shadow-[0_0_12px_rgba(192,38,211,0.35)]" type="button">
+<span class="w-2 h-2 rounded-full bg-primary-fixed"></span>
+<span class="font-label-md text-label-md font-semibold">Desarrollo KRONO</span>
+</button>
+<button class="px-3 py-1.5 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center gap-1.5 shrink-0 shadow-sm" type="button">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-label-md text-label-md">Diseño UI/UX</span>
+</button>
+<button class="w-8 h-8 rounded-xl bg-surface-container text-on-surface-variant flex items-center justify-center shrink-0" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+</button>
+</div>
+</div>
+<!-- Date & Time Row (Hora Límite with Validation Error) -->
+<div class="flex flex-col gap-1.5">
+<div class="grid grid-cols-2 gap-3">
+<!-- Date Trigger (Valid) -->
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">FECHA LÍMITE</span>
+<button class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface shadow-sm active:scale-[0.98] transition-transform text-left" type="button">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[20px]">calendar_today</span>
+<span class="font-body-sm text-body-sm font-semibold">Hoy, 24 Oct</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">expand_more</span>
+</button>
+</div>
+<!-- Time Trigger (3. In Error State: Past time) -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center">
+<span class="font-label-sm text-label-sm text-error">HORA LÍMITE</span>
+<span class="material-symbols-outlined text-error text-[14px]">history</span>
+</div>
+<button class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-error-container/20 text-on-surface shadow-[0_0_10px_rgba(255,180,171,0.18)] active:scale-[0.98] transition-transform text-left" type="button">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-error text-[20px]">schedule</span>
+<span class="font-body-sm text-body-sm font-semibold text-error">09:15 AM</span>
+</div>
+<span class="material-symbols-outlined text-error text-[16px]">error_outline</span>
+</button>
+</div>
+</div>
+<!-- Time Error caption -->
+<div class="flex items-center gap-1.5 px-1 text-error">
+<span class="material-symbols-outlined text-[16px]">schedule_send</span>
+<span class="font-body-sm text-body-sm text-error font-medium">La hora de entrega no puede ser anterior a la hora actual</span>
+</div>
+</div>
+<!-- Priority (Signal Bar Selector) -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-label-md text-on-surface">Nivel de Prioridad</label>
+<span class="font-label-sm text-label-sm text-primary">ALTA // P1</span>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<button class="py-2.5 px-2 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface flex flex-col items-center gap-1.5 transition-all" type="button">
+<div class="flex gap-1 items-end h-4">
+<span class="w-1.5 h-2 rounded-full bg-surface-container-highest"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-surface-container-highest/40"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-surface-container-highest/40"></span>
+</div>
+<span class="font-label-sm text-label-sm">Baja</span>
+</button>
+<button class="py-2.5 px-2 rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface flex flex-col items-center gap-1.5 transition-all" type="button">
+<div class="flex gap-1 items-end h-4">
+<span class="w-1.5 h-2.5 rounded-full bg-surface-container-highest"></span>
+<span class="w-1.5 h-3.5 rounded-full bg-surface-container-highest"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-surface-container-highest/40"></span>
+</div>
+<span class="font-label-sm text-label-sm">Media</span>
+</button>
+<button class="py-2.5 px-2 rounded-xl bg-primary-container text-on-primary-container flex flex-col items-center gap-1.5 shadow-[0_0_14px_rgba(192,38,211,0.35)]" type="button">
+<div class="flex gap-1 items-end h-4">
+<span class="w-1.5 h-2 rounded-full bg-on-primary-container"></span>
+<span class="w-1.5 h-3.5 rounded-full bg-on-primary-container"></span>
+<span class="w-1.5 h-4.5 rounded-full bg-on-primary-container"></span>
+</div>
+<span class="font-label-sm text-label-sm font-semibold">Alta</span>
+</button>
+</div>
+</div>
+<!-- 4. Estimated Time (Validation Error: None Selected) -->
+<div class="flex flex-col gap-2 p-3 rounded-xl bg-error-container/15 shadow-sm">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-1.5">
+<label class="font-label-md text-label-md text-on-surface font-medium">Tiempo Estimado</label>
+<span class="text-error font-bold">*</span>
+</div>
+<span class="font-label-sm text-label-sm text-error bg-surface-container px-2 py-0.5 rounded-full">Sin seleccionar</span>
+</div>
+<!-- Quick-Pills unselected -->
+<div class="grid grid-cols-4 gap-2">
+<button class="py-2 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+          25m
+        </button>
+<button class="py-2 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+          45m
+        </button>
+<button class="py-2 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+          1h
+        </button>
+<button class="py-2 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface font-label-md text-label-md text-center transition-colors" type="button">
+          Otro...
+        </button>
+</div>
+<!-- Explicit Warning Indicator -->
+<div class="flex items-start gap-2 pt-1 text-error">
+<span class="material-symbols-outlined text-[16px] mt-0.5 shrink-0">lightbulb</span>
+<span class="font-body-sm text-body-sm text-error leading-tight">
+          Selecciona una duración estimada para activar la predicción inteligente de ritmo circadiano.
+        </span>
+</div>
+</div>
+<!-- Subtasks Section -->
+<div class="flex flex-col gap-2">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-label-md text-on-surface">Subtareas y Checkpoints</label>
+<span class="font-label-sm text-label-sm text-on-surface-variant">1 de 2 listas</span>
+</div>
+<div class="flex flex-col gap-2">
+<!-- Subtask 1 (Completed) -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-container shadow-sm">
+<div class="flex items-center gap-3 min-w-0">
+<span class="material-symbols-outlined text-outline text-[18px]">drag_indicator</span>
+<div class="w-5 h-5 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container shadow-[0_0_8px_rgba(192,38,211,0.4)] shrink-0">
+<span class="material-symbols-outlined text-[14px]">check</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant line-through truncate">Revisión de dependencias npm</span>
+</div>
+<button class="text-outline hover:text-on-surface p-1" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Subtask 2 (Pending) -->
+<div class="flex items-center justify-between p-3 rounded-xl bg-surface-container shadow-sm">
+<div class="flex items-center gap-3 min-w-0">
+<span class="material-symbols-outlined text-outline text-[18px]">drag_indicator</span>
+<div class="w-5 h-5 rounded-full bg-surface-container-high shrink-0"></div>
+<span class="font-body-sm text-body-sm text-on-surface truncate">Optimizar payload de bundles</span>
+</div>
+<button class="text-outline hover:text-on-surface p-1" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+<!-- Add Subtask Input Pill -->
+<button class="flex items-center justify-center gap-2 p-2.5 rounded-xl bg-surface-container-low text-secondary hover:bg-surface-container transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">add_circle</span>
+<span class="font-label-md text-label-md font-medium">Agregar subtarea</span>
+</button>
+</div>
+</div>
+<!-- AI Suggestion Card (Contextual helper) -->
+<div class="p-3.5 rounded-xl bg-primary/5 flex items-start gap-3 shadow-inner">
+<span class="material-symbols-outlined text-primary text-[22px] shrink-0" style="font-variation-settings: &quot;FILL&quot; 1;">auto_awesome</span>
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-1.5">
+<span class="font-label-md text-label-md text-primary font-bold">Krono AI Diagnóstico</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+          Los bloques de <span class="text-primary font-medium">45 minutos</span> son ideales para tareas de alta prioridad. Corregir los 3 campos restaurará el score de consistencia.
+        </p>
+</div>
+</div>
+<!-- Action Buttons Row -->
+<div class="flex flex-col gap-2.5 pt-2">
+<!-- 5. Save Changes Button (Disabled / Validation Feedback State) -->
+<button class="w-full py-3.5 px-4 rounded-xl bg-surface-container-high text-on-surface-variant/40 font-headline-lg-mobile text-body-md font-semibold flex items-center justify-center gap-2 cursor-not-allowed shadow-none select-none relative overflow-hidden" disabled="" type="submit">
+<span class="material-symbols-outlined text-[20px] text-error/60">error</span>
+<span class="">Guardar Cambios (3 Errores)</span>
+</button>
+<!-- Secondary Cancel Button -->
+<button class="w-full py-2.5 px-4 rounded-xl bg-surface-container text-on-surface font-label-md text-label-md font-medium hover:bg-surface-container-high transition-colors text-center" type="button">
+        Descartar y volver
+      </button>
+</div>
+</form>
+</div></main>
+
+</body></html>

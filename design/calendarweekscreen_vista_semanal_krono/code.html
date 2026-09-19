@@ -1,0 +1,201 @@
+<!DOCTYPE html><html class="dark" lang="es" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
+<title>KRONO - Vista Semanal en Cuadrícula</title>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface": "#121221",
+            "background": "#121221",
+            "surface-container-lowest": "#0d0d18",
+            "surface-container-low": "#171726",
+            "surface-container": "#1e1e30",
+            "surface-container-high": "#27273c",
+            "surface-container-highest": "#32324b",
+            "primary": "#fda9ff",
+            "primary-container": "#bd00ff",
+            "on-primary": "#520071",
+            "on-primary-container": "#ffffff",
+            "secondary": "#49d9e5",
+            "secondary-container": "#00b7c3",
+            "on-secondary": "#00363b",
+            "tertiary": "#c8c3e0",
+            "on-surface": "#e3e0f6",
+            "on-surface-variant": "#a1a1bb",
+            "outline": "#363456",
+            "error": "#ffb4ab",
+            "error-container": "#93000a"
+          },
+          fontFamily: {
+            sans: ["Hanken Grotesk", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    body {
+      background-color: #121221;
+      color: #e3e0f6;
+      font-family: 'Hanken Grotesk', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .material-symbols-outlined-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col justify-between overflow-x-hidden antialiased selection:bg-primary-container selection:text-white">
+<!-- Glows Ambientales Decorativos -->
+<div class="fixed top-0 left-1/4 w-72 h-44 bg-primary-container/15 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+<div class="fixed top-60 right-0 w-80 h-52 bg-secondary/10 rounded-full blur-[90px] pointer-events-none -z-10"></div>
+<!-- Header Superior Fijo -->
+<header class="sticky top-0 z-40 bg-[#0b0c16]/90 backdrop-blur-xl border-b border-white/5 px-4 py-3.5">
+<div class="max-w-md mx-auto flex items-center justify-between">
+<div class="flex items-center gap-2"><button aria-label="Volver a Inicio" class="inline-flex items-center gap-1 text-xs font-semibold text-slate-300 hover:text-white px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all mr-1" type="button"><span class="material-symbols-outlined text-[16px]">arrow_back</span><span class="">Inicio</span></button>
+<button aria-label="Mes anterior" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<h1 class="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
+        Octubre 2024
+      </h1>
+<button aria-label="Mes siguiente" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/5 transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+<div class="flex items-center bg-[#18192b] p-1 rounded-xl border border-white/5 shadow-inner">
+<button class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors" type="button">
+        Mes
+      </button>
+<button class="px-3 py-1 text-xs font-bold bg-gradient-to-r from-primary-container to-[#d946ef] text-white rounded-lg shadow-sm transition-all" type="button">
+        Semana
+      </button>
+<button class="px-3 py-1 text-xs font-medium text-slate-400 hover:text-white rounded-lg transition-colors" type="button">
+        Día
+      </button>
+</div>
+</div>
+</header>
+<!-- Contenedor Principal con Scroll Fluido -->
+<main class="flex-1 w-full max-w-md mx-auto px-4 pt-4 pb-28 flex flex-col gap-5"><!-- Subcabecera de Semana -->
+<div class="flex items-center justify-between pt-1">
+<div>
+<span class="text-[11px] font-mono uppercase tracking-wider text-secondary font-semibold">Semana 43</span>
+<h2 class="text-lg font-bold text-white tracking-tight">21 - 27 de Octubre</h2>
+</div>
+<div class="flex items-center gap-1.5 bg-[#171728] px-2.5 py-1 rounded-full border border-white/5">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="text-[11px] font-medium text-slate-300">Hoy</span>
+</div>
+</div>
+<!-- Tira Horizontal de Días de la Semana Minimalista -->
+<div aria-label="Días de la semana" class="grid grid-cols-7 gap-1.5 p-1.5 rounded-2xl bg-[#141525]/80 border border-white/5 shadow-sm" role="tablist">
+<!-- Lun 21 -->
+<button aria-selected="false" class="flex flex-col items-center py-2.5 px-1 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-medium text-slate-400">Lun</span>
+<span class="text-sm font-semibold mt-1 text-slate-200">21</span>
+<span class="w-1 h-1 rounded-full bg-secondary mt-1.5"></span>
+</button>
+<!-- Mar 22 -->
+<button aria-selected="false" class="flex flex-col items-center py-2.5 px-1 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-medium text-slate-400">Mar</span>
+<span class="text-sm font-semibold mt-1 text-slate-200">22</span>
+<span class="w-1 h-1 rounded-full bg-primary mt-1.5"></span>
+</button>
+<!-- Mié 23 -->
+<button aria-selected="false" class="flex flex-col items-center py-2.5 px-1 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-medium text-slate-400">Mié</span>
+<span class="text-sm font-semibold mt-1 text-slate-200">23</span>
+<span class="w-1 h-1 rounded-full bg-secondary mt-1.5"></span>
+</button>
+<!-- Jue 24 (Activo) -->
+<button aria-selected="true" class="flex flex-col items-center py-2.5 px-1 rounded-xl bg-gradient-to-b from-primary-container to-[#9900cf] text-white shadow-md shadow-primary-container/30 ring-1 ring-primary/40 scale-[1.03] transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-bold text-white/90">Jue</span>
+<span class="text-sm font-extrabold mt-1 text-white">24</span>
+<span class="w-1.5 h-1.5 rounded-full bg-white mt-1"></span>
+</button>
+<!-- Vie 25 -->
+<button aria-selected="false" class="flex flex-col items-center py-2.5 px-1 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-medium text-slate-400">Vie</span>
+<span class="text-sm font-semibold mt-1 text-slate-200">25</span>
+<span class="w-1 h-1 rounded-full bg-secondary mt-1.5"></span>
+</button>
+<!-- Sáb 26 -->
+<button aria-selected="false" class="flex flex-col items-center py-2.5 px-1 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-medium text-slate-500">Sáb</span>
+<span class="text-sm font-medium mt-1 text-slate-400">26</span>
+<span class="w-1 h-1 rounded-full bg-outline mt-1.5"></span>
+</button>
+<!-- Dom 27 -->
+<button aria-selected="false" class="flex flex-col items-center py-2.5 px-1 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-all" role="tab" type="button">
+<span class="text-[11px] uppercase font-medium text-slate-500">Dom</span>
+<span class="text-sm font-medium mt-1 text-slate-400">27</span>
+<span class="w-1 h-1 rounded-full bg-outline mt-1.5"></span>
+</button>
+</div>
+<!-- Cabecera de Agenda idéntica a SCREEN_6 -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2.5">
+<h3 class="text-base font-bold text-white tracking-tight">Agenda</h3>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary/15 text-secondary border border-secondary/20">
+      Jueves 24
+    </span>
+</div>
+<span class="text-xs text-slate-400 font-medium">3 actividades</span>
+</div>
+<!-- Tarjetas de Actividades Estilo SCREEN_6 -->
+<section aria-label="Actividades del día" class="flex flex-col gap-3">
+<!-- Actividad 1 -->
+<article class="p-4 rounded-2xl bg-[#141525]/90 border border-white/5 hover:border-secondary/30 transition-all flex flex-col gap-2 relative overflow-hidden shadow-sm">
+<div class="flex items-center justify-between text-xs"><div class="flex items-center gap-2 font-mono text-secondary font-medium"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="">09:00 - 13:00</span></div><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-full bg-white/5 text-[11px] font-medium text-slate-300 border border-white/5">Remoto</span><button aria-label="Eliminar actividad" class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-white/5 transition-colors" type="button"><span class="material-symbols-outlined text-[16px]">delete</span></button></div></div>
+<h4 class="text-sm font-bold text-white tracking-tight mt-0.5">Trabajo Soporte KRONO</h4>
+<div class="flex items-center gap-1.5 text-xs text-slate-400">
+<span class="material-symbols-outlined text-[15px] text-slate-400">computer</span>
+<span class="">Atención de tickets críticos y guardias de infraestructura</span>
+</div>
+</article>
+<!-- Actividad 2 -->
+<article class="p-4 rounded-2xl bg-[#141525]/90 border border-white/5 hover:border-primary/40 transition-all flex flex-col gap-2 relative overflow-hidden shadow-sm">
+<div class="flex items-center justify-between text-xs"><div class="flex items-center gap-2 font-mono text-primary font-medium"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="">15:00 - 16:30</span></div><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-full bg-primary/10 text-[11px] font-semibold text-primary border border-primary/20">En 1 h 40 min</span><button aria-label="Eliminar actividad" class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-white/5 transition-colors" type="button"><span class="material-symbols-outlined text-[16px]">delete</span></button></div></div>
+<h4 class="text-sm font-bold text-white tracking-tight mt-0.5">Clase de Álgebra Lineal</h4>
+<div class="flex items-center gap-1.5 text-xs text-slate-400">
+<span class="material-symbols-outlined text-[15px] text-slate-400">location_on</span>
+<span class="">Aula Magna 2B · Facultad de Ingeniería</span>
+</div>
+</article>
+<!-- Actividad 3 -->
+<article class="p-4 rounded-2xl bg-[#141525]/90 border border-white/5 hover:border-secondary/30 transition-all flex flex-col gap-2 relative overflow-hidden shadow-sm">
+<div class="flex items-center justify-between text-xs"><div class="flex items-center gap-2 font-mono text-secondary font-medium"><span class="w-2 h-2 rounded-full bg-secondary"></span><span class="">17:30 - 19:30</span></div><div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-full bg-white/5 text-[11px] font-medium text-slate-300 border border-white/5">Biblioteca Central</span><button aria-label="Eliminar actividad" class="w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-400 hover:bg-white/5 transition-colors" type="button"><span class="material-symbols-outlined text-[16px]">delete</span></button></div></div>
+<h4 class="text-sm font-bold text-white tracking-tight mt-0.5">Sesión de Enfoque Tesis</h4>
+<div class="flex items-center gap-1.5 text-xs text-slate-400">
+<span class="material-symbols-outlined text-[15px] text-slate-400">book</span>
+<span class="">Redacción del marco teórico y revisión bibliográfica</span>
+</div>
+</article>
+</section>
+<!-- Botón de Acción Principal -->
+<div class="pt-1 pb-1">
+
+</div></main>
+<!-- Barra de Navegación Inferior Fija (Inicio, Tareas, Calendario [activo], Ajustes) -->
+<nav aria-label="Navegación principal" class="fixed bottom-0 left-0 right-0 z-50 bg-[#121221]/95 backdrop-blur-xl border-t border-outline/30 px-6 py-2 pb-safe"></nav>
+
+
+
+
+</body></html>

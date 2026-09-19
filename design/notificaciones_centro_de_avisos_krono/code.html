@@ -1,0 +1,252 @@
+<!DOCTYPE html><html lang="es" class="dark" style=""><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notificaciones - KRONO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            krono: {
+              bg: '#0c0d14',
+              surface: '#12141f',
+              card: '#181b2a',
+              border: '#23273e',
+              neon: '#c026d3',
+              cyan: '#06b6d4',
+              pink: '#ec4899',
+              amber: '#f59e0b',
+              red: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .glow-magenta {
+      box-shadow: 0 0 25px -4px rgba(217, 70, 239, 0.35);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 20px -4px rgba(6, 182, 212, 0.3);
+    }
+    .glass-card {
+      background: rgba(24, 27, 42, 0.75);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .glass-card-unread {
+      background: linear-gradient(135deg, rgba(28, 26, 48, 0.85) 0%, rgba(20, 23, 38, 0.9) 100%);
+      border: 1px solid rgba(192, 38, 211, 0.3);
+    }
+  </style>
+</head>
+<body class="bg-[#0b0c13] text-slate-100 font-sans antialiased min-h-screen flex justify-center selection:bg-fuchsia-500 selection:text-white">
+  <!-- Mobile Container Frame -->
+  <div class="w-full max-w-[412px] min-h-screen bg-[#0d0e17] flex flex-col relative border-x border-slate-900/80 shadow-2xl overflow-x-hidden pb-24">
+    
+    <!-- Top Status Bar & Ambient Glow -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-32 bg-fuchsia-600/15 blur-[60px] pointer-events-none -z-0"></div>
+
+    <!-- Header Principal -->
+    <header class="relative z-10 px-5 pt-6 pb-4 flex flex-col gap-4 border-b border-slate-800/60 bg-[#0d0e17]/80 backdrop-blur-md sticky top-0">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button class="w-9 h-9 rounded-full bg-slate-800/80 border border-slate-700/50 flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-700/60 transition" aria-label="Volver">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+          </button>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono font-bold tracking-wider text-fuchsia-400 uppercase bg-fuchsia-950/60 border border-fuchsia-800/40 px-2 py-0.5 rounded-full flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-fuchsia-400 animate-pulse"></span>
+              Centro de Avisos
+            </span>
+          </div>
+        </div>
+
+        <!-- Marca de lectura rápida -->
+        <button class="text-xs font-medium text-slate-400 hover:text-fuchsia-300 flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/5 transition">
+          <span class="material-symbols-outlined text-[16px] text-fuchsia-400">done_all</span>
+          <span class="">Leer todo</span>
+        </button>
+      </div>
+
+      <!-- Título de pantalla y contador -->
+      <div class="flex items-baseline justify-between mt-1">
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            Notificaciones
+            
+          </h1>
+          <p class="text-xs text-slate-400 mt-0.5">Alertas de ritmo circadiano, entregas y sincronización</p>
+        </div>
+      </div>
+
+      <!-- Filtro tipo Tabs / Píldoras -->
+      <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1 pb-0.5 text-xs font-medium">
+        <button class="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white font-semibold shadow-sm flex items-center gap-1.5 shrink-0">
+          <span class="">Todas</span>
+          <span class="bg-black/30 text-[10px] px-1.5 py-0.2 rounded-full">5</span>
+        </button>
+        <button class="px-3.5 py-1.5 rounded-full bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 shrink-0 transition">
+          <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+          <span class="">Críticas</span>
+          <span class="text-[10px] text-slate-400 font-mono">1</span>
+        </button>
+        <button class="px-3.5 py-1.5 rounded-full bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 shrink-0 transition">
+          <span class="w-1.5 h-1.5 rounded-full bg-fuchsia-400"></span>
+          <span class="">IA &amp; Ritmo</span>
+          <span class="text-[10px] text-slate-400 font-mono">2</span>
+        </button>
+        <button class="px-3.5 py-1.5 rounded-full bg-slate-800/70 hover:bg-slate-800 text-slate-300 border border-slate-700/60 flex items-center gap-1.5 shrink-0 transition">
+          <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+          <span class="">Tareas</span>
+          <span class="text-[10px] text-slate-400 font-mono">2</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Lista de Notificaciones -->
+    <main class="flex-1 px-4 py-4 space-y-5 relative z-10">
+
+      <!-- Sección: Hoy -->
+      <div>
+        <div class="flex items-center justify-between px-1 mb-2.5">
+          <span class="text-[11px] font-mono font-bold tracking-wider text-slate-400 uppercase flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[14px] text-fuchsia-400">schedule</span>
+            Hoy
+          </span>
+          <span class="text-[11px] font-mono text-slate-500">24 Oct</span>
+        </div>
+
+        <div class="space-y-2.5">
+
+          <!-- 1. Notificación Crítica / Alerta de Deadline Solapado (Sin leer) -->
+          
+
+          <!-- 2. Notificación Asistente IA / Pico de Enfoque (Sin leer) -->
+          <div class="glass-card-unread rounded-2xl p-4 relative overflow-hidden transition hover:border-fuchsia-500/50">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-fuchsia-500 to-cyan-500"></div>
+
+            
+          </div>
+
+          <!-- 3. Notificación Recordatorio de Entrega (Sin leer) -->
+          <div class="glass-card-unread rounded-2xl p-4 relative overflow-hidden transition hover:border-cyan-500/50">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-cyan-500"></div>
+
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0 text-cyan-300 mt-0.5">
+                <span class="material-symbols-outlined text-[22px]">alarm</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/40">Recordatorio</span>
+                  <span class="text-[11px] font-mono text-slate-400">11:30 AM</span>
+                </div>
+
+                <h3 class="text-sm font-bold text-white mt-1.5">Aviso anticipado: 3 horas restantes</h3>
+                <p class="text-xs text-slate-300 leading-relaxed mt-1">
+                  La tarea <span class="text-slate-100 font-medium">Entrega Informe Trimestral</span> vence hoy a las 18:00 hrs. Aún tienes 2 subtareas pendientes.
+                </p>
+
+                <div class="mt-2.5 flex items-center gap-2">
+                  <span class="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px] text-fuchsia-400">check_circle</span>
+                    Progreso: 2/4 completadas
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Sección: Ayer / Anteriores -->
+      <div class="pt-2">
+        <div class="flex items-center justify-between px-1 mb-2.5">
+          <span class="text-[11px] font-mono font-bold tracking-wider text-slate-500 uppercase flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[14px]">history</span>
+            Anteriores
+          </span>
+          <span class="text-[11px] font-mono text-slate-600">23 Oct</span>
+        </div>
+
+        <div class="space-y-2.5">
+
+          <!-- 4. Notificación Sincronización Exitosa (Leída) -->
+          <div class="glass-card rounded-2xl p-4 relative overflow-hidden opacity-85 hover:opacity-100 transition">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0 text-emerald-400 mt-0.5">
+                <span class="material-symbols-outlined text-[22px]">cloud_sync</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-mono font-semibold text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/30">KRONO Shield OK</span>
+                  <span class="text-[11px] font-mono text-slate-500">Ayer, 21:15</span>
+                </div>
+
+                <h3 class="text-sm font-semibold text-slate-200 mt-1.5">Sincronización en la nube completada</h3>
+                <p class="text-xs text-slate-400 leading-relaxed mt-1">
+                  12 eventos y tareas locales fueron fusionados exitosamente con Google Workspace y Outlook.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Notificación Hito / Modo Enfoque Completado (Leída) -->
+          <div class="glass-card rounded-2xl p-4 relative overflow-hidden opacity-85 hover:opacity-100 transition">
+            <div class="flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shrink-0 text-purple-300 mt-0.5">
+                <span class="material-symbols-outlined text-[22px]">award_star</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-mono font-semibold text-purple-300 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-800/30">Logro Diario</span>
+                  <span class="text-[11px] font-mono text-slate-500">Ayer, 19:45</span>
+                </div>
+
+                <h3 class="text-sm font-semibold text-slate-200 mt-1.5">Sesión de concentración finalizada</h3>
+                <p class="text-xs text-slate-400 leading-relaxed mt-1">
+                  Completaste 45 minutos continuos de <span class="text-slate-300">Modo Deep Work</span> sin interrupciones ni desvíos.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Acceso a Configuración de Alertas -->
+      <div class="pt-2">
+        <a href="#" class="block p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-fuchsia-500/30 transition text-center group">
+          <div class="flex items-center justify-center gap-2 text-xs font-medium text-slate-400 group-hover:text-fuchsia-300">
+            <span class="material-symbols-outlined text-[18px]">tune</span>
+            <span class="">Personalizar frecuencia de alarmas y notificaciones</span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          </div>
+        </a>
+      </div>
+
+    </main>
+
+    <!-- Barra de Navegación Inferior Móvil -->
+    
+
+  </div>
+
+
+
+
+</body></html>

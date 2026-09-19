@@ -1,0 +1,4 @@
+<resources>
+    <!-- Tema base a nivel de plataforma; el theming real de Compose vive en core-ui/theme/Theme.kt -->
+    <style name="Theme.Krono" parent="android:Theme.Material.NoActionBar" />
+</resources>

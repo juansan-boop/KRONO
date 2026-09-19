@@ -1,0 +1,183 @@
+<!DOCTYPE html><html class="dark" lang="es" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>Perfil de Usuario - KRONO</title>
+<!-- Tailwind CSS v3 CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            krono: {
+              dark: '#0e0e15',
+              card: '#13131a',
+              cardHover: '#181822',
+              purple: '#A200FF',
+              purpleGlow: 'rgba(162, 0, 255, 0.25)',
+              teal: '#00F5D4',
+              tealGlow: 'rgba(0, 245, 212, 0.2)',
+              border: '#232332'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+<!-- Estilos visuales personalizados -->
+<style data-purpose="custom-styling">
+    body {
+      background-color: #0e0e15;
+      color: #f3f4f6;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .krono-glass-card {
+      background: linear-gradient(180deg, rgba(25, 25, 36, 0.7) 0%, rgba(19, 19, 26, 0.95) 100%);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .krono-glow-purple {
+      box-shadow: 0 0 20px -3px rgba(162, 0, 255, 0.35);
+    }
+    .krono-glow-teal {
+      box-shadow: 0 0 16px -3px rgba(0, 245, 212, 0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-krono-dark flex justify-center selection:bg-krono-purple selection:text-white">
+<!-- BEGIN: MainMobileContainer -->
+<main class="w-full max-w-md min-h-screen flex flex-col px-4 pt-4 pb-12 overflow-x-hidden relative">
+<!-- BEGIN: TopHeader -->
+<header class="flex items-center justify-between py-2 mb-6" data-purpose="header-navigation">
+<!-- Ergonomic Back to Home Button -->
+<a class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#1b1b24] border border-[#2d2d3d] text-gray-200 text-xs font-medium tracking-wide hover:bg-[#232330] hover:text-white transition-all shadow-sm active:scale-95" href="#">
+<svg class="w-4 h-4 text-krono-purple" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<span class="">Volver al Inicio</span>
+</a>
+<!-- Brand Badge -->
+
+</header>
+<!-- END: TopHeader -->
+<!-- BEGIN: UserIdentityCard -->
+<section class="krono-glass-card rounded-3xl p-5 mb-5 border border-[#262638] shadow-lg relative overflow-hidden" data-purpose="user-identity">
+<!-- Decorative background accent -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-krono-purple/15 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center gap-4 relative z-10">
+<!-- Hidden File Input for Avatar Upload -->
+<input id="avatar-upload-input" type="file" accept="image/*" class="sr-only" onchange="if(this.files &amp;&amp; this.files[0]){ const reader = new FileReader(); reader.onload = function(e){ const img = document.getElementById('user-avatar-image'); const svgFallback = document.getElementById('user-avatar-svg'); if(img){ img.src = e.target.result; img.classList.remove('hidden'); } if(svgFallback){ svgFallback.classList.add('hidden'); } }; reader.readAsDataURL(this.files[0]); }">
+<!-- Avatar Container with Active Ring & Upload Trigger -->
+<div class="relative flex-shrink-0 group"><label for="avatar-file-input" class="cursor-pointer block relative group" aria-label="Cambiar foto de perfil"><div class="w-18 h-18 rounded-2xl p-0.5 bg-gradient-to-tr from-krono-purple to-krono-teal krono-glow-purple relative overflow-hidden transition-all group-hover:scale-105 group-active:scale-95"><div class="w-16 h-16 rounded-[14px] bg-[#161622] flex items-center justify-center overflow-hidden border border-white/10 relative"><div class="w-full h-full bg-gradient-to-br from-indigo-950 via-purple-950 to-[#0e0e15] flex items-center justify-center"><svg class="w-10 h-10 text-purple-300 drop-shadow" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path clip-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" fill-rule="evenodd"></path></svg></div><div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><svg class="w-5 h-5 text-white drop-shadow" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></div></div></div><button type="button" class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-tr from-krono-purple to-purple-500 border-2 border-krono-dark flex items-center justify-center text-white shadow-md hover:scale-110 active:scale-95 transition-transform pointer-events-none" aria-hidden="true"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></button><div class="absolute -top-0.5 -left-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-krono-dark rounded-full z-10" title="En línea"></div></label></div>
+<!-- Details and Secondary Change Photo Trigger -->
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<h1 class="text-xl font-bold text-white truncate tracking-tight">Alexa Gómez</h1>
+</div>
+<p class="text-xs text-gray-400 truncate mb-1.5">alexa.gomez@correo.com</p>
+<div class="flex flex-wrap items-center gap-2 mb-2">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-950/70 border border-purple-500/30 text-[11px] font-medium text-purple-200">
+<span class="w-1.5 h-1.5 rounded-full bg-krono-teal"></span>
+<span class="">Estudiante y Trabajadora</span>
+</div>
+</div>
+<!-- Secondary Photo Action Button -->
+<button type="button" onclick="document.getElementById('avatar-upload-input').click()" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-purple-300 hover:text-white bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-lg transition-colors active:scale-95">
+
+
+</button>
+</div>
+</div>
+<!-- Live Sync status sub-bar -->
+<div class="mt-4 pt-3.5 border-t border-white/5 flex items-center justify-between text-xs">
+<div class="flex items-center gap-2 text-gray-300">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-krono-teal opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-krono-teal"></span>
+</span>
+<span class="text-[11px] text-gray-300 font-medium">Sincronización KRONO AI</span>
+</div>
+<span class="text-[10px] uppercase font-semibold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/20 tracking-wider">Activa</span>
+</div>
+</section>
+<!-- END: UserIdentityCard -->
+<!-- BEGIN: QuickStatsSection -->
+
+<!-- END: QuickStatsSection -->
+<!-- BEGIN: DualRoutineSection -->
+
+<!-- END: DualRoutineSection -->
+<!-- BEGIN: PredictiveAlgorithmPreferences -->
+
+<!-- END: PredictiveAlgorithmPreferences -->
+<!-- BEGIN: AccountSettingsSection -->
+<section class="krono-glass-card rounded-3xl p-2 mb-6 border border-[#242436]" data-purpose="account-management">
+<!-- Option 1 -->
+<a class="flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-300">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div>
+<div class="text-xs font-medium text-gray-200 group-hover:text-white">Editar Información Personal</div>
+<div class="text-[11px] text-gray-400">Nombre, rol académico y contactos</div>
+</div>
+</div>
+<svg class="w-4 h-4 text-gray-500 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</a>
+<!-- Option 2 -->
+<a class="flex items-center justify-between p-3 rounded-2xl hover:bg-white/5 transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-300">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<div>
+<div class="text-xs font-medium text-gray-200 group-hover:text-white">Notificaciones y Alarmas</div>
+<div class="text-[11px] text-gray-400">Recordatorios anticipados de entregas</div>
+</div>
+</div>
+<svg class="w-4 h-4 text-gray-500 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</a>
+<!-- Option 3 -->
+
+</section>
+<!-- END: AccountSettingsSection -->
+<!-- BEGIN: FooterActions -->
+<footer class="mt-auto pt-2 pb-4 flex flex-col items-center gap-3" data-purpose="profile-actions">
+<!-- Logout Button -->
+<button class="w-full py-3 px-4 rounded-2xl bg-[#18121a] hover:bg-[#22131f] border border-red-500/20 text-rose-300 text-xs font-medium transition-all active:scale-[0.98] flex items-center justify-center gap-2 shadow-sm">
+<svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="">Cerrar Sesión</span>
+</button>
+<!-- App version & footer note -->
+<div class="text-center">
+<p class="text-[11px] text-gray-500 font-mono">KRONO AI Engine v2.4.0 • Build 2025</p>
+</div>
+</footer>
+<!-- END: FooterActions -->
+</main>
+<!-- END: MainMobileContainer -->
+
+
+
+
+
+
+
+
+</body></html>

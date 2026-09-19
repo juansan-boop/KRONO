@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="es" class="h-full" style=""><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gestión de Bloques de Enfoque - KRONO</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            oled: '#080812',
+            surface: '#161522',
+            'surface-highlight': '#1f1d30',
+            borderDark: '#2A273F',
+            magentaAccent: '#C826D3',
+            'magenta-glow': 'rgba(200, 38, 211, 0.35)',
+            cyanNeon: '#49D9E5',
+            'cyan-dim': 'rgba(73, 217, 229, 0.12)',
+            crimsonRed: '#FF4D6D',
+            'crimson-dim': 'rgba(255, 77, 109, 0.14)',
+            subtext: '#8E8CA3'
+          },
+          fontFamily: {
+            sans: ['"Hanken Grotesk"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body {
+      background-color: #080812;
+      color: #F3F3F8;
+      font-family: 'Hanken Grotesk', sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    .neon-border-active {
+      box-shadow: 0 0 0 1px rgba(200, 38, 211, 0.6), 0 0 16px -3px rgba(200, 38, 211, 0.3);
+    }
+    .btn-magenta-glow {
+      box-shadow: 0 4px 20px -2px rgba(200, 38, 211, 0.45);
+    }
+  </style>
+</head>
+<body class="h-full flex items-center justify-center bg-black">
+
+  <!-- Mobile Frame Container (393px x 852px strictly fixed, zero scroll) -->
+  <main class="w-[393px] h-[852px] bg-oled flex flex-col justify-between relative overflow-hidden border border-[#1f1d2e] shadow-2xl rounded-[44px]">
+
+    <!-- Status Bar Native Emulation -->
+    <header class="w-full pt-3 px-7 flex items-center justify-between z-30 shrink-0 select-none">
+      <span class="text-xs font-mono font-medium tracking-tight text-white/90">09:41</span>
+      <div class="flex items-center space-x-2 text-white/80">
+        <!-- Cellular signal -->
+        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 18.25c-.2.2-.2.51 0 .71.2.2.51.2.71 0l.64-.64C7.26 19.34 9.49 20 12 20c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 15c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"></path></svg>
+        <!-- Wifi icon -->
+        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 4C7.31 4 3.07 5.9 0 8.98L12 21 24 8.98C20.93 5.9 16.69 4 12 4zm0 3.5c3.78 0 7.21 1.5 9.74 3.96L12 18.17 2.26 11.46C4.79 9 8.22 7.5 12 7.5z"></path></svg>
+        <!-- Battery icon -->
+        <div class="w-5 h-2.5 border border-white/80 rounded-sm p-0.5 flex items-center">
+          <div class="w-full h-full bg-white rounded-2xs"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Top App Bar (Native Header) -->
+    <div class="w-full h-12 px-5 flex items-center justify-between shrink-0 relative z-20">
+      <a href="javascript:void(0)" class="flex items-center space-x-1.5 text-subtext hover:text-white transition-colors group cursor-pointer">
+        <svg class="w-5 h-5 text-subtext group-hover:text-white transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        <span class="text-sm font-medium tracking-tight">Ajustes</span>
+      </a>
+
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-[17px] font-bold tracking-tight text-white">Plantillas de creacion</h1>
+
+      <!-- Balanced right slot (options / count) -->
+      <div class="w-12 flex justify-end">
+        <span class="font-mono text-[10px] text-cyanNeon/80 bg-cyanNeon/10 px-2 py-0.5 rounded-full border border-cyanNeon/20">3 slots</span>
+      </div>
+    </div>
+
+    <!-- Main Content Flow (Strictly sized, balanced gaps, zero scroll) -->
+    <div class="flex-1 flex flex-col justify-between px-5 pt-1 pb-3">
+
+      <!-- Guía Explicativa / Micro-banner de Inteligencia -->
+      <div class="bg-surface/80 border border-borderDark/80 rounded-2xl p-3.5 flex items-center space-x-3 backdrop-blur-sm">
+        <div class="w-8 h-8 rounded-xl bg-cyanNeon/10 border border-cyanNeon/20 flex items-center justify-center shrink-0">
+          <svg class="w-4 h-4 text-cyanNeon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+        </div>
+        <p class="text-xs text-[#A19FB6] leading-relaxed font-normal">
+          Tiempos base que la IA utiliza para estructurar tus sesiones y descansos.
+        </p>
+      </div>
+
+      <!-- Sección de Lista CRUD (3 Bloques de Enfoque) -->
+      <section class="flex flex-col space-y-3.5 my-auto">
+
+        <!-- BLOQUE 1: Predeterminado / Activo -->
+        <article class="bg-surface rounded-2xl p-4 border border-magentaAccent/60 neon-border-active relative overflow-hidden transition-all duration-200">
+          <!-- Ambient subtle glow line -->
+          <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-magentaAccent via-magentaAccent to-purple-800"></div>
+
+          <div class="flex items-start justify-between mb-2">
+            <div>
+              <div class="flex items-center space-x-2.5">
+                <h2 class="text-base font-bold text-white tracking-tight">Estudio Profundo</h2>
+                <span class="font-mono text-[10px] font-semibold tracking-wider text-cyanNeon bg-cyanNeon/15 border border-cyanNeon/30 px-2 py-0.5 rounded-md flex items-center space-x-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyanNeon animate-pulse"></span>
+                  <span class="">ACTIVO</span>
+                </span>
+              </div>
+              <p class="font-mono text-xs text-subtext mt-1">
+                <span class="text-white/90 font-medium">45m foco</span> · 10m descanso
+              </p>
+            </div>
+
+            <!-- Acciones CRUD: Editar -->
+            <button class="w-9 h-9 rounded-xl bg-white/5 border border-borderDark/90 flex items-center justify-center text-white/80 hover:text-magentaAccent hover:border-magentaAccent/50 active:scale-95 transition-all" title="Editar bloque">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Micro-telemetry bar -->
+          <div class="w-full bg-[#11101b] h-1.5 rounded-full overflow-hidden flex mt-3">
+            <div class="h-full bg-magentaAccent w-[81.8%]"></div>
+            <div class="h-full bg-cyanNeon/60 w-[18.2%]"></div>
+          </div>
+          <div class="flex justify-between text-[10px] font-mono text-white/40 mt-1">
+            <span class="">Foco 82%</span>
+            <span class="">Descanso 18%</span>
+          </div>
+        </article>
+
+        <!-- BLOQUE 2: Sprint Rápido -->
+        <article class="bg-surface rounded-2xl p-4 border border-borderDark hover:border-[#3d3859] relative transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-white tracking-tight">Sprint Rápido</h2>
+              <p class="font-mono text-xs text-subtext mt-1">
+                <span class="text-white/90 font-medium">25m foco</span> · 5m descanso
+              </p>
+            </div>
+
+            <!-- Acciones CRUD: Editar + Papelera -->
+            <div class="flex items-center space-x-2">
+              <button class="w-9 h-9 rounded-xl bg-white/5 border border-borderDark flex items-center justify-center text-white/80 hover:text-white hover:border-white/30 active:scale-95 transition-all" title="Editar bloque">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"></path>
+                </svg>
+              </button>
+              <button class="w-9 h-9 rounded-xl bg-crimsonRed/10 border border-crimsonRed/25 flex items-center justify-center text-crimsonRed hover:bg-crimsonRed/20 active:scale-95 transition-all" title="Eliminar bloque">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- BLOQUE 3: Lectura Nocturna -->
+        <article class="bg-surface rounded-2xl p-4 border border-borderDark hover:border-[#3d3859] relative transition-all duration-200">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-white tracking-tight">Lectura Nocturna</h2>
+              <p class="font-mono text-xs text-subtext mt-1">
+                <span class="text-white/90 font-medium">60m foco</span> · 15m descanso
+              </p>
+            </div>
+
+            <!-- Acciones CRUD: Editar + Papelera -->
+            <div class="flex items-center space-x-2">
+              <button class="w-9 h-9 rounded-xl bg-white/5 border border-borderDark flex items-center justify-center text-white/80 hover:text-white hover:border-white/30 active:scale-95 transition-all" title="Editar bloque">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"></path>
+                </svg>
+              </button>
+              <button class="w-9 h-9 rounded-xl bg-crimsonRed/10 border border-crimsonRed/25 flex items-center justify-center text-crimsonRed hover:bg-crimsonRed/20 active:scale-95 transition-all" title="Eliminar bloque">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- Botón de Acción Principal (CRUD CREATE) -->
+      <div class="pt-2 pb-1">
+        <button class="w-full h-13 py-3.5 px-4 bg-magentaAccent hover:bg-[#d63ae2] active:scale-[0.98] text-white font-bold rounded-2xl flex items-center justify-center space-x-2 transition-all duration-200 btn-magenta-glow">
+          <span class="text-lg leading-none font-extrabold">+</span>
+          <span class="text-sm tracking-wide">Crear Nuevo Bloque</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar Fija (64px nativo con Ajustes seleccionado) -->
+    
+
+  </main>
+
+
+
+
+
+</body></html>

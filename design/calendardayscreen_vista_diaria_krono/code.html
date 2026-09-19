@@ -1,0 +1,234 @@
+<!DOCTYPE html><html class="dark" lang="es" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+<title>CalendarDayScreen - Vista Diaria KRONO</title>
+<!-- Tailwind CSS CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            krono: {
+              bg: '#0B0C14',
+              surface: '#151624',
+              card: '#161828',
+              cardBorder: 'rgba(255, 255, 255, 0.07)',
+              accent: '#C026D3',
+              accentHover: '#D946EF',
+              cyan: '#22D3EE',
+              cyanGlow: '#06B6D4',
+              pink: '#F43F5E',
+              violet: '#A855F7',
+              textPrimary: '#F1F5F9',
+              textSecondary: '#94A3B8',
+              textMuted: '#64748B'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+<!-- Google Fonts: Inter & Material Symbols Rounded -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<style data-purpose="base-setup">
+    /* Global scroll and dark theme normalization */
+    body {
+      background-color: #0B0C14;
+      color: #F1F5F9;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Hide scrollbar for mini date-picker */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style data-purpose="krono-visual-fx">
+    /* Glow highlights authentic to KRONO screenshots */
+    .neon-button-glow {
+      box-shadow: 0 4px 20px -2px rgba(192, 38, 211, 0.55), 0 0 10px rgba(168, 85, 247, 0.35);
+    }
+    
+    .active-day-glow {
+      box-shadow: 0 0 18px rgba(192, 38, 211, 0.45);
+    }
+
+    .subtle-mesh {
+      background: radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+                  radial-gradient(circle at 100% 25%, rgba(192, 38, 211, 0.08) 0%, transparent 50%);
+    }
+
+    .timeline-line {
+      background: linear-gradient(180deg, rgba(34, 211, 238, 0.3) 0%, rgba(192, 38, 211, 0.35) 60%, rgba(100, 116, 139, 0.15) 100%);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex justify-center bg-[#07080D]">
+<!-- Mobile Viewport Simulator Outer Box -->
+<div class="relative w-full max-w-[430px] min-h-screen bg-[#0B0C14] border-x border-white/5 flex flex-col justify-between overflow-x-hidden pb-24 subtle-mesh shadow-2xl">
+<!-- BEGIN: TopBarAndNavigation -->
+<header class="pt-6 px-4 pb-2 shrink-0" data-purpose="app-header">
+<!-- Month Selector & View Segmented Switch -->
+<div class="flex items-center justify-between gap-2 mb-5">
+<!-- Month Navigation -->
+<div class="flex items-center gap-1 text-white">
+<button aria-label="Mes anterior" class="p-1.5 -ml-1.5 rounded-lg text-slate-400 hover:text-white transition-colors" type="button">
+<span class="material-symbols-rounded text-xl leading-none">chevron_left</span>
+</button>
+<span class="font-bold text-lg tracking-tight text-white">Octubre 2024</span>
+<button aria-label="Mes siguiente" class="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors" type="button">
+<span class="material-symbols-rounded text-xl leading-none">chevron_right</span>
+</button>
+</div>
+<!-- Segmented Tab: Mes | Sem | Día -->
+<nav aria-label="Vistas de calendario" class="flex items-center bg-[#131522] p-1 rounded-2xl border border-white/5">
+<a class="px-3.5 py-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors" href="#">Mes</a>
+<a class="px-3 py-1 text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors" href="#">Semana</a>
+<!-- 'Día' tab is strictly ACTIVE with magenta pill matching SCREEN_1 Semana badge -->
+<a class="px-3.5 py-1 text-xs font-bold text-white bg-gradient-to-r from-[#C026D3] to-[#A855F7] rounded-xl shadow-md transition-all" href="#">Día</a>
+</nav>
+</div>
+<!-- Current Day Title & Today Pill Badge -->
+<div class="flex items-end justify-between mb-4">
+<div>
+<span class="text-[11px] font-bold tracking-widest text-[#22D3EE] uppercase block mb-0.5">JUEVES · SEMANA 43</span>
+<h1 class="text-2xl font-black text-white tracking-tight">24 de Octubre</h1>
+</div>
+<!-- "Hoy" Badge Indicator matching SCREEN_1 -->
+<div class="flex items-center gap-1.5 bg-[#141829] border border-white/10 px-3 py-1 rounded-full">
+<span class="w-2 h-2 rounded-full bg-[#22D3EE] animate-pulse"></span>
+<span class="text-xs font-medium text-slate-200">Hoy</span>
+</div>
+</div>
+<!-- Horizontal Fast Day Strip / Mini Week Strip -->
+<div class="flex items-center justify-between bg-[#121422]/90 border border-white/5 rounded-2xl p-2 mb-1 gap-1">
+<!-- Mar 22 -->
+
+<!-- Mié 23 -->
+
+<!-- JUE 24 (ACTIVE SELECTION) -->
+<div class="flex-1 flex flex-col items-center py-2 px-1 bg-gradient-to-b from-[#C026D3] to-[#8B5CF6] text-white rounded-xl active-day-glow">
+<span class="text-[10px] uppercase font-extrabold tracking-wide">Jue</span>
+<span class="text-base font-black mt-0.5 leading-tight">24</span>
+<span class="w-1.5 h-1.5 rounded-full bg-white mt-1"></span>
+</div>
+<!-- Vie 25 -->
+
+<!-- Sáb 26 -->
+
+<!-- Dom 27 -->
+
+</div>
+</header>
+<!-- END: TopBarAndNavigation -->
+<!-- BEGIN: DailyAgendaSection -->
+<main class="flex-1 px-4 pt-3 flex flex-col" data-purpose="daily-timeline-schedule">
+<!-- Agenda Subheader bar with badge & activity counter -->
+<div class="flex items-center justify-between pb-3 pt-1">
+<div class="flex items-center gap-2">
+<h2 class="text-lg font-bold text-white tracking-tight">Agenda</h2>
+<span class="bg-[#122736] text-[#22D3EE] text-[11px] font-bold px-2.5 py-0.5 rounded-lg border border-[#22D3EE]/20">
+            Jueves 24
+          </span>
+</div>
+<span class="text-xs text-slate-400 font-medium">3 actividades</span>
+</div>
+<!-- Time-Slot / Activity Cards List -->
+<div class="space-y-3.5 relative">
+<!-- Activity 1: Soporte Remoto (Completed/Earlier block) -->
+<article class="bg-[#141624] border border-white/5 rounded-2xl p-4 transition-all duration-200 hover:border-white/15" data-purpose="activity-card">
+<!-- Card Header: Time dot + Time range + Location/Tag -->
+<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#22D3EE] shadow-[0_0_8px_rgba(34,211,238,0.7)]"></span><span class="font-mono text-xs font-semibold text-[#22D3EE] tracking-wide">09:00 - 13:00</span></div><div class="flex items-center gap-2"><span class="text-[11px] font-medium text-slate-300 bg-[#1F2338] px-2.5 py-0.5 rounded-md border border-white/5">Remoto</span><button aria-label="Eliminar actividad" class="p-1 text-slate-500 hover:text-pink-400 transition-colors rounded-md" type="button"><span class="material-symbols-rounded text-base leading-none block">delete</span></button></div></div>
+<!-- Title -->
+<h3 class="text-white text-base font-bold tracking-tight mb-1.5">Trabajo Soporte KRONO</h3>
+<!-- Details & Icon -->
+<div class="flex items-center gap-2 text-slate-400 text-xs">
+<span class="material-symbols-rounded text-sm text-slate-400">laptop_chromebook</span>
+<span class="truncate">Atención de tickets críticos y guardias de infraestructura</span>
+</div>
+<!-- Bottom micro-status indicator -->
+<div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[11px]">
+<span class="text-emerald-400 font-medium flex items-center gap-1">
+<span class="material-symbols-rounded text-sm">check_circle</span> Concluido
+            </span>
+<span class="text-slate-500 font-mono">4h dedicadas</span>
+</div>
+</article>
+<!-- Current Timeline Position Indicator (Between morning and afternoon) -->
+<div class="flex items-center gap-2 py-0.5 px-1" data-purpose="now-indicator">
+<span class="text-[10px] font-bold font-mono text-pink-400 tracking-wider">AHORA · 14:15</span>
+<div class="h-px flex-1 bg-gradient-to-r from-pink-500/70 via-[#C026D3]/40 to-transparent"></div>
+<span class="w-2 h-2 rounded-full bg-pink-500 shadow-[0_0_8px_#F43F5E]"></span>
+</div>
+<!-- Activity 2: Álgebra Lineal (Upcoming next - Highlighted) -->
+<article class="bg-[#16182B] border border-pink-500/25 rounded-2xl p-4 shadow-lg shadow-purple-950/20 relative overflow-hidden" data-purpose="activity-card">
+<!-- Accent glow bar on side -->
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-pink-500 to-violet-500"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-pink-500 shadow-[0_0_8px_rgba(244,63,94,0.7)] animate-ping-once"></span><span class="font-mono text-xs font-semibold text-pink-400 tracking-wide">15:00 - 16:30</span></div><div class="flex items-center gap-2"><span class="text-[11px] font-semibold text-pink-300 bg-pink-950/40 border border-pink-500/30 px-2.5 py-0.5 rounded-md">En 1 h 40 min</span><button aria-label="Eliminar actividad" class="p-1 text-slate-500 hover:text-pink-400 transition-colors rounded-md" type="button"><span class="material-symbols-rounded text-base leading-none block">delete</span></button></div></div>
+<!-- Title -->
+<h3 class="text-white text-base font-bold tracking-tight mb-1.5">Clase de Álgebra Lineal</h3>
+<!-- Details & Location -->
+<div class="flex items-center gap-1.5 text-slate-300 text-xs">
+<span class="material-symbols-rounded text-sm text-pink-400">location_on</span>
+<span class="truncate">Aula Magna 2B · Facultad de Ingeniería</span>
+</div>
+<!-- Subtext info from SCREEN_7 context -->
+<p class="mt-2 text-slate-400 text-xs pl-5 line-clamp-1">
+            Espacios vectoriales y transformaciones
+          </p>
+</article>
+<!-- Activity 3: Tesis (Evening focus block) -->
+<article class="bg-[#141624] border border-white/5 rounded-2xl p-4 transition-all duration-200 hover:border-white/15" data-purpose="activity-card">
+<!-- Card Header -->
+<div class="flex items-center justify-between mb-2"><div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-[#22D3EE] shadow-[0_0_8px_rgba(34,211,238,0.7)]"></span><span class="font-mono text-xs font-semibold text-[#22D3EE] tracking-wide">17:30 - 19:30</span></div><div class="flex items-center gap-2"><span class="text-[11px] font-medium text-slate-300 bg-[#1F2338] px-2.5 py-0.5 rounded-md border border-white/5">Biblioteca Central</span><button aria-label="Eliminar actividad" class="p-1 text-slate-500 hover:text-pink-400 transition-colors rounded-md" type="button"><span class="material-symbols-rounded text-base leading-none block">delete</span></button></div></div>
+<!-- Title -->
+<h3 class="text-white text-base font-bold tracking-tight mb-1.5">Sesión de Enfoque Tesis</h3>
+<!-- Details -->
+<div class="flex items-center gap-2 text-slate-400 text-xs">
+<span class="material-symbols-rounded text-sm text-slate-400">menu_book</span>
+<span class="truncate">Redacción del marco teórico y revisión bibliográfica</span>
+</div>
+<!-- Focus Tag Pill -->
+<div class="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between">
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#1B1E32] rounded-md text-[10px] font-medium text-purple-300">
+<span class="material-symbols-rounded text-xs text-purple-400">timer</span>
+              Modo Deep Work (4 bloques Pomodoro)
+            </div>
+<span class="text-xs text-slate-500 font-medium">Prioridad alta</span>
+</div>
+</article>
+</div>
+<!-- BEGIN: CTAButton -->
+<!-- Floating Action-like button matching SCREEN_1 bottom CTA -->
+<div class="mt-5 mb-2" data-purpose="primary-action-container">
+
+</div>
+<!-- END: CTAButton -->
+</main>
+<!-- END: DailyAgendaSection -->
+<!-- BEGIN: BottomNavigation -->
+<!-- Fixed Bottom App Navigation Bar identical to SCREEN_1 -->
+
+<!-- END: BottomNavigation -->
+</div>
+
+
+
+
+</body></html>
