@@ -78,3 +78,7 @@ NO se usa para:
 Regla dura: si un ejemplo de la skill sugiere `MaterialTheme.colorScheme.*` o
 `dynamicColorScheme()`, se descarta esa parte y se reemplaza por los tokens de
 `core-ui`. Cero colores/espaciados hardcodeados sigue aplicando siempre.
+
+## Especificación
+
+Las funcionalidades, criterios de aceptación y decisiones abiertas están en `docs/SPEC.md`.
