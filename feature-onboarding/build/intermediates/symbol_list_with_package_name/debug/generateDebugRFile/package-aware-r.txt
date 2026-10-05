@@ -1,1 +1,0 @@
-com.krono.feature.onboarding
