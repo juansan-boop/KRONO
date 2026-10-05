@@ -12,7 +12,7 @@
 > Lo marcado como **(propuesta)** es una sugerencia inicial que el equipo debe
 > confirmar en la sección 9 antes de implementarlo.
 
-**Versión:** 0.1 · **Última actualización:** 2026-10-05
+**Versión:** 0.2 · **Última actualización:** 2026-10-05
 
 ---
 
@@ -144,12 +144,12 @@ Estados: `Pendiente` · `En progreso` · `En revisión` · `Hecho` · `Bloqueada
 ### Fase 0 — Infraestructura (prerrequisito de todo lo demás)
 
 #### F-00 — Gradle Wrapper y dependencias de prueba
-- **Estado:** Pendiente · **Prioridad:** Alta · **Módulos:** raíz, todos · **Depende de:** ninguna · **PR:** —
+- **Estado:** Hecho · **Prioridad:** Alta · **Módulos:** raíz, todos · **Depende de:** ninguna · **PR:** #3
 
 Sin el wrapper el CI falla en todos los PRs (`chmod +x gradlew`), y ningún
 módulo de librería declara dependencias de prueba.
 
-- **CA-1:** Dado el repo clonado, cuando se ejecuta `./gradlew assembleDebug`, entonces compila sin pasos manuales (wrapper Gradle 8.11 versionado, incluido `gradle-wrapper.jar`).
+- **CA-1:** Dado el repo clonado, cuando se ejecuta `./gradlew assembleDebug`, entonces compila sin pasos manuales (wrapper Gradle 9.6.0 versionado, incluido `gradle-wrapper.jar`).
 - **CA-2:** Dado un PR abierto, cuando corre el workflow de CI, entonces los pasos lint, pruebas unitarias y assemble terminan en verde.
 - **CA-3:** Dado cualquier módulo `core-*` o `feature-*`, cuando se agrega una prueba unitaria, entonces `./gradlew testDebugUnitTest` la ejecuta (dependencias declaradas desde `libs.versions.toml`, incluida `kotlinx-coroutines-test`).
 
@@ -329,13 +329,13 @@ reportan al orquestador.
 
 | # | Pregunta | Afecta a | Decisión |
 |---|---|---|---|
-| D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? Hoy el proyecto no tiene librerías de red | F-21 (CA-2), F-22 a F-26, sincronización | Pendiente |
-| D-2 | ¿Qué proveedores de login social ("o continúa con")? | F-22 | Pendiente |
+| D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? Hoy el proyecto no tiene librerías de red | F-21 (CA-2), F-22 a F-26, sincronización | Temporal: autenticación en memoria (RAM), sin backend ni persistencia; al cerrar la app se pierden cuentas y sesión. Pendiente: base de datos persistente. Sin Firebase por ahora. |
+| D-2 | ¿Qué proveedores de login social ("o continúa con")? | F-22 | Ninguno por ahora (fuera de alcance). |
 | D-3 | ¿Se aprueba el modelo de datos propuesto de la sección 6? | F-02 en adelante | Pendiente |
 | D-4 | ¿Se aprueba el algoritmo de estimación propuesto en F-11? | F-11 | Pendiente |
 | D-5 | ¿El asistente de prioridades es una heurística local o usa un servicio de IA externo? Los diseños mencionan "ritmo circadiano" y "confianza 94%": definir qué datos los respaldan | F-12 | Pendiente |
 | D-6 | ¿Entra la sincronización con Google Calendar y Outlook en el alcance del proyecto académico? | F-18 | Pendiente |
-| D-7 | `CONTRIBUTING.md` define la rama `develop`, pero solo existe `main` en el remoto. ¿Se crea `develop` como base de los PRs? | Flujo de PRs | Pendiente |
+| D-7 | `CONTRIBUTING.md` define la rama `develop`, pero solo existe `main` en el remoto. ¿Se crea `develop` como base de los PRs? | Flujo de PRs | Resuelta: `develop` existe y es la base de los PRs. |
 | D-8 | ¿Qué integrante es responsable de cada módulo? Los agentes solo deben tocar los módulos asignados a quien los ejecuta | Todas | Pendiente |
 | D-9 | Ajustes muestra "Tema de pantalla: Cyber Dark", pero no hay tema claro. ¿Se omite la opción o queda informativa? | F-20 | Pendiente |
 
@@ -355,3 +355,4 @@ reportan al orquestador.
 | Fecha | Cambio |
 |---|---|
 | 2026-10-05 | Versión inicial a partir del scaffold, `CLAUDE.md`, `CONTRIBUTING.md` y las referencias de `/design/` |
+| 2026-10-05 | v0.2: F-00 marcada como Hecha (PR #3) y wrapper corregido a Gradle 9.6.0 (AGP 9.4.1 exige Gradle 9.x); D-1 (autenticación temporal en memoria), D-2 (login social fuera de alcance) y D-7 (`develop` existe) resueltas |
