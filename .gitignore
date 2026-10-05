@@ -16,3 +16,5 @@ local.properties
 *.hprof
 .claude/agent-memory-local/
 .claude/settings.local.json
+**/build
+.kotlin/
