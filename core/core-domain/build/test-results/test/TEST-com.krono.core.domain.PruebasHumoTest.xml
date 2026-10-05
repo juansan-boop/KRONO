@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.krono.core.domain.PruebasHumoTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-05T22:30:11.749Z" hostname="EL_MALEDUCADO" time="0.233">
+  <properties/>
+  <testcase name="elModuloEjecutaPruebasConCorrutinasYFlows" classname="com.krono.core.domain.PruebasHumoTest" time="0.226"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

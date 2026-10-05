@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.krono.app-mergeDebugResources-2:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\mcami\\.gradle\\caches\\9.6.0\\transforms\\1d4c95fe563a3a79b0a8f2f02d5074eb\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}
