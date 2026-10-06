@@ -20,6 +20,11 @@ object KronoSizes {
     /** Logo de la marca en pantallas de acceso. */
     val brandLogo = 80.dp
 
+    /** Alto del símbolo de KRONO: barras superiores, dentro del logo y en vistas previas. */
+    val brandSymbolSmall = 32.dp
+    val brandSymbol = 40.dp
+    val brandSymbolLarge = 48.dp
+
     /** Insignia circular de confirmación (pantallas de éxito). */
     val successBadge = 120.dp
 

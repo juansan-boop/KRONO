@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Símbolo de KRONO, capa azul marino: los dos trazos de la "K", el costado y la arena
+    del reloj y el punto de la "D". Va encima de krono_symbol_lilac (mismo lienzo).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20.6dp"
+    android:height="22dp"
+    android:viewportWidth="206"
+    android:viewportHeight="220">
+    <path
+        android:fillColor="@color/krono_brand_navy"
+        android:pathData="M128.75,0 L180.25,0 Q196.25,0 186.65,12.8 L82.5,151.7 L57.15,117.9 Q48.75,106.7 57.15,95.5 Z
+            M82.5,151.7 Q94.25,136 106,136 L123.75,136 Q135.75,136 142.95,145.6 L189.15,207.2 Q198.75,220 182.75,220 L133.75,220 Z
+            M0,57 L28.85,95.5 Q37.25,106.7 28.85,117.9 L0,156.3 Z
+            M44,142 L75,168 L13,168 Z
+            M168.5,110 A9.5,9.5 0 1 1 187.5,110 A9.5,9.5 0 1 1 168.5,110 Z" />
+</vector>
