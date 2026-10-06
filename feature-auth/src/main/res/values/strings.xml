@@ -44,7 +44,7 @@
     <string name="auth_forgot_loading">Enviando…</string>
     <string name="auth_forgot_back_to_login">Volver a Iniciar Sesión</string>
     <string name="auth_forgot_success_title">¡Enlace Enviado!</string>
-    <string name="auth_forgot_success_body">Te enviamos un enlace para restablecer tu contraseña.</string>
+    <string name="auth_forgot_success_body">Confirmamos que tu correo está registrado en KRONO.</string>
     <string name="auth_forgot_success_simulated">Por ahora la recuperación es simulada: no se envía ningún correo real.</string>
 
     <!-- Mensajes de error: cortos, en español y sin detalles técnicos -->
