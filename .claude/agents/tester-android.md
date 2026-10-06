@@ -2,8 +2,8 @@
 name: tester-android
 description: Compila el PR de KRONO, lo instala en el emulador Android y verifica sus criterios de aceptación con adb. Úsalo después de que qa apruebe un PR.
 tools: Read, Grep, Glob, Bash, Skill
-model: haiku
-effort: low
+model: sonnet
+effort: medium
 memory: local
 skills:
   - android-device-testing
