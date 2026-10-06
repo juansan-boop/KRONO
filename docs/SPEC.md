@@ -302,7 +302,7 @@ Algoritmo **(propuesta, confirmar en D-4)**: promedio de `actualDuration` de las
 ### Fase 3 — Cuenta, sincronización e IA avanzada
 
 #### F-22 a F-25 — Iniciar sesión, crear cuenta, recuperar contraseña, cerrar sesión
-- **Estado:** Pendiente · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00, F-01 · **PR:** —
+- **Estado:** Pendiente · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00 · **PR:** —
 
 Por ahora la autenticación es local con Room (D-1); `AuthRepository` en `core-domain` aísla la implementación para sustituirla por un backend en un hito futuro.
 
