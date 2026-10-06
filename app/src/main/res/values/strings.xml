@@ -1,3 +1,16 @@
 <resources>
     <string name="app_name">KRONO</string>
+
+    <!-- Navegación principal (barra inferior) -->
+    <string name="nav_inicio">Inicio</string>
+    <string name="nav_tareas">Tareas</string>
+    <string name="nav_calendario">Calendario</string>
+    <string name="nav_ajustes">Ajustes</string>
+    <string name="nav_ir_a">Ir a %1$s</string>
+
+    <!-- Pantallas provisionales hasta que cada feature exponga la suya -->
+    <string name="seccion_inicio">Inicio</string>
+    <string name="seccion_tareas">Tareas</string>
+    <string name="seccion_calendario">Calendario</string>
+    <string name="seccion_ajustes">Ajustes</string>
 </resources>

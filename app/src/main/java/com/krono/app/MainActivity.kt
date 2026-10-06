@@ -3,6 +3,7 @@ package com.krono.app
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import com.krono.app.navigation.KronoApp
 import com.krono.core.ui.theme.KronoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -17,8 +18,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             KronoTheme {
-                // TODO: NavHost con las rutas de feature-auth, feature-onboarding,
-                // feature-dashboard, feature-tasks, feature-calendar y feature-profile.
+                KronoApp()
             }
         }
     }

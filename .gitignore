@@ -15,3 +15,9 @@
 local.properties
 *.hprof
 .claude/agent-memory-local/
+.claude/settings.local.json
+**/build
+.kotlin/
+
+# Firebase: nunca versionar credenciales
+google-services.json
