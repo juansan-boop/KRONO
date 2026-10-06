@@ -339,7 +339,7 @@ reportan al orquestador.
 | D-5 | ¿El asistente de prioridades es una heurística local o usa un servicio de IA externo? Los diseños mencionan "ritmo circadiano" y "confianza 94%": definir qué datos los respaldan | F-12 | Pendiente |
 | D-6 | ¿Entra la sincronización con Google Calendar y Outlook en el alcance del proyecto académico? | F-18 | Pendiente |
 | D-7 | `CONTRIBUTING.md` define la rama `develop`, pero solo existe `main` en el remoto. ¿Se crea `develop` como base de los PRs? | Flujo de PRs | Resuelta: `develop` existe y es la base de los PRs. |
-| D-8 | ¿Qué integrante es responsable de cada módulo? Los agentes solo deben tocar los módulos asignados a quien los ejecuta | Todas | Pendiente |
+| D-8 | ¿Qué integrante es responsable de cada módulo? Los agentes solo deben tocar los módulos asignados a quien los ejecuta | Todas | Parcial: Juan Fernando Sánchez Otero en `app`, `core-*` y `feature-auth`; demás módulos sin asignar |
 | D-9 | Ajustes muestra "Tema de pantalla: Cyber Dark", pero no hay tema claro. ¿Se omite la opción o queda informativa? | F-20 | Pendiente |
 
 ### Responsables por módulo (D-8, parcial)
