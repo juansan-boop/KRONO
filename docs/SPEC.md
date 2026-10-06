@@ -12,7 +12,7 @@
 > Lo marcado como **(propuesta)** es una sugerencia inicial que el equipo debe
 > confirmar en la sección 9 antes de implementarlo.
 
-**Versión:** 0.3 · **Última actualización:** 2026-10-05
+**Versión:** 0.4 · **Última actualización:** 2026-10-06
 
 ---
 
@@ -302,7 +302,7 @@ Algoritmo **(propuesta, confirmar en D-4)**: promedio de `actualDuration` de las
 ### Fase 3 — Cuenta, sincronización e IA avanzada
 
 #### F-22 a F-25 — Iniciar sesión, crear cuenta, recuperar contraseña, cerrar sesión
-- **Estado:** Pendiente · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00 · **PR:** —
+- **Estado:** Hecho · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00 · **PR:** #7
 
 Por ahora la autenticación es local con Room (D-1); `AuthRepository` en `core-domain` aísla la implementación para sustituirla por un backend en un hito futuro.
 
@@ -362,3 +362,4 @@ reportan al orquestador.
 | 2026-10-05 | v0.2: F-00 marcada como Hecha (PR #3) y wrapper corregido a Gradle 9.6.0 (AGP 9.4.1 exige Gradle 9.x); D-1 (autenticación temporal en memoria), D-2 (login social fuera de alcance) y D-7 (`develop` existe) resueltas |
 | 2026-10-05 | v0.3: decisiones de Juan Fernando Sánchez Otero: F-00 con PR #5; D-1 (autenticación y datos locales con Room, hash con sal), D-2 (sin login social) y D-8 (responsable de `app`, `core-*` y `feature-auth`; demás módulos sin asignar); F-22 a F-26 pasan a Pendiente con criterios ajustados (registro sin nombre, recuperación simulada, pantalla provisional, sesión persistente, `LogoutUseCase`); aclaración: el proyecto usa AGP 8.7.0 con Gradle 9.6.0 (compila, con aviso de incompatibilidad futura con Gradle 10; subir AGP queda como tarea aparte), por lo que la nota de v0.2 sobre AGP 9.4.1 no aplica |
 | 2026-10-06 | F-22 a F-25: CA-4 aclarado con un botón temporal "Cerrar sesión" (sin confirmación) en la pantalla provisional de `app` mientras no exista `feature-profile`; decisión de Juan Fernando Sánchez Otero |
+| 2026-10-06 | v0.4: cierre del hito 1: F-22 a F-25 marcadas como Hechas (PR #7): autenticación local en Room, botón temporal "Cerrar sesión" en la pantalla provisional de `app`, ícono adaptativo y logo de KRONO |
