@@ -68,7 +68,17 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
                     }
                 },
             )
-            composable(RUTA_PROXIMO_HITO) { PantallaProximoHito() }
+            composable(RUTA_PROXIMO_HITO) {
+                PantallaProximoHito(
+                    // TEMPORAL: se elimina cuando existan F-01/F-19 (feature-profile)
+                    alCerrarSesion = {
+                        navController.navigate(AUTH_GRAPH_ROUTE) {
+                            // "Atrás" no regresa a la pantalla provisional.
+                            popUpTo(RUTA_PROXIMO_HITO) { inclusive = true }
+                        }
+                    },
+                )
+            }
             // F-01: flujo principal con barra inferior. Aún no es destino tras autenticarse (CA-5).
             grafoPrincipal()
         }

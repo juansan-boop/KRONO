@@ -31,7 +31,7 @@ import com.krono.core.ui.theme.glassSurface
  * F-01 la reemplazará por el flujo principal con barra inferior.
  */
 @Composable
-fun PantallaProximoHito(modifier: Modifier = Modifier) {
+fun PantallaProximoHito(alCerrarSesion: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -59,6 +59,9 @@ fun PantallaProximoHito(modifier: Modifier = Modifier) {
                 color = OnSurface,
                 textAlign = TextAlign.Center,
             )
+            // TEMPORAL: se elimina cuando existan F-01/F-19 (feature-profile)
+            Spacer(Modifier.height(KronoSpacing.lg))
+            BotonCerrarSesionTemporal(alCerrarSesion = alCerrarSesion)
         }
     }
 }

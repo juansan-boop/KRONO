@@ -16,4 +16,8 @@
 
     <!-- Destino provisional tras autenticarse (F-22 a F-25 CA-5); F-01 lo reemplaza -->
     <string name="proximo_hito">Este módulo se desarrollará en el siguiente hito</string>
+
+    <!-- TEMPORAL: se elimina cuando existan F-01/F-19 (feature-profile) -->
+    <string name="cerrar_sesion">Cerrar sesión</string>
+    <string name="cerrar_sesion_error">No pudimos cerrar tu sesión. Inténtalo de nuevo.</string>
 </resources>
