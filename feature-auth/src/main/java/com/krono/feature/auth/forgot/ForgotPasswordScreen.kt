@@ -17,7 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -73,9 +73,10 @@ internal fun ForgotPasswordScreen(
         ForgotPasswordSuccessContent(onBack = onBack, modifier = modifier)
         return
     }
-    val focusManager = LocalFocusManager.current
+    // Ocultar el teclado sin quitar el foco (ver RegisterScreen: ENTER de teclado físico).
+    val keyboard = LocalSoftwareKeyboardController.current
     val submit = {
-        focusManager.clearFocus()
+        keyboard?.hide()
         onSubmit()
     }
 

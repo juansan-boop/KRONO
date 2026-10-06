@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -72,6 +73,9 @@ internal fun LoginScreen(
     modifier: Modifier = Modifier,
 ) {
     val focusManager = LocalFocusManager.current
+    // Ocultar el teclado sin quitar el foco: con clearFocus(), un ENTER de teclado físico
+    // movía el foco al primer elemento y su key-up activaba otro botón.
+    val keyboard = LocalSoftwareKeyboardController.current
     val missingFields = state.error == AuthMessage.EmptyFields
     val badCredentials = state.error == AuthMessage.InvalidCredentials
 
@@ -105,7 +109,7 @@ internal fun LoginScreen(
             isError = (missingFields && state.password.isEmpty()) || badCredentials,
             imeAction = ImeAction.Go,
             onImeAction = {
-                focusManager.clearFocus()
+                keyboard?.hide()
                 onSubmit()
             },
             isPassword = true,
@@ -123,7 +127,7 @@ internal fun LoginScreen(
             loadingText = stringResource(R.string.auth_login_loading),
             isLoading = state.isLoading,
             onClick = {
-                focusManager.clearFocus()
+                keyboard?.hide()
                 onSubmit()
             },
         )

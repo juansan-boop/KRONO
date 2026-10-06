@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -135,8 +136,11 @@ private fun RegisterFormContent(
     val generalMessage = state.error?.takeIf {
         it == AuthMessage.EmptyFields || it == AuthMessage.WeakPassword || it == AuthMessage.Unexpected
     }
+    // Ocultar el teclado sin quitar el foco: con clearFocus(), un ENTER de teclado físico
+    // movía el foco a "Volver" y su key-up regresaba al login.
+    val keyboard = LocalSoftwareKeyboardController.current
     val submit = {
-        focusManager.clearFocus()
+        keyboard?.hide()
         onSubmit()
     }
 

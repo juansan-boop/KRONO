@@ -5,8 +5,12 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.pressKey
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.auth.AuthMessage
 import com.krono.feature.auth.R
@@ -100,6 +104,19 @@ class RegisterScreenTest {
 
         assertEquals(1, submits)
         assertEquals(1, signIns)
+    }
+
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun enterEnLaConfirmacionEnviaElFormularioSinVolverAlLogin() {
+        show(RegisterUiState(email = "ana@correo.com", password = "krono", confirmation = "kron"))
+
+        composeRule.onNodeWithText(str(R.string.auth_field_confirm_password)).performClick()
+        composeRule.onNodeWithText(str(R.string.auth_field_confirm_password)).performKeyInput { pressKey(Key.Enter) }
+        composeRule.waitForIdle()
+
+        assertEquals(1, submits)
+        assertEquals(0, signIns)
     }
 
     @Test
