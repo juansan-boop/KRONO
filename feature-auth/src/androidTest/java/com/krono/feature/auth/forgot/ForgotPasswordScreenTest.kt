@@ -5,6 +5,8 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onNodeWithTag
+import com.krono.core.ui.brand.KronoSymbolTestTag
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.auth.AuthMessage
 import com.krono.feature.auth.R
@@ -66,5 +68,13 @@ class ForgotPasswordScreenTest {
         composeRule.onNodeWithText(str(R.string.auth_forgot_back_to_login)).performClick()
 
         assertEquals(1, backs)
+    }
+
+    @Test
+    fun muestraElLogoDeKronoConSimboloYPalabra() {
+        show(ForgotPasswordUiState())
+
+        composeRule.onNodeWithTag(KronoSymbolTestTag, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText(str(R.string.auth_brand_name)).assertIsDisplayed()
     }
 }

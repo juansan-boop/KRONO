@@ -11,6 +11,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.onNodeWithTag
+import com.krono.core.ui.brand.KronoSymbolTestTag
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.auth.AuthMessage
 import com.krono.feature.auth.R
@@ -127,5 +129,20 @@ class RegisterScreenTest {
         composeRule.onNodeWithText(str(R.string.auth_register_success_continue)).performClick()
 
         assertEquals(1, continues)
+    }
+
+    @Test
+    fun laBarraSuperiorMuestraElSimboloYLaMarca() {
+        show(RegisterUiState())
+
+        composeRule.onNodeWithTag(KronoSymbolTestTag, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText(str(R.string.auth_brand_name)).assertIsDisplayed()
+    }
+
+    @Test
+    fun elExitoDelRegistroConservaElSimboloEnLaBarraSuperior() {
+        show(RegisterUiState(isRegistered = true))
+
+        composeRule.onNodeWithTag(KronoSymbolTestTag, useUnmergedTree = true).assertIsDisplayed()
     }
 }

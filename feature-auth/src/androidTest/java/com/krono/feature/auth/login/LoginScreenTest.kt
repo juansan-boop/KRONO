@@ -7,6 +7,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.onNodeWithTag
+import com.krono.core.ui.brand.KronoSymbolTestTag
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.auth.AuthMessage
 import com.krono.feature.auth.R
@@ -109,5 +111,13 @@ class LoginScreenTest {
 
         assertEquals(1, forgotClicks)
         assertEquals(1, createClicks)
+    }
+
+    @Test
+    fun muestraElLogoDeKronoConSimboloYPalabra() {
+        show(LoginUiState())
+
+        composeRule.onNodeWithTag(KronoSymbolTestTag, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText(str(R.string.auth_brand_name)).assertIsDisplayed()
     }
 }

@@ -1,7 +1,6 @@
 <resources>
     <!-- Marca -->
     <string name="auth_brand_name">KRONO</string>
-    <string name="auth_logo_description">Logo de KRONO</string>
 
     <!-- Campos comunes -->
     <string name="auth_field_email">Correo electrónico</string>

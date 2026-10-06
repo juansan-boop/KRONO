@@ -24,7 +24,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -49,6 +48,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import com.krono.core.ui.brand.KronoLogo
+import com.krono.core.ui.brand.KronoSymbol
 import com.krono.core.ui.theme.ErrorColor
 import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
@@ -83,7 +84,10 @@ internal fun AuthLayout(
     }
 }
 
-/** Logo de KRONO sobre una superficie glass. */
+/**
+ * Logo de KRONO (símbolo y palabra) sobre una superficie glass. Referencia:
+ * `/design/iniciar_sesi_n_lumina_style_1` y `recuperar_contrase_a_estilo_lumina_glass_1`.
+ */
 @Composable
 internal fun BrandLogo(modifier: Modifier = Modifier) {
     Box(
@@ -92,12 +96,7 @@ internal fun BrandLogo(modifier: Modifier = Modifier) {
             .glassSurface(),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = Icons.Outlined.HourglassTop,
-            contentDescription = stringResource(R.string.auth_logo_description),
-            tint = PrimaryFixedDim,
-            modifier = Modifier.size(KronoSizes.iconLarge),
-        )
+        KronoLogo(wordmark = stringResource(R.string.auth_brand_name))
     }
 }
 
@@ -158,12 +157,8 @@ internal fun AuthTopBar(onBack: (() -> Unit)?, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(KronoSpacing.sm))
         }
-        Icon(
-            imageVector = Icons.Outlined.HourglassTop,
-            contentDescription = null,
-            tint = PrimaryFixedDim,
-            modifier = Modifier.size(KronoSizes.iconMedium),
-        )
+        // Decorativo: la palabra KRONO va al lado como texto.
+        KronoSymbol(height = KronoSizes.brandSymbolSmall, contentDescription = null)
         Spacer(Modifier.width(KronoSpacing.sm))
         Text(
             text = stringResource(R.string.auth_brand_name),
