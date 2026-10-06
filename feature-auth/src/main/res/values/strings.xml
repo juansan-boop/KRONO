@@ -1,0 +1,59 @@
+<resources>
+    <!-- Marca -->
+    <string name="auth_brand_name">KRONO</string>
+    <string name="auth_logo_description">Logo de KRONO</string>
+
+    <!-- Campos comunes -->
+    <string name="auth_field_email">Correo electrónico</string>
+    <string name="auth_field_email_placeholder">tu@correo.com</string>
+    <string name="auth_field_password">Contraseña</string>
+    <string name="auth_field_confirm_password">Confirmar contraseña</string>
+    <string name="auth_show_password">Mostrar contraseña</string>
+    <string name="auth_hide_password">Ocultar contraseña</string>
+    <string name="auth_back">Volver</string>
+
+    <!-- Iniciar sesión (F-22) -->
+    <string name="auth_login_title">Bienvenido de nuevo</string>
+    <string name="auth_login_subtitle">Accede a tu espacio de tranquilidad.</string>
+    <string name="auth_login_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="auth_login_submit">Iniciar Sesión</string>
+    <string name="auth_login_loading">Iniciando…</string>
+    <string name="auth_login_no_account">¿No tienes una cuenta?</string>
+    <string name="auth_login_create_account">Crear una cuenta</string>
+
+    <!-- Crear cuenta (F-23) -->
+    <string name="auth_register_title">Comienza tu camino</string>
+    <string name="auth_register_subtitle">Solo un par de pasos para organizar tu tiempo</string>
+    <string name="auth_register_requirement_length">Mínimo 8 caracteres</string>
+    <string name="auth_register_requirement_digit">Al menos un número</string>
+    <string name="auth_register_requirement_special">Un carácter especial</string>
+    <string name="auth_register_requirement_met">Cumplido: %1$s</string>
+    <string name="auth_register_requirement_unmet">Pendiente: %1$s</string>
+    <string name="auth_register_submit">Crear Cuenta</string>
+    <string name="auth_register_loading">Creando cuenta…</string>
+    <string name="auth_register_has_account">¿Ya tienes cuenta?</string>
+    <string name="auth_register_sign_in">Iniciar Sesión</string>
+    <string name="auth_register_success_title">¡Cuenta Creada!</string>
+    <string name="auth_register_success_body">Tu registro ha sido exitoso. Comienza a organizar tu tiempo con calma.</string>
+    <string name="auth_register_success_continue">Continuar</string>
+
+    <!-- Recuperar contraseña (F-24) -->
+    <string name="auth_forgot_title">¿Olvidaste tu contraseña?</string>
+    <string name="auth_forgot_subtitle">Ingresa tu correo registrado y te ayudaremos a restablecerla.</string>
+    <string name="auth_forgot_submit">Enviar enlace de recuperación</string>
+    <string name="auth_forgot_loading">Enviando…</string>
+    <string name="auth_forgot_back_to_login">Volver a Iniciar Sesión</string>
+    <string name="auth_forgot_success_title">¡Enlace Enviado!</string>
+    <string name="auth_forgot_success_body">Te enviamos un enlace para restablecer tu contraseña.</string>
+    <string name="auth_forgot_success_simulated">Por ahora la recuperación es simulada: no se envía ningún correo real.</string>
+
+    <!-- Mensajes de error: cortos, en español y sin detalles técnicos -->
+    <string name="auth_error_empty_fields">Por favor, completa todos los campos obligatorios</string>
+    <string name="auth_error_invalid_email">Ingresa un correo válido, por ejemplo tu@correo.com</string>
+    <string name="auth_error_weak_password">Tu contraseña aún no cumple los requisitos</string>
+    <string name="auth_error_passwords_mismatch">Las contraseñas no coinciden</string>
+    <string name="auth_error_invalid_credentials">Correo o contraseña incorrectos</string>
+    <string name="auth_error_email_already_registered">Este correo ya está registrado. Inicia sesión</string>
+    <string name="auth_error_email_not_registered">Este correo no está registrado en KRONO</string>
+    <string name="auth_error_unexpected">Algo salió mal. Inténtalo de nuevo</string>
+</resources>
