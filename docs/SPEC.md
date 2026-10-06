@@ -12,7 +12,7 @@
 > Lo marcado como **(propuesta)** es una sugerencia inicial que el equipo debe
 > confirmar en la sección 9 antes de implementarlo.
 
-**Versión:** 0.2 · **Última actualización:** 2026-10-05
+**Versión:** 0.3 · **Última actualización:** 2026-10-05
 
 ---
 
@@ -144,7 +144,7 @@ Estados: `Pendiente` · `En progreso` · `En revisión` · `Hecho` · `Bloqueada
 ### Fase 0 — Infraestructura (prerrequisito de todo lo demás)
 
 #### F-00 — Gradle Wrapper y dependencias de prueba
-- **Estado:** Hecho · **Prioridad:** Alta · **Módulos:** raíz, todos · **Depende de:** ninguna · **PR:** #3
+- **Estado:** Hecho · **Prioridad:** Alta · **Módulos:** raíz, todos · **Depende de:** ninguna · **PR:** #5
 
 Sin el wrapper el CI falla en todos los PRs (`chmod +x gradlew`), y ningún
 módulo de librería declara dependencias de prueba.
@@ -299,20 +299,23 @@ Algoritmo **(propuesta, confirmar en D-4)**: promedio de `actualDuration` de las
 - **CA-1:** Dada la zona de seguridad, cuando se elige "Restablecer configuración y datos" y se confirma en un segundo paso, entonces se borran los datos locales y se restauran los valores por defecto.
 - **CA-2:** "Eliminar cuenta y perfil completo" queda **Bloqueada** hasta resolver D-1.
 
-### Fase 3 — Cuenta, sincronización e IA avanzada (bloqueada por decisiones)
+### Fase 3 — Cuenta, sincronización e IA avanzada
 
 #### F-22 a F-25 — Iniciar sesión, crear cuenta, recuperar contraseña, cerrar sesión
-- **Estado:** Bloqueada (D-1, D-2) · **Prioridad:** Alta · **Módulos:** `feature-auth` · **PR:** —
+- **Estado:** Pendiente · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00, F-01 · **PR:** —
 
-Criterios ya definidos por el diseño, aplicables cuando se resuelva el backend:
-- **CA-1 (registro):** La contraseña exige mínimo 8 caracteres, al menos un número y un carácter especial, con indicadores que se marcan en vivo; si la confirmación no coincide se muestra "Las contraseñas no coinciden".
+Por ahora la autenticación es local con Room (D-1); `AuthRepository` en `core-domain` aísla la implementación para sustituirla por un backend en un hito futuro.
+
+- **CA-1 (registro):** El formulario tiene los campos correo, contraseña y confirmación, sin campo de nombre (el nombre se pide en el onboarding, F-26). La contraseña exige mínimo 8 caracteres, al menos un número y un carácter especial, con indicadores que se marcan en vivo; si la confirmación no coincide se muestra "Las contraseñas no coinciden". La contraseña se guarda solo como hash con sal.
 - **CA-2 (login):** Con campos vacíos se muestra "Por favor, completa todos los campos obligatorios"; durante el envío el botón muestra progreso y no permite doble envío.
-- **CA-3 (recuperar):** Con un correo no registrado se muestra "Este correo no está registrado en KRONO"; con uno válido, el mensaje de enlace enviado.
-- **CA-4 (cerrar sesión):** Se pide confirmación con "Permanecer en KRONO" y "Cerrar Sesión".
+- **CA-3 (recuperar):** Mientras no haya backend, el envío es simulado. Con un correo no registrado se muestra "Este correo no está registrado en KRONO"; con uno registrado, la pantalla de éxito, sin enviar un correo real.
+- **CA-4 (cerrar sesión):** Por ahora solo existe el caso de uso `LogoutUseCase`; el diálogo de confirmación ("Permanecer en KRONO" y "Cerrar Sesión") vive luego en `feature-profile`.
+- **CA-5 (pantalla provisional):** Dado un inicio de sesión exitoso, cuando termina, entonces la app lleva por ahora a una pantalla provisional en `app` con el texto "Este módulo se desarrollará en el siguiente hito" (estilo Lumina Glass), que F-01 reemplazará.
+- **CA-6 (sesión persistente):** Dada una sesión activa, cuando se reabre la app, entonces se entra directamente sin pasar por el login.
 
 #### F-26 — Onboarding: completar perfil
-- **Estado:** Bloqueada (D-1) · **Prioridad:** Media · **Módulos:** `feature-onboarding` · **PR:** —
-- **CA-1:** Tras crear cuenta, se muestra la bienvenida y luego "Completa tu Perfil"; con campos obligatorios vacíos no avanza.
+- **Estado:** Pendiente · **Prioridad:** Media · **Módulos:** `feature-onboarding` · **Depende de:** F-23 (autenticación, D-1 resuelta) · **PR:** —
+- **CA-1:** Tras crear cuenta, se muestra la bienvenida y luego "Completa tu Perfil" (donde se pide el nombre); con campos obligatorios vacíos no avanza.
 
 #### F-12 — Asistente de prioridades
 - **Estado:** Bloqueada (D-5) · **Prioridad:** Media · **Módulos:** `feature-tasks`, `core-domain` · **PR:** —
@@ -329,8 +332,8 @@ reportan al orquestador.
 
 | # | Pregunta | Afecta a | Decisión |
 |---|---|---|---|
-| D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? Hoy el proyecto no tiene librerías de red | F-21 (CA-2), F-22 a F-26, sincronización | Temporal: autenticación en memoria (RAM), sin backend ni persistencia; al cerrar la app se pierden cuentas y sesión. Pendiente: base de datos persistente. Sin Firebase por ahora. |
-| D-2 | ¿Qué proveedores de login social ("o continúa con")? | F-22 | Ninguno por ahora (fuera de alcance). |
+| D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? Hoy el proyecto no tiene librerías de red | F-21 (CA-2), F-22 a F-26, sincronización | Por ahora, autenticación y datos locales con Room (sin Firebase ni red). En un hito futuro se reemplaza por un servicio de backend con persistencia; `AuthRepository` en `core-domain` permite cambiar la implementación sin tocar los casos de uso ni la UI. Las contraseñas se guardan solo como hash con sal. |
+| D-2 | ¿Qué proveedores de login social ("o continúa con")? | F-22 | Ninguno: sin login social por ahora. |
 | D-3 | ¿Se aprueba el modelo de datos propuesto de la sección 6? | F-02 en adelante | Pendiente |
 | D-4 | ¿Se aprueba el algoritmo de estimación propuesto en F-11? | F-11 | Pendiente |
 | D-5 | ¿El asistente de prioridades es una heurística local o usa un servicio de IA externo? Los diseños mencionan "ritmo circadiano" y "confianza 94%": definir qué datos los respaldan | F-12 | Pendiente |
@@ -339,16 +342,17 @@ reportan al orquestador.
 | D-8 | ¿Qué integrante es responsable de cada módulo? Los agentes solo deben tocar los módulos asignados a quien los ejecuta | Todas | Pendiente |
 | D-9 | Ajustes muestra "Tema de pantalla: Cyber Dark", pero no hay tema claro. ¿Se omite la opción o queda informativa? | F-20 | Pendiente |
 
-### Responsables por módulo (completar con D-8)
+### Responsables por módulo (D-8, parcial)
 
 | Módulo | Responsable |
 |---|---|
-| `app`, `core-*` | <...> |
-| `feature-auth`, `feature-onboarding` | <...> |
-| `feature-dashboard` | <...> |
-| `feature-tasks` | <...> |
-| `feature-calendar` | <...> |
-| `feature-profile` | <...> |
+| `app`, `core-*` | Juan Fernando Sánchez Otero |
+| `feature-auth` | Juan Fernando Sánchez Otero |
+| `feature-onboarding` | Sin asignar |
+| `feature-dashboard` | Sin asignar |
+| `feature-tasks` | Sin asignar |
+| `feature-calendar` | Sin asignar |
+| `feature-profile` | Sin asignar |
 
 ## 10. Registro de cambios
 
@@ -356,3 +360,4 @@ reportan al orquestador.
 |---|---|
 | 2026-10-05 | Versión inicial a partir del scaffold, `CLAUDE.md`, `CONTRIBUTING.md` y las referencias de `/design/` |
 | 2026-10-05 | v0.2: F-00 marcada como Hecha (PR #3) y wrapper corregido a Gradle 9.6.0 (AGP 9.4.1 exige Gradle 9.x); D-1 (autenticación temporal en memoria), D-2 (login social fuera de alcance) y D-7 (`develop` existe) resueltas |
+| 2026-10-05 | v0.3: decisiones de Juan Fernando Sánchez Otero: F-00 con PR #5; D-1 (autenticación y datos locales con Room, hash con sal), D-2 (sin login social) y D-8 (responsable de `app`, `core-*` y `feature-auth`; demás módulos sin asignar); F-22 a F-26 pasan a Pendiente con criterios ajustados (registro sin nombre, recuperación simulada, pantalla provisional, sesión persistente, `LogoutUseCase`) |
