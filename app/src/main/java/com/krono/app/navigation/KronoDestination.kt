@@ -21,5 +21,11 @@ enum class KronoDestination(val route: String, @StringRes val labelRes: Int) {
     }
 }
 
-/** Ruta del grafo del flujo principal (con barra inferior). Un grafo de auth irá antes, como hermano. */
+/** Ruta del grafo del flujo principal (con barra inferior). */
 const val RUTA_GRAFO_PRINCIPAL = "principal"
+
+/**
+ * Destino tras iniciar sesión o crear cuenta mientras F-01 no se conecte al flujo
+ * autenticado (F-22 a F-25 CA-5). Para activarlo, navegar a [RUTA_GRAFO_PRINCIPAL].
+ */
+const val RUTA_PROXIMO_HITO = "proximo_hito"

@@ -13,4 +13,7 @@
     <string name="seccion_tareas">Tareas</string>
     <string name="seccion_calendario">Calendario</string>
     <string name="seccion_ajustes">Ajustes</string>
+
+    <!-- Destino provisional tras autenticarse (F-22 a F-25 CA-5); F-01 lo reemplaza -->
+    <string name="proximo_hito">Este módulo se desarrollará en el siguiente hito</string>
 </resources>
