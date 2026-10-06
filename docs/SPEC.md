@@ -297,7 +297,7 @@ Algoritmo **(propuesta, confirmar en D-4)**: promedio de `actualDuration` de las
 - **Estado:** Pendiente · **Prioridad:** Baja · **Módulos:** `feature-profile` · **Depende de:** F-02 · **PR:** —
 
 - **CA-1:** Dada la zona de seguridad, cuando se elige "Restablecer configuración y datos" y se confirma en un segundo paso, entonces se borran los datos locales y se restauran los valores por defecto.
-- **CA-2:** "Eliminar cuenta y perfil completo" queda **Bloqueada** hasta resolver D-1.
+- **CA-2:** "Eliminar cuenta y perfil completo" queda **Bloqueada** hasta contar con el servicio de backend (D-1 se resolvió de forma temporal con autenticación local en Room).
 
 ### Fase 3 — Cuenta, sincronización e IA avanzada
 
@@ -360,4 +360,4 @@ reportan al orquestador.
 |---|---|
 | 2026-10-05 | Versión inicial a partir del scaffold, `CLAUDE.md`, `CONTRIBUTING.md` y las referencias de `/design/` |
 | 2026-10-05 | v0.2: F-00 marcada como Hecha (PR #3) y wrapper corregido a Gradle 9.6.0 (AGP 9.4.1 exige Gradle 9.x); D-1 (autenticación temporal en memoria), D-2 (login social fuera de alcance) y D-7 (`develop` existe) resueltas |
-| 2026-10-05 | v0.3: decisiones de Juan Fernando Sánchez Otero: F-00 con PR #5; D-1 (autenticación y datos locales con Room, hash con sal), D-2 (sin login social) y D-8 (responsable de `app`, `core-*` y `feature-auth`; demás módulos sin asignar); F-22 a F-26 pasan a Pendiente con criterios ajustados (registro sin nombre, recuperación simulada, pantalla provisional, sesión persistente, `LogoutUseCase`) |
+| 2026-10-05 | v0.3: decisiones de Juan Fernando Sánchez Otero: F-00 con PR #5; D-1 (autenticación y datos locales con Room, hash con sal), D-2 (sin login social) y D-8 (responsable de `app`, `core-*` y `feature-auth`; demás módulos sin asignar); F-22 a F-26 pasan a Pendiente con criterios ajustados (registro sin nombre, recuperación simulada, pantalla provisional, sesión persistente, `LogoutUseCase`); aclaración: el proyecto usa AGP 8.7.0 con Gradle 9.6.0 (compila, con aviso de incompatibilidad futura con Gradle 10; subir AGP queda como tarea aparte), por lo que la nota de v0.2 sobre AGP 9.4.1 no aplica |

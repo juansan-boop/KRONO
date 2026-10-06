@@ -40,7 +40,7 @@ design/                 → export de Google Stitch (referencia visual por panta
 ## Requisitos
 
 - Android Studio (última versión estable)
-- JDK 17 (obligatorio: Kotlin 2.2.10 falla con JDK 25 u otras versiones más nuevas)
+- JDK 17 (obligatorio: con el JDK 25 que trae Android Studio el build falla por un JVM target inconsistente en `core-common:compileKotlin`; el proyecto usa Kotlin 2.1.0)
 - SDK Android 35 (compileSdk), mínimo API 26
 
 ### Configurar JDK 17
