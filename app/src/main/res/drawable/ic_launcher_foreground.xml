@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Primer plano del ícono adaptativo: el símbolo de KRONO (core-ui, capas lila y azul
+    marino) centrado en el lienzo de 108dp. Los márgenes en porcentaje escalan con el
+    tamaño al que el launcher dibuje el ícono y dejan el símbolo (aprox. 45 x 48dp)
+    dentro de la zona segura de 66dp. Ver IconoLauncherTest.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <inset
+            android:drawable="@drawable/krono_symbol_lilac"
+            android:insetLeft="29.2%"
+            android:insetTop="27.7%"
+            android:insetRight="29.2%"
+            android:insetBottom="27.7%" />
+    </item>
+    <item>
+        <inset
+            android:drawable="@drawable/krono_symbol_navy"
+            android:insetLeft="29.2%"
+            android:insetTop="27.7%"
+            android:insetRight="29.2%"
+            android:insetBottom="27.7%" />
+    </item>
+</layer-list>

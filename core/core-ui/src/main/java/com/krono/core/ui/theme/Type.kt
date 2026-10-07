@@ -44,4 +44,22 @@ val KronoTypography = Typography(
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
     ),
+    // Texto de botones y acciones destacadas.
+    titleMedium = TextStyle(
+        fontFamily = HankenGrotesk,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+    ),
+    // Etiquetas de campos y enlaces secundarios.
+    labelMedium = TextStyle(
+        fontFamily = HankenGrotesk,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+    ),
+    // Ayudas y mensajes de validación bajo los campos.
+    bodySmall = TextStyle(
+        fontFamily = HankenGrotesk,
+        fontWeight = FontWeight.Normal,
+        fontSize = 12.sp,
+    ),
 )

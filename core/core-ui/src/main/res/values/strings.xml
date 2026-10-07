@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Palabra de la marca bajo el símbolo (KronoLogo). -->
+    <string name="krono_wordmark" translatable="false">KRONO</string>
+</resources>

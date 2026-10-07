@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Capa monocromática (íconos temáticos, Android 13+): el sistema la tiñe de un solo
+    color, así que solo lleva la silueta lila; la "K" y el reloj quedan como recortes.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <inset
+            android:drawable="@drawable/krono_symbol_lilac"
+            android:insetLeft="29.2%"
+            android:insetTop="27.7%"
+            android:insetRight="29.2%"
+            android:insetBottom="27.7%" />
+    </item>
+</layer-list>

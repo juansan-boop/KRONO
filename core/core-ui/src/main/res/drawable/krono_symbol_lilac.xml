@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Símbolo de KRONO, capa lila: la "D" redondeada con su punto, la franja superior y el
+    reloj de arena. Se dibuja debajo de krono_symbol_navy (mismo lienzo de 206 x 220).
+    Sola, sirve como capa monocromática del ícono del launcher.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20.6dp"
+    android:height="22dp"
+    android:viewportWidth="206"
+    android:viewportHeight="220">
+    <path
+        android:fillColor="@color/krono_brand_lilac"
+        android:fillType="evenOdd"
+        android:pathData="M0,10 Q0,0 10,0 L95,0 A110,110 0 0 1 125.5,4.3 L91.25,50 L0,50 Z
+            M14.25,76 L71.75,76 L57.15,95.5 Q48.75,106.7 57.15,117.9 L133.75,220 L12,220 Q0,220 0,208 L0,156.3 L28.85,117.9 Q37.25,106.7 28.85,95.5 Z
+            M44,142 L75,168 L13,168 Z
+            M120,108.3 L175.2,34.7 A110,110 0 0 1 176.6,183.8 Z
+            M168.5,110 A9.5,9.5 0 1 1 187.5,110 A9.5,9.5 0 1 1 168.5,110 Z" />
+</vector>

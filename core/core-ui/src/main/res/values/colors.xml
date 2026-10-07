@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Colores de marca para recursos XML (símbolo de KRONO e ícono del launcher), que no
+    pueden leer los tokens de Compose. Cada uno replica un token de
+    core-ui/theme/Color.kt; RecursosDeMarcaTest falla si se desincronizan.
+    En Compose no se usan: el símbolo se tiñe con los tokens.
+-->
+<resources>
+    <!-- = PrimaryFixedDim (Color.kt). Lila del símbolo. -->
+    <color name="krono_brand_lilac">#ECB2FF</color>
+    <!-- = SurfaceContainerHighest (Color.kt). Azul marino de la "K" y el reloj de arena. -->
+    <color name="krono_brand_navy">#343344</color>
+    <!-- = DeepMidnight (Color.kt). Fondo del ícono del launcher. -->
+    <color name="krono_brand_midnight">#121221</color>
+</resources>

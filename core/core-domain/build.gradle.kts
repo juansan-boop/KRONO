@@ -1,5 +1,8 @@
 plugins {
     id("java-library")
+    // Plugin integrado de Gradle: expone dobles de prueba (p. ej. FakeAuthRepository)
+    // para que los módulos que dependen del dominio los reutilicen en sus pruebas.
+    id("java-test-fixtures")
     kotlin("jvm")
 }
 
@@ -9,9 +12,13 @@ java {
 }
 
 dependencies {
-    implementation(project(":core:core-common"))
+    // KronoResult y Flow forman parte de la API pública del dominio (AuthRepository, casos de uso).
+    api(project(":core:core-common"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.datetime)
+
+    testFixturesImplementation(project(":core:core-common"))
+    testFixturesImplementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
