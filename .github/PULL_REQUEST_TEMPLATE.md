@@ -8,3 +8,4 @@
 - [ ] Sin colores/espaciados hardcodeados
 - [ ] Sin imports cruzados entre feature-*
 - [ ] ViewModels sin `androidx.compose.*`
+- [ ] Código limpio y documentado con KDoc según CLAUDE.md

@@ -56,6 +56,28 @@ Scaffold recién generado: estructura de módulos, Gradle (version catalog centr
 - Usar Conventional Commits (ver `CONTRIBUTING.md`).
 - Métricas de éxito del producto (para tener en mente al priorizar features): reducción de la brecha entre tiempo estimado y real, y reducción de la tasa de entregas extemporáneas.
 
+## Calidad y documentación del código
+
+Estándar obligatorio para todo código Kotlin del repo:
+
+- **KDoc en español** para toda clase, interfaz, objeto, caso de uso y
+  función o propiedad pública. Usa `@param`, `@return` y `@throws` solo cuando
+  aporten información que el nombre y la firma no dan.
+- **Comentarios inline solo para explicar el "por qué"** (una decisión, una
+  restricción, un caso borde), nunca el "qué" hace la línea.
+- **Funciones cortas con una sola responsabilidad.** Si necesitas "y" para
+  describirla, divídela.
+- **Nombres descriptivos** para clases, funciones, variables y pruebas.
+- **Sin código muerto ni comentado.** Lo que no se usa se borra (git conserva
+  el historial).
+- **Sin números mágicos:** todo literal con significado va en una constante
+  con nombre (los espaciados y tamaños siguen saliendo de `core-ui`).
+- **Clases y archivos con un propósito claro:** un archivo no mezcla
+  responsabilidades ajenas entre sí.
+- **Alcance en los PR:** el código que se toque en un PR debe quedar
+  documentado según este estándar. No se hacen refactors masivos de lo que el
+  PR no toca.
+
 ## Uso de la skill mobile-android-design
 
 Esta skill (Material Design 3 + Jetpack Compose, de wshobson/agents) se usa

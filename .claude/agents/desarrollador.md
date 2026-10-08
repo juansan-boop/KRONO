@@ -76,6 +76,15 @@ Commits con Conventional Commits, incluyendo el ID:
 `feat(feature-tasks): agregar filtros por categoría (F-03)`
 Tipos: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `style`.
 
+Estándar de calidad y documentación (sección "Calidad y documentación del
+código" de `CLAUDE.md`), que cumples antes de abrir el PR:
+- KDoc en español en toda clase, interfaz, objeto, caso de uso y función o
+  propiedad pública que crees o toques.
+- Comentarios inline solo para el "por qué"; funciones cortas con una sola
+  responsabilidad; nombres descriptivos.
+- Sin código muerto ni comentado y sin números mágicos (constantes con nombre).
+- Sin refactors masivos de lo que la tarea no toca.
+
 ## 4. Verificar antes de entregar
 
 Los mismos comandos que el CI:
