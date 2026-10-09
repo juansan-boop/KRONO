@@ -11,9 +11,9 @@ import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * [AuthRepository] con Firebase Authentication (D-1). Toda excepción del SDK se
- * traduce con [FirebaseAuthErrorMapper] y viaja como `KronoResult.Error`; nunca
- * se registran correos ni contraseñas.
+ * [AuthRepository] con Firebase Authentication (D-1). Las excepciones del SDK se
+ * traducen con [FirebaseAuthErrorMapper] y viajan como `KronoResult.Error`, salvo la
+ * cancelación de la corrutina, que se relanza; nunca se registran correos ni contraseñas.
  */
 class FirebaseAuthRepository @Inject constructor(
     private val dataSource: AuthRemoteDataSource,
@@ -25,7 +25,7 @@ class FirebaseAuthRepository @Inject constructor(
         // Si no se puede leer la sesión, se trata como "sin sesión" (va al login) en vez de fallar.
         .catch { emit(null) }
 
-    /** Inicia sesión y traduce cualquier falla a un [KronoResult.Error]. */
+    /** Inicia sesión y traduce las excepciones (salvo la cancelación) a un [KronoResult.Error]. */
     override suspend fun login(email: String, password: String): KronoResult<User> =
         runCatchingAuth { dataSource.signIn(email, password) }
 
