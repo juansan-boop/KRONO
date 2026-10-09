@@ -18,7 +18,7 @@ app/                    → punto de entrada, navegación entre features
 core/
   core-common/          → utilidades compartidas, sin dependencias de Android
   core-domain/          → modelos y casos de uso, Kotlin puro
-  core-data/            → Room, repositorios, fuentes de datos
+  core-data/            → Firebase (Authentication y Cloud Firestore), repositorios
   core-ui/              → tema Lumina Glass System (Color, Type, Shape, Theme, Glass)
 feature-auth/           → login, registro, recuperar contraseña
 feature-onboarding/     → flujo inicial
