@@ -14,6 +14,7 @@
 .cxx
 local.properties
 *.hprof
+.claude/agent-memory/
 .claude/agent-memory-local/
 .claude/settings.local.json
 **/build
