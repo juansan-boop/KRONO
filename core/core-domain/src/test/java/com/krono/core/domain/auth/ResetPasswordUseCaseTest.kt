@@ -23,8 +23,16 @@ class ResetPasswordUseCaseTest {
     }
 
     @Test
-    fun conCorreoNoRegistradoDevuelveCorreoNoRegistrado() = runTest {
-        assertEquals(KronoResult.Error(AuthError.EmailNotRegistered), resetPassword("nadie@correo.com"))
+    fun conCorreoNoRegistradoDevuelveExitoParaNoRevelarQueCorreosTienenCuenta() = runTest {
+        assertEquals(KronoResult.Success(Unit), resetPassword("nadie@correo.com"))
+        assertEquals(1, repository.resetCalls)
+    }
+
+    @Test
+    fun sinConexionDevuelveElErrorDeConexionDelRepositorio() = runTest {
+        repository.failure = AuthError.NoConnection
+
+        assertEquals(KronoResult.Error(AuthError.NoConnection), resetPassword("ana@correo.com"))
     }
 
     @Test

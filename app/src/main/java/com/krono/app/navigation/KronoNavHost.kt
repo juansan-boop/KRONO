@@ -31,7 +31,7 @@ import com.krono.feature.auth.navigation.authGraph
 fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
     val inicio by viewModel.startDestination.collectAsState()
     if (inicio == StartDestination.Loading) {
-        // Lectura breve de la sesión en Room: solo el fondo, sin parpadeo del login.
+        // Lectura breve de la sesión de Firebase: solo el fondo, sin parpadeo del login.
         Box(Modifier.fillMaxSize().background(DeepMidnight))
         return
     }

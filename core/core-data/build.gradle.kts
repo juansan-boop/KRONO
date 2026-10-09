@@ -14,20 +14,18 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-}
-
-// Room exporta el esquema de cada versión para poder escribir y probar migraciones.
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
+    // Las excepciones de Firebase validan su mensaje con android.text.TextUtils; en las
+    // pruebas JVM esos métodos son stubs que lanzan, salvo que devuelvan valores por defecto.
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 dependencies {
     implementation(project(":core:core-common"))
     implementation(project(":core:core-domain"))
 
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

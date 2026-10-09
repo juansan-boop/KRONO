@@ -14,10 +14,12 @@ enum class AuthMessage {
     PasswordsDoNotMatch,
     InvalidCredentials,
     EmailAlreadyRegistered,
-    EmailNotRegistered,
+    NoConnection,
+    TooManyRequests,
     Unexpected,
 }
 
+/** Traduce un error recibido en `KronoResult.Error` al mensaje que verá el usuario. */
 fun Throwable.toAuthMessage(): AuthMessage = when (this) {
     AuthError.EmptyFields -> AuthMessage.EmptyFields
     AuthError.InvalidEmail -> AuthMessage.InvalidEmail
@@ -25,6 +27,7 @@ fun Throwable.toAuthMessage(): AuthMessage = when (this) {
     AuthError.PasswordsDoNotMatch -> AuthMessage.PasswordsDoNotMatch
     AuthError.InvalidCredentials -> AuthMessage.InvalidCredentials
     AuthError.EmailAlreadyRegistered -> AuthMessage.EmailAlreadyRegistered
-    AuthError.EmailNotRegistered -> AuthMessage.EmailNotRegistered
+    AuthError.NoConnection -> AuthMessage.NoConnection
+    AuthError.TooManyRequests -> AuthMessage.TooManyRequests
     else -> AuthMessage.Unexpected
 }

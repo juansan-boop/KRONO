@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+ (API 31+): krono.db guarda hashes de contraseña y la sesión; no debe salir del dispositivo. -->
+<!-- Android 12+ (API 31+): las bases de datos locales no salen del dispositivo; los datos de la cuenta viven en Firebase. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="database" />

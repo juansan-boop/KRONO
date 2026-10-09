@@ -37,10 +37,17 @@ class ForgotPasswordScreenTest {
     }
 
     @Test
-    fun conCorreoNoRegistradoMuestraElMensaje() {
-        show(ForgotPasswordUiState(email = "nadie@correo.com", error = AuthMessage.EmailNotRegistered))
+    fun sinConexionMuestraElMensajeDeSinConexion() {
+        show(ForgotPasswordUiState(email = "ana@correo.com", error = AuthMessage.NoConnection))
 
-        composeRule.onNodeWithText(str(R.string.auth_error_email_not_registered)).assertIsDisplayed()
+        composeRule.onNodeWithText(str(R.string.auth_error_no_connection)).assertIsDisplayed()
+    }
+
+    @Test
+    fun conCorreoMalFormadoMuestraElMensajeDeCorreoInvalido() {
+        show(ForgotPasswordUiState(email = "ana@correo", error = AuthMessage.InvalidEmail))
+
+        composeRule.onNodeWithText(str(R.string.auth_error_invalid_email)).assertIsDisplayed()
     }
 
     @Test
@@ -60,11 +67,11 @@ class ForgotPasswordScreenTest {
     }
 
     @Test
-    fun conExitoMuestraLaPantallaDeEnlaceEnviadoYAclaraQueEsSimulado() {
+    fun conExitoMuestraLaPantallaDeEnlaceEnviadoConElTextoNeutro() {
         show(ForgotPasswordUiState(email = "ana@correo.com", isSent = true))
 
         composeRule.onNodeWithText(str(R.string.auth_forgot_success_title)).assertIsDisplayed()
-        composeRule.onNodeWithText(str(R.string.auth_forgot_success_simulated)).assertIsDisplayed()
+        composeRule.onNodeWithText(str(R.string.auth_forgot_success_body)).assertIsDisplayed()
         composeRule.onNodeWithText(str(R.string.auth_forgot_back_to_login)).performClick()
 
         assertEquals(1, backs)

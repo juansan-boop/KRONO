@@ -24,9 +24,12 @@ sealed class AuthError : Exception() {
     /** Ya existe una cuenta con ese correo. */
     data object EmailAlreadyRegistered : AuthError()
 
-    /** No existe una cuenta con ese correo (recuperación de contraseña). */
-    data object EmailNotRegistered : AuthError()
+    /** No hay conexión a internet para hablar con el servicio de autenticación. */
+    data object NoConnection : AuthError()
 
-    /** Falla no prevista (base de datos, criptografía...). La UI muestra un mensaje genérico. */
+    /** El servicio bloqueó temporalmente los intentos por exceso de solicitudes. */
+    data object TooManyRequests : AuthError()
+
+    /** Falla no prevista del servicio de autenticación. La UI muestra un mensaje genérico. */
     data class Unexpected(override val cause: Throwable?) : AuthError()
 }

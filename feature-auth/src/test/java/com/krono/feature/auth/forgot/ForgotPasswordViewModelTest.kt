@@ -1,6 +1,7 @@
 package com.krono.feature.auth.forgot
 
 import androidx.lifecycle.SavedStateHandle
+import com.krono.core.domain.auth.AuthError
 import com.krono.core.domain.auth.FakeAuthRepository
 import com.krono.core.domain.auth.ResetPasswordUseCase
 import com.krono.feature.auth.AuthMessage
@@ -48,14 +49,39 @@ class ForgotPasswordViewModelTest {
     }
 
     @Test
-    fun conCorreoNoRegistradoMuestraQueNoEstaRegistradoEnKrono() = runTest {
+    fun conCorreoNoRegistradoPasaALaPantallaDeExitoNeutra() = runTest {
         val vm = viewModel()
         vm.onEmailChange("nadie@correo.com")
 
         vm.onSubmit()
         advanceUntilIdle()
 
-        assertEquals(AuthMessage.EmailNotRegistered, vm.uiState.value.error)
+        assertTrue(vm.uiState.value.isSent)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun conCorreoMalFormadoMuestraCorreoInvalidoSinEnviar() = runTest {
+        val vm = viewModel()
+        vm.onEmailChange("ana@correo")
+
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(AuthMessage.InvalidEmail, vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isSent)
+    }
+
+    @Test
+    fun sinConexionMuestraElMensajeDeSinConexion() = runTest {
+        repository.failure = AuthError.NoConnection
+        val vm = viewModel()
+        vm.onEmailChange("ana@correo.com")
+
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(AuthMessage.NoConnection, vm.uiState.value.error)
         assertFalse(vm.uiState.value.isSent)
     }
 

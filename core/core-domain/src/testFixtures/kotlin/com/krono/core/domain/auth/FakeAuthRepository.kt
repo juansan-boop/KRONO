@@ -65,7 +65,7 @@ class FakeAuthRepository : AuthRepository {
         lastEmailReceived = email
         awaitGate()
         failure?.let { return KronoResult.Error(it) }
-        if (email !in passwordsByEmail) return KronoResult.Error(AuthError.EmailNotRegistered)
+        // Como Firebase con la protección contra enumeración: éxito aunque el correo no exista (D-10).
         return KronoResult.Success(Unit)
     }
 

@@ -59,6 +59,13 @@ class LoginScreenTest {
     }
 
     @Test
+    fun conDemasiadosIntentosMuestraElMensajeDeEspera() {
+        show(LoginUiState(email = "ana@correo.com", password = "x", error = AuthMessage.TooManyRequests))
+
+        composeRule.onNodeWithText(str(R.string.auth_error_too_many_requests)).assertIsDisplayed()
+    }
+
+    @Test
     fun alEnviarLlamaAOnSubmit() {
         show(LoginUiState())
 

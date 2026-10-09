@@ -362,6 +362,7 @@ internal fun AuthMessage.stringRes(): Int = when (this) {
     AuthMessage.PasswordsDoNotMatch -> R.string.auth_error_passwords_mismatch
     AuthMessage.InvalidCredentials -> R.string.auth_error_invalid_credentials
     AuthMessage.EmailAlreadyRegistered -> R.string.auth_error_email_already_registered
-    AuthMessage.EmailNotRegistered -> R.string.auth_error_email_not_registered
+    AuthMessage.NoConnection -> R.string.auth_error_no_connection
+    AuthMessage.TooManyRequests -> R.string.auth_error_too_many_requests
     AuthMessage.Unexpected -> R.string.auth_error_unexpected
 }

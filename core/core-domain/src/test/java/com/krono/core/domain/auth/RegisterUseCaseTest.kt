@@ -67,8 +67,18 @@ class RegisterUseCaseTest {
     }
 
     @Test
+    fun sinConexionPropagaElErrorDeConexion() = runTest {
+        repository.failure = AuthError.NoConnection
+
+        assertEquals(
+            KronoResult.Error(AuthError.NoConnection),
+            register("ana@correo.com", "krono2026!", "krono2026!"),
+        )
+    }
+
+    @Test
     fun unaFallaInesperadaSeConvierteEnErrorInesperado() = runTest {
-        val causa = RuntimeException("sqlite")
+        val causa = RuntimeException("INTERNAL_ERROR")
         repository.failure = causa
 
         assertEquals(

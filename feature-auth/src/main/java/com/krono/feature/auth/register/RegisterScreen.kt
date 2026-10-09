@@ -132,10 +132,7 @@ private fun RegisterFormContent(
     val emailMessage = state.error?.takeIf {
         it == AuthMessage.InvalidEmail || it == AuthMessage.EmailAlreadyRegistered
     }
-    // Errores que no pertenecen a un campo concreto se muestran sobre el botón.
-    val generalMessage = state.error?.takeIf {
-        it == AuthMessage.EmptyFields || it == AuthMessage.WeakPassword || it == AuthMessage.Unexpected
-    }
+    val generalMessage = state.error?.takeIf { it in GENERAL_REGISTER_MESSAGES }
     // Ocultar el teclado sin quitar el foco: con clearFocus(), un ENTER de teclado físico
     // movía el foco a "Volver" y su key-up regresaba al login.
     val keyboard = LocalSoftwareKeyboardController.current
@@ -294,6 +291,15 @@ private fun RegisterSuccessContent(onContinue: () -> Unit, modifier: Modifier = 
         AuthPrimaryButton(text = stringResource(R.string.auth_register_success_continue), onClick = onContinue)
     }
 }
+
+/** Errores sin campo propio: se muestran sobre el botón de crear cuenta. */
+private val GENERAL_REGISTER_MESSAGES = setOf(
+    AuthMessage.EmptyFields,
+    AuthMessage.WeakPassword,
+    AuthMessage.NoConnection,
+    AuthMessage.TooManyRequests,
+    AuthMessage.Unexpected,
+)
 
 @Preview
 @Composable

@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Estado de "Recuperar contraseña" (simulado, sin envío real de correo).
+ * Estado de "Recuperar contraseña" (envío real con Firebase).
  * Inicial: correo vacío; cargando: [isLoading]; error: [error]; éxito: [isSent].
  */
 data class ForgotPasswordUiState(
@@ -26,6 +26,10 @@ data class ForgotPasswordUiState(
     val isSent: Boolean = false,
 )
 
+/**
+ * Lógica de "Recuperar contraseña" (F-24). Guarda el correo y el éxito en
+ * [SavedStateHandle] para que sobrevivan a la muerte del proceso.
+ */
 @HiltViewModel
 class ForgotPasswordViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
@@ -38,13 +42,16 @@ class ForgotPasswordViewModel @Inject constructor(
             isSent = savedStateHandle[KEY_SENT] ?: false,
         ),
     )
+    /** Estado que observa la pantalla. */
     val uiState: StateFlow<ForgotPasswordUiState> = _uiState.asStateFlow()
 
+    /** Actualiza el correo y borra el error anterior. */
     fun onEmailChange(value: String) {
         savedStateHandle[KEY_EMAIL] = value
         _uiState.update { it.copy(email = value, error = null) }
     }
 
+    /** Pide el enlace de recuperación; ignora el envío si ya hay uno en curso. */
     fun onSubmit() {
         val current = _uiState.value
         if (current.isLoading) return // sin doble envío
