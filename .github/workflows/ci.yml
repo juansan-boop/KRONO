@@ -21,6 +21,46 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # google-services.json no se versiona (tiene la configuración real de Firebase).
+      # El plugin com.google.gms.google-services lo exige para compilar `app`, así que el CI
+      # genera uno de relleno con valores falsos. Solo sirve para compilar y correr pruebas
+      # unitarias: la app resultante no puede conectarse a Firebase.
+      - name: Create placeholder google-services.json
+        run: |
+          if [ ! -f app/google-services.json ]; then
+            cat > app/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "krono-ci-placeholder",
+              "storage_bucket": "krono-ci-placeholder.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                  "android_client_info": {
+                    "package_name": "com.krono.app"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "placeholder-api-key-for-ci"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
+          fi
+
       - name: Lint
         run: ./gradlew lint
 
