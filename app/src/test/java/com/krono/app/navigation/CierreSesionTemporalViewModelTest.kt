@@ -37,6 +37,45 @@ class CierreSesionTemporalViewModelTest {
     private fun viewModel() = CierreSesionTemporalViewModel(LogoutUseCase(repository))
 
     @Test
+    fun alInicioNoSeMuestraLaConfirmacion() {
+        assertFalse(viewModel().confirmacionVisible.value)
+    }
+
+    @Test
+    fun alSolicitarElCierreSeMuestraLaConfirmacionSinCerrarLaSesion() = runTest {
+        val vm = viewModel()
+
+        vm.solicitarCierre()
+        advanceUntilIdle()
+
+        assertTrue(vm.confirmacionVisible.value)
+        assertEquals("1", repository.currentSession?.id)
+    }
+
+    @Test
+    fun alCancelarSeOcultaLaConfirmacionYLaSesionSigueActiva() = runTest {
+        val vm = viewModel()
+        vm.solicitarCierre()
+
+        vm.cancelarCierre()
+        advanceUntilIdle()
+
+        assertFalse(vm.confirmacionVisible.value)
+        assertEquals("1", repository.currentSession?.id)
+    }
+
+    @Test
+    fun alConfirmarSeOcultaLaConfirmacion() = runTest {
+        val vm = viewModel()
+        vm.solicitarCierre()
+
+        vm.cerrarSesion()
+        advanceUntilIdle()
+
+        assertFalse(vm.confirmacionVisible.value)
+    }
+
+    @Test
     fun alCerrarSesionSeLimpiaLaSesionYSeEmiteLaNavegacionAlLogin() = runTest {
         val vm = viewModel()
 

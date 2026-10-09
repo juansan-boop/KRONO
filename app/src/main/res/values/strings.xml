@@ -13,11 +13,12 @@
     <string name="seccion_tareas">Tareas</string>
     <string name="seccion_calendario">Calendario</string>
     <string name="seccion_ajustes">Ajustes</string>
+    <string name="seccion_proximamente">Próximamente</string>
 
-    <!-- Destino provisional tras autenticarse (F-22 a F-25 CA-5); F-01 lo reemplaza -->
-    <string name="proximo_hito">Este módulo se desarrollará en el siguiente hito</string>
-
-    <!-- TEMPORAL: se elimina cuando existan F-01/F-19 (feature-profile) -->
+    <!-- TEMPORAL: se elimina cuando exista feature-profile (F-19) -->
     <string name="cerrar_sesion">Cerrar sesión</string>
     <string name="cerrar_sesion_error">No pudimos cerrar tu sesión. Inténtalo de nuevo.</string>
+    <string name="cerrar_sesion_dialogo_titulo">¿Cerrar sesión?</string>
+    <string name="cerrar_sesion_dialogo_mensaje">Tendrás que volver a iniciar sesión para usar KRONO.</string>
+    <string name="cancelar">Cancelar</string>
 </resources>
