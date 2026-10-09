@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.krono.app.R
 import com.krono.core.ui.theme.Outline
 import com.krono.core.ui.theme.PrimaryFixedDim
@@ -41,15 +43,14 @@ fun KronoBottomBar(
     ) {
         KronoDestination.entries.forEach { destino ->
             val etiqueta = stringResource(destino.labelRes)
+            val descripcion = stringResource(R.string.nav_ir_a, etiqueta)
             NavigationBarItem(
                 selected = destino == seleccionado,
                 onClick = { onSeleccionar(destino) },
-                icon = {
-                    Icon(
-                        imageVector = destino.icono,
-                        contentDescription = stringResource(R.string.nav_ir_a, etiqueta),
-                    )
-                },
+                // La descripción va en el ítem y no en el ícono: con la etiqueta siempre visible,
+                // NavigationBarItem borra la semántica del ícono y TalkBack no la anunciaría.
+                modifier = Modifier.semantics { contentDescription = descripcion },
+                icon = { Icon(imageVector = destino.icono, contentDescription = null) },
                 label = { Text(etiqueta) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = PrimaryFixedDim,

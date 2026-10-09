@@ -1,5 +1,6 @@
 package com.krono.app.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -28,12 +30,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.krono.app.R
 import com.krono.core.ui.theme.ErrorColor
+import com.krono.core.ui.theme.KronoShapes
 import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
 import com.krono.core.ui.theme.OnError
 import com.krono.core.ui.theme.OnSurface
 import com.krono.core.ui.theme.OnSurfaceVariant
 import com.krono.core.ui.theme.OutlineVariant
+import com.krono.core.ui.theme.SurfaceContainerHigh
 import com.krono.core.ui.theme.glassSurface
 
 // TEMPORAL: se elimina cuando exista feature-profile (F-19); ver CierreSesionTemporal.kt.
@@ -111,7 +115,10 @@ fun PantallaAjustes(
     }
 }
 
-/** Diálogo "¿Cerrar sesión?" con las acciones Cancelar y Cerrar sesión. */
+/**
+ * Diálogo "¿Cerrar sesión?" con las acciones Cancelar y Cerrar sesión. Sobre una base opaca se
+ * aplica el vidrio para que Ajustes no se transparente detrás del texto.
+ */
 @Composable
 fun DialogoCerrarSesion(
     alCancelar: () -> Unit,
@@ -122,6 +129,8 @@ fun DialogoCerrarSesion(
         Column(
             modifier = modifier
                 .fillMaxWidth()
+                .clip(KronoShapes.medium)
+                .background(SurfaceContainerHigh)
                 .glassSurface()
                 .padding(KronoSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,

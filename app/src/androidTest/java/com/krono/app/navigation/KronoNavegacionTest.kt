@@ -89,10 +89,9 @@ class KronoNavegacionTest {
         )
     }
 
-    /** Ícono de una pestaña; se busca en el árbol sin fusionar porque la descripción vive en el ícono. */
+    /** Pestaña localizada por "Ir a <sección>" en el árbol fusionado, el mismo que consume TalkBack. */
     private fun pestana(@StringRes etiqueta: Int) = composeRule.onNodeWithContentDescription(
         label = texto(R.string.nav_ir_a, texto(etiqueta)),
-        useUnmergedTree = true,
     )
 
     private fun tocarPestana(@StringRes etiqueta: Int) {
