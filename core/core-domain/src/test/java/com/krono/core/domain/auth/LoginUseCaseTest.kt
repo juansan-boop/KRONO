@@ -63,6 +63,16 @@ class LoginUseCaseTest {
     }
 
     @Test
+    fun demasiadosIntentosLlegaComoErrorDeDominioSinEnvolver() = runTest {
+        repository.failure = AuthError.TooManyRequests
+
+        assertEquals(
+            KronoResult.Error(AuthError.TooManyRequests),
+            login(email = "ana@correo.com", password = "krono2026!"),
+        )
+    }
+
+    @Test
     fun unaFallaInesperadaDelRepositorioSeConvierteEnErrorInesperado() = runTest {
         val causa = IllegalStateException("disco lleno")
         repository.failure = causa
