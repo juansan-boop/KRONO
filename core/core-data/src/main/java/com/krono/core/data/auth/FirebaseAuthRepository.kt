@@ -1,0 +1,54 @@
+package com.krono.core.data.auth
+
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.krono.core.common.KronoResult
+import com.krono.core.domain.auth.AuthRepository
+import com.krono.core.domain.auth.User
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import javax.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * [AuthRepository] con Firebase Authentication (D-1). Toda excepción del SDK se
+ * traduce con [FirebaseAuthErrorMapper] y viaja como `KronoResult.Error`; nunca
+ * se registran correos ni contraseñas.
+ */
+class FirebaseAuthRepository @Inject constructor(
+    private val dataSource: AuthRemoteDataSource,
+) : AuthRepository {
+
+    override fun observeSession(): Flow<User?> = dataSource.observeUser()
+        .distinctUntilChanged()
+        // Si no se puede leer la sesión, se trata como "sin sesión" (va al login) en vez de fallar.
+        .catch { emit(null) }
+
+    override suspend fun login(email: String, password: String): KronoResult<User> =
+        runCatchingAuth { dataSource.signIn(email, password) }
+
+    override suspend fun register(email: String, password: String): KronoResult<User> =
+        runCatchingAuth(attemptedPassword = password) { dataSource.createAccount(email, password) }
+
+    override suspend fun requestPasswordReset(email: String): KronoResult<Unit> = runCatchingAuth {
+        try {
+            dataSource.sendPasswordReset(email)
+        } catch (e: FirebaseAuthInvalidUserException) {
+            // Si la protección contra enumeración se desactiva, Firebase avisa que el correo
+            // no existe; se responde igual que con éxito para no revelarlo (D-10).
+        }
+    }
+
+    override suspend fun logout(): KronoResult<Unit> = runCatchingAuth { dataSource.signOut() }
+
+    private suspend fun <T> runCatchingAuth(
+        attemptedPassword: String = "",
+        block: suspend () -> T,
+    ): KronoResult<T> = try {
+        KronoResult.Success(block())
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        KronoResult.Error(FirebaseAuthErrorMapper.map(e, attemptedPassword))
+    }
+}

@@ -14,6 +14,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
+    // Las excepciones de Firebase validan su mensaje con android.text.TextUtils; en las
+    // pruebas JVM esos métodos son stubs que lanzan, salvo que devuelvan valores por defecto.
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 
 // Room exporta el esquema de cada versión para poder escribir y probar migraciones.

@@ -1,12 +1,9 @@
 package com.krono.core.data.di
 
-import android.content.Context
-import androidx.room.Room
-import com.krono.core.data.auth.AuthRepositoryImpl
-import com.krono.core.data.auth.PasswordHasher
-import com.krono.core.data.auth.Pbkdf2PasswordHasher
-import com.krono.core.data.auth.local.AuthDao
-import com.krono.core.data.local.KronoDatabase
+import com.google.firebase.auth.FirebaseAuth
+import com.krono.core.data.auth.AuthRemoteDataSource
+import com.krono.core.data.auth.FirebaseAuthDataSource
+import com.krono.core.data.auth.FirebaseAuthRepository
 import com.krono.core.domain.auth.AuthRepository
 import com.krono.core.domain.auth.LoginUseCase
 import com.krono.core.domain.auth.LogoutUseCase
@@ -17,37 +14,34 @@ import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import javax.inject.Singleton
 
+/** Provee el cliente de Firebase Authentication, que se inicializa con `google-services.json` de `app`. */
 @Module
 @InstallIn(SingletonComponent::class)
-object DatabaseModule {
+object FirebaseModule {
 
+    /** Instancia única de Firebase Authentication de la app. */
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): KronoDatabase =
-        Room.databaseBuilder(context, KronoDatabase::class.java, KronoDatabase.NAME).build()
-
-    @Provides
-    fun provideAuthDao(database: KronoDatabase): AuthDao = database.authDao()
-
-    @Provides
-    @IoDispatcher
-    fun provideIoDispatcher(): CoroutineDispatcher = Dispatchers.IO
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 }
 
+/** Enlaza el contrato de autenticación del dominio con su implementación en Firebase (D-1). */
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AuthBindingsModule {
 
-    /** Punto único a cambiar cuando exista el backend (D-1). */
+    /** Fuente remota de autenticación: Firebase Authentication. */
     @Binds
     @Singleton
-    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
+    abstract fun bindAuthRemoteDataSource(impl: FirebaseAuthDataSource): AuthRemoteDataSource
+
+    /** Repositorio de autenticación que consumen los casos de uso. */
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(impl: FirebaseAuthRepository): AuthRepository
 }
 
 /**
@@ -57,10 +51,6 @@ abstract class AuthBindingsModule {
 @Module
 @InstallIn(SingletonComponent::class)
 object AuthModule {
-
-    @Provides
-    @Singleton
-    fun providePasswordHasher(): PasswordHasher = Pbkdf2PasswordHasher()
 
     @Provides
     fun provideLoginUseCase(repository: AuthRepository) = LoginUseCase(repository)
