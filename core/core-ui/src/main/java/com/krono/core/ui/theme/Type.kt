@@ -52,8 +52,36 @@ val JetBrainsMono = FontFamily(
     Font(R.font.jetbrains_mono_medium, FontWeight.Medium),
 )
 
-/** Escala tipográfica de KRONO; los estilos no definidos usan los valores por defecto de Material. */
-val KronoTypography = Typography(
+/**
+ * Base de Material 3 con todos los estilos en Hanken Grotesk. Conserva el resto de
+ * métricas por defecto de los estilos que [KronoTypography] no personaliza, de modo que
+ * ningún texto caiga en la fuente del sistema.
+ */
+private val TipografiaBase: Typography = Typography().let { base ->
+    base.copy(
+        displayLarge = base.displayLarge.copy(fontFamily = HankenGrotesk),
+        displayMedium = base.displayMedium.copy(fontFamily = HankenGrotesk),
+        displaySmall = base.displaySmall.copy(fontFamily = HankenGrotesk),
+        headlineLarge = base.headlineLarge.copy(fontFamily = HankenGrotesk),
+        headlineMedium = base.headlineMedium.copy(fontFamily = HankenGrotesk),
+        headlineSmall = base.headlineSmall.copy(fontFamily = HankenGrotesk),
+        titleLarge = base.titleLarge.copy(fontFamily = HankenGrotesk),
+        titleMedium = base.titleMedium.copy(fontFamily = HankenGrotesk),
+        titleSmall = base.titleSmall.copy(fontFamily = HankenGrotesk),
+        bodyLarge = base.bodyLarge.copy(fontFamily = HankenGrotesk),
+        bodyMedium = base.bodyMedium.copy(fontFamily = HankenGrotesk),
+        bodySmall = base.bodySmall.copy(fontFamily = HankenGrotesk),
+        labelLarge = base.labelLarge.copy(fontFamily = HankenGrotesk),
+        labelMedium = base.labelMedium.copy(fontFamily = HankenGrotesk),
+        labelSmall = base.labelSmall.copy(fontFamily = HankenGrotesk),
+    )
+}
+
+/**
+ * Escala tipográfica de KRONO. Los estilos personalizados fijan fuente, peso y tamaño; los
+ * demás heredan de [TipografiaBase] y por tanto también usan Hanken Grotesk.
+ */
+val KronoTypography = TipografiaBase.copy(
     headlineLarge = TextStyle(
         fontFamily = HankenGrotesk,
         fontWeight = FontWeight.Bold,
