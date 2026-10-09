@@ -11,6 +11,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import com.krono.core.ui.theme.KronoTheme
+import com.krono.feature.auth.forgot.ForgotPasswordScreen
+import com.krono.feature.auth.forgot.ForgotPasswordUiState
 import com.krono.feature.auth.login.LoginScreen
 import com.krono.feature.auth.login.LoginUiState
 import com.krono.feature.auth.register.RegisterScreen
@@ -66,6 +68,10 @@ class EscalaDeFuenteTest {
         )
     }
 
+    private fun mostrarRecuperar(estado: ForgotPasswordUiState = ForgotPasswordUiState()) = mostrarConEscalaMaxima {
+        ForgotPasswordScreen(state = estado, onEmailChange = {}, onSubmit = {}, onBack = {})
+    }
+
     private fun SemanticsNodeInteraction.disposicionDelTexto(): TextLayoutResult {
         val resultados = mutableListOf<TextLayoutResult>()
         fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(resultados)
@@ -113,6 +119,51 @@ class EscalaDeFuenteTest {
         assertTrue("El enlace sobresale por la derecha", enlace.right <= pantalla.right)
         assertTrue("El enlace sobresale por la izquierda", enlace.left >= pantalla.left)
         textoSinPalabrasPartidas(str(R.string.auth_register_sign_in))
+    }
+
+    /** El texto no debe necesitar más alto del que recibió: si lo necesita, el botón lo recorta. */
+    private fun textoCompletoVisible(texto: String) {
+        val disposicion = composeRule.onNodeWithText(texto, useUnmergedTree = true).disposicionDelTexto()
+        assertTrue(
+            "'$texto' se recorta: necesita ${disposicion.multiParagraph.height}px y tiene ${disposicion.size.height}px",
+            ceil(disposicion.multiParagraph.height) <= disposicion.size.height,
+        )
+    }
+
+    @Test
+    fun enRecuperarElBotonEnviarEnlaceMuestraSuTextoCompleto() {
+        mostrarRecuperar()
+
+        textoCompletoVisible(str(R.string.auth_forgot_submit))
+        textoSinPalabrasPartidas(str(R.string.auth_forgot_submit))
+    }
+
+    @Test
+    fun enRecuperarElBotonEnCargaMuestraSuTextoCompleto() {
+        mostrarRecuperar(ForgotPasswordUiState(isLoading = true))
+
+        textoCompletoVisible(str(R.string.auth_forgot_loading))
+    }
+
+    @Test
+    fun enRecuperarElBotonDeLaPantallaDeExitoMuestraSuTextoCompleto() {
+        mostrarRecuperar(ForgotPasswordUiState(isSent = true))
+
+        textoCompletoVisible(str(R.string.auth_forgot_back_to_login))
+    }
+
+    @Test
+    fun enElLoginElBotonPrincipalMuestraSuTextoCompleto() {
+        mostrarLogin()
+
+        textoCompletoVisible(str(R.string.auth_login_submit))
+    }
+
+    @Test
+    fun enElRegistroElBotonPrincipalMuestraSuTextoCompleto() {
+        mostrarRegistro()
+
+        textoCompletoVisible(str(R.string.auth_register_submit))
     }
 
     private companion object {

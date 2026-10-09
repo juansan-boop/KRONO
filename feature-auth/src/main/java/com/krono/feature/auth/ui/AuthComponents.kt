@@ -259,7 +259,11 @@ internal fun AuthTextField(
     )
 }
 
-/** Botón primario con estado de carga: muestra progreso y queda deshabilitado (sin doble envío). */
+/**
+ * Botón primario con estado de carga: muestra progreso y queda deshabilitado (sin doble envío).
+ * Su alto es un mínimo y el texto puede ocupar varias líneas (centradas): con la fuente
+ * ampliada el botón crece en vez de recortar la etiqueta.
+ */
 @Composable
 internal fun AuthPrimaryButton(
     text: String,
@@ -274,7 +278,7 @@ internal fun AuthPrimaryButton(
         enabled = !isLoading,
         modifier = modifier
             .fillMaxWidth()
-            .height(KronoSizes.controlHeight),
+            .heightIn(min = KronoSizes.controlHeight),
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
             containerColor = PrimaryMagenta,
@@ -290,9 +294,9 @@ internal fun AuthPrimaryButton(
                 strokeWidth = KronoSizes.progressStroke,
             )
             Spacer(Modifier.width(KronoSpacing.sm))
-            Text(text = loadingText, style = MaterialTheme.typography.titleMedium)
+            Text(text = loadingText, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         } else {
-            Text(text = text, style = MaterialTheme.typography.titleMedium)
+            Text(text = text, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             if (showArrow) {
                 Spacer(Modifier.width(KronoSpacing.sm))
                 Icon(

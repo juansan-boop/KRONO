@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -99,7 +100,7 @@ fun PantallaAjustes(
             enabled = !cerrando,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(KronoSizes.controlHeight),
+                .heightIn(min = KronoSizes.controlHeight),
             shape = MaterialTheme.shapes.small,
             border = ButtonDefaults.outlinedButtonBorder(enabled = !cerrando).copy(
                 brush = SolidColor(OutlineVariant),
@@ -107,7 +108,11 @@ fun PantallaAjustes(
             colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface),
         ) {
             IconoCerrarSesion()
-            Text(text = stringResource(R.string.cerrar_sesion), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.cerrar_sesion),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
         }
     }
     if (confirmacionVisible) {
@@ -152,26 +157,34 @@ fun DialogoCerrarSesion(
                 onClick = alConfirmar,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(KronoSizes.controlHeight),
+                    .heightIn(min = KronoSizes.controlHeight),
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(containerColor = ErrorColor, contentColor = OnError),
             ) {
                 IconoCerrarSesion()
-                Text(text = stringResource(R.string.cerrar_sesion), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(R.string.cerrar_sesion),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
             }
             Spacer(Modifier.height(KronoSpacing.sm))
             OutlinedButton(
                 onClick = alCancelar,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(KronoSizes.controlHeight),
+                    .heightIn(min = KronoSizes.controlHeight),
                 shape = MaterialTheme.shapes.small,
                 border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                     brush = SolidColor(OutlineVariant),
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface),
             ) {
-                Text(text = stringResource(R.string.cancelar), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(R.string.cancelar),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }
