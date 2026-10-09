@@ -22,10 +22,14 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object FirebaseModule {
 
-    /** Instancia única de Firebase Authentication de la app. */
+    /** Idioma de los correos que envía Firebase (por ejemplo, el de recuperar contraseña). */
+    private const val EMAIL_LANGUAGE_CODE = "es"
+
+    /** Instancia única de Firebase Authentication de la app, con los correos en español. */
     @Provides
     @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+    fun provideFirebaseAuth(): FirebaseAuth =
+        FirebaseAuth.getInstance().apply { setLanguageCode(EMAIL_LANGUAGE_CODE) }
 }
 
 /** Enlaza el contrato de autenticación del dominio con su implementación en Firebase (D-1). */
@@ -52,18 +56,23 @@ abstract class AuthBindingsModule {
 @InstallIn(SingletonComponent::class)
 object AuthModule {
 
+    /** Caso de uso de iniciar sesión (F-22). */
     @Provides
     fun provideLoginUseCase(repository: AuthRepository) = LoginUseCase(repository)
 
+    /** Caso de uso de crear cuenta (F-23). */
     @Provides
     fun provideRegisterUseCase(repository: AuthRepository) = RegisterUseCase(repository)
 
+    /** Caso de uso de recuperar contraseña (F-24). */
     @Provides
     fun provideResetPasswordUseCase(repository: AuthRepository) = ResetPasswordUseCase(repository)
 
+    /** Caso de uso de cerrar sesión (F-25). */
     @Provides
     fun provideLogoutUseCase(repository: AuthRepository) = LogoutUseCase(repository)
 
+    /** Caso de uso que observa la sesión activa (CA-6). */
     @Provides
     fun provideObserveSessionUseCase(repository: AuthRepository) = ObserveSessionUseCase(repository)
 }
