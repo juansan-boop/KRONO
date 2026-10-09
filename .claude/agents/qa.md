@@ -58,6 +58,12 @@ Revisa solo las líneas agregadas por el PR (`gh pr diff <n>`):
    `contentDescription`). Si afecta listas, arranque o recomposición, carga
    `performance-optimization`.
 6. Verifica que el checklist de la plantilla del PR esté marcado y sea cierto.
+7. Verifica el estándar de "Calidad y documentación del código" de `CLAUDE.md`
+   en las líneas agregadas por el PR. Es hallazgo BLOQUEANTE (crítico) que
+   falte KDoc en API pública (clase, interfaz, objeto, caso de uso, función o
+   propiedad pública) o que haya complejidad innecesaria (funciones largas con
+   varias responsabilidades, código muerto o comentado, números mágicos).
+   Comentarios que explican el "qué" y nombres poco descriptivos son advertencias.
 
 ## 4. Ejecución local
 
