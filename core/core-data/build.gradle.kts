@@ -19,18 +19,9 @@ android {
     testOptions { unitTests.isReturnDefaultValues = true }
 }
 
-// Room exporta el esquema de cada versión para poder escribir y probar migraciones.
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
 dependencies {
     implementation(project(":core:core-common"))
     implementation(project(":core:core-domain"))
-
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)

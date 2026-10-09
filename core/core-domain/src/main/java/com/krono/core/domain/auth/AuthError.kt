@@ -24,9 +24,6 @@ sealed class AuthError : Exception() {
     /** Ya existe una cuenta con ese correo. */
     data object EmailAlreadyRegistered : AuthError()
 
-    /** No existe una cuenta con ese correo (recuperación de contraseña). */
-    data object EmailNotRegistered : AuthError()
-
     /** No hay conexión a internet para hablar con el servicio de autenticación. */
     data object NoConnection : AuthError()
 

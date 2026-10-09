@@ -78,7 +78,7 @@ class RegisterUseCaseTest {
 
     @Test
     fun unaFallaInesperadaSeConvierteEnErrorInesperado() = runTest {
-        val causa = RuntimeException("sqlite")
+        val causa = RuntimeException("INTERNAL_ERROR")
         repository.failure = causa
 
         assertEquals(
