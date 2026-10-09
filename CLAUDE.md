@@ -36,7 +36,7 @@ Reglas duras:
 - Los módulos feature **nunca** se importan entre sí directamente — solo `app` puede depender de todos. Comunicación entre features vía `core-domain` o navegación.
 - Sin colores/espaciados hardcodeados — todo desde `core-ui`.
 - Inyección de dependencias con Hilt (ya configurado en `app` y en cada `feature-*`).
-- Persistencia con Room (dependencia ya declarada en `core-data`).
+- Persistencia con Cloud Firestore (fuente única de datos, con su caché offline) y autenticación con Firebase Authentication, ambas en `core-data`; Room se elimina (D-1).
 
 ## Diseño de referencia
 
