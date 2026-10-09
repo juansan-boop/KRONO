@@ -14,6 +14,7 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /** Aplica [KronoTheme] y monta la raíz de la UI ([KronoApp]). */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

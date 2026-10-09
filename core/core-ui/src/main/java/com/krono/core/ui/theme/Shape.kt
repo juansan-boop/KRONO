@@ -15,10 +15,16 @@ val KronoShapes = Shapes(
 
 /** Espaciados base del grid de 8dp — usar siempre estos tokens, nunca dp sueltos. */
 object KronoSpacing {
+    /** Separación mínima. */
     val xs = 4.dp
+    /** Separación pequeña. */
     val sm = 8.dp
+    /** Separación estándar. */
     val md = 16.dp
+    /** Separación grande. */
     val lg = 24.dp
+    /** Separación muy grande. */
     val xl = 32.dp
+    /** Separación máxima. */
     val xxl = 48.dp
 }

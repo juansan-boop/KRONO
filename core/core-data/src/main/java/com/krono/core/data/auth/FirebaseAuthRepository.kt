@@ -19,17 +19,21 @@ class FirebaseAuthRepository @Inject constructor(
     private val dataSource: AuthRemoteDataSource,
 ) : AuthRepository {
 
+    /** Emite la sesión actual sin repetir valores iguales consecutivos. */
     override fun observeSession(): Flow<User?> = dataSource.observeUser()
         .distinctUntilChanged()
         // Si no se puede leer la sesión, se trata como "sin sesión" (va al login) en vez de fallar.
         .catch { emit(null) }
 
+    /** Inicia sesión y traduce cualquier falla a un [KronoResult.Error]. */
     override suspend fun login(email: String, password: String): KronoResult<User> =
         runCatchingAuth { dataSource.signIn(email, password) }
 
+    /** Crea la cuenta; el mapeo de errores recibe la contraseña para distinguir una contraseña débil. */
     override suspend fun register(email: String, password: String): KronoResult<User> =
         runCatchingAuth(attemptedPassword = password) { dataSource.createAccount(email, password) }
 
+    /** Solicita el correo de recuperación; responde con éxito aunque el correo no exista. */
     override suspend fun requestPasswordReset(email: String): KronoResult<Unit> = runCatchingAuth {
         try {
             dataSource.sendPasswordReset(email)
@@ -39,6 +43,7 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
+    /** Cierra la sesión. */
     override suspend fun logout(): KronoResult<Unit> = runCatchingAuth { dataSource.signOut() }
 
     private suspend fun <T> runCatchingAuth(

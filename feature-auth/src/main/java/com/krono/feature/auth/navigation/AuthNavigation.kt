@@ -11,9 +11,13 @@ import com.krono.feature.auth.register.RegisterRoute
 /** Ruta del grafo de autenticación. `app` la usa como destino inicial cuando no hay sesión. */
 const val AUTH_GRAPH_ROUTE = "auth"
 
+/** Rutas internas del grafo de autenticación. */
 internal object AuthRoutes {
+    /** Pantalla de iniciar sesión. */
     const val LOGIN = "auth/login"
+    /** Pantalla de crear cuenta. */
     const val REGISTER = "auth/register"
+    /** Pantalla de recuperar contraseña. */
     const val FORGOT_PASSWORD = "auth/forgot-password"
 }
 

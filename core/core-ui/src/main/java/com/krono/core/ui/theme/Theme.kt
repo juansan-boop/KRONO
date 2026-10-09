@@ -35,6 +35,9 @@ private val KronoDarkColorScheme = darkColorScheme(
     onError = OnError,
 )
 
+/**
+ * Aplica el tema Lumina Glass System (siempre oscuro) a [content].
+ */
 @Composable
 fun KronoTheme(content: @Composable () -> Unit) {
     MaterialTheme(

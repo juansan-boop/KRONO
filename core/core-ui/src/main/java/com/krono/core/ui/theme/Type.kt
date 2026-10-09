@@ -15,9 +15,12 @@ import androidx.compose.ui.unit.sp
  * descargadas de Google Fonts) y reemplazar FontFamily.Default por los
  * FontFamily generados con Font(R.font....).
  */
+/** Familia para texto general de UI (Hanken Grotesk). */
 val HankenGrotesk = FontFamily.Default // placeholder hasta agregar el recurso real
+/** Familia para datos y números (JetBrains Mono). */
 val JetBrainsMono = FontFamily.Monospace // placeholder hasta agregar el recurso real
 
+/** Escala tipográfica de KRONO; los estilos no definidos usan los valores por defecto de Material. */
 val KronoTypography = Typography(
     headlineLarge = TextStyle(
         fontFamily = HankenGrotesk,
