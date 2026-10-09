@@ -14,9 +14,12 @@ enum class KronoDestination(val route: String, @StringRes val labelRes: Int) {
     Ajustes("ajustes", R.string.nav_ajustes),
     ;
 
+    /** Utilidades para resolver destinos de la barra inferior. */
     companion object {
+        /** Destino con el que arranca el flujo principal. */
         val Inicial: KronoDestination = Inicio
 
+        /** Devuelve el destino de la barra inferior que corresponde a [route], o `null` si no es ninguno. */
         fun desdeRuta(route: String?): KronoDestination? = entries.firstOrNull { it.route == route }
     }
 }

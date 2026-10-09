@@ -20,9 +20,13 @@ import javax.inject.Inject
  * Inicial: correo vacío; cargando: [isLoading]; error: [error]; éxito: [isSent].
  */
 data class ForgotPasswordUiState(
+    /** Correo escrito por el usuario. */
     val email: String = "",
+    /** Hay un envío en curso. */
     val isLoading: Boolean = false,
+    /** Mensaje de error vigente, o `null`. */
     val error: AuthMessage? = null,
+    /** El enlace de recuperación ya se solicitó. */
     val isSent: Boolean = false,
 )
 
@@ -71,7 +75,9 @@ class ForgotPasswordViewModel @Inject constructor(
     }
 
     private companion object {
+        /** Clave del correo en el [SavedStateHandle]. */
         const val KEY_EMAIL = "forgot_email"
+        /** Clave del indicador de envío exitoso en el [SavedStateHandle]. */
         const val KEY_SENT = "forgot_sent"
     }
 }

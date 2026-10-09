@@ -14,6 +14,7 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class LoginUseCase(private val repository: AuthRepository) {
 
+    /** Inicia sesión; falla con [AuthError.EmptyFields] o [AuthError.InvalidEmail] sin llegar al repositorio. */
     suspend operator fun invoke(email: String, password: String): KronoResult<User> {
         if (email.isBlank() || password.isEmpty()) return KronoResult.Error(AuthError.EmptyFields)
         if (!EmailValidator.isValid(email)) return KronoResult.Error(AuthError.InvalidEmail)
@@ -21,8 +22,10 @@ class LoginUseCase(private val repository: AuthRepository) {
     }
 }
 
+/** Crea una cuenta tras validar campos, correo, política de contraseña y confirmación. */
 class RegisterUseCase(private val repository: AuthRepository) {
 
+    /** Registra la cuenta; devuelve el primer incumplimiento de validación como [AuthError] sin llegar al repositorio. */
     suspend operator fun invoke(email: String, password: String, confirmation: String): KronoResult<User> {
         if (email.isBlank() || password.isEmpty() || confirmation.isEmpty()) {
             return KronoResult.Error(AuthError.EmptyFields)
@@ -35,8 +38,10 @@ class RegisterUseCase(private val repository: AuthRepository) {
     }
 }
 
+/** Solicita el correo de recuperación de contraseña tras validar el correo. */
 class ResetPasswordUseCase(private val repository: AuthRepository) {
 
+    /** Pide el enlace de recuperación para [email]; falla con [AuthError.EmptyFields] o [AuthError.InvalidEmail]. */
     suspend operator fun invoke(email: String): KronoResult<Unit> {
         if (email.isBlank()) return KronoResult.Error(AuthError.EmptyFields)
         if (!EmailValidator.isValid(email)) return KronoResult.Error(AuthError.InvalidEmail)
@@ -47,12 +52,14 @@ class ResetPasswordUseCase(private val repository: AuthRepository) {
 /** Cierra la sesión. Sin UI por ahora: el botón vivirá en `feature-profile` (F-25 CA-4). */
 class LogoutUseCase(private val repository: AuthRepository) {
 
+    /** Cierra la sesión actual. */
     suspend operator fun invoke(): KronoResult<Unit> = safeCall { repository.logout() }
 }
 
 /** Sesión activa (o `null`). `app` la usa para decidir si arranca en el login o dentro de la app. */
 class ObserveSessionUseCase(private val repository: AuthRepository) {
 
+    /** Emite el usuario con sesión, o `null` cuando no hay sesión. */
     operator fun invoke(): Flow<User?> = repository.observeSession()
 }
 

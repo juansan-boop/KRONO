@@ -52,9 +52,11 @@ class CierreSesionTemporalViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _cerrando = MutableStateFlow(false)
+    /** Verdadero mientras el cierre de sesión está en curso; la UI deshabilita el botón. */
     val cerrando: StateFlow<Boolean> = _cerrando.asStateFlow()
 
     private val _hayError = MutableStateFlow(false)
+    /** Verdadero si el último intento de cerrar sesión falló. */
     val hayError: StateFlow<Boolean> = _hayError.asStateFlow()
 
     private val _sesionCerrada = Channel<Unit>(Channel.BUFFERED)
@@ -62,6 +64,7 @@ class CierreSesionTemporalViewModel @Inject constructor(
     /** Se emite una vez la sesión quedó limpia; la UI navega al login. */
     val sesionCerrada: Flow<Unit> = _sesionCerrada.receiveAsFlow()
 
+    /** Cierra la sesión; ignora la llamada si ya hay un cierre en curso. */
     fun cerrarSesion() {
         if (_cerrando.value) return
         _cerrando.value = true

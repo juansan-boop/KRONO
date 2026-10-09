@@ -14,6 +14,9 @@ import javax.inject.Inject
 /** Destino con el que arranca la app según la sesión persistida (F-22 a F-25 CA-6). */
 enum class StartDestination { Loading, Auth, Home }
 
+/**
+ * Decide el destino inicial de la app a partir de la sesión persistida.
+ */
 @HiltViewModel
 class KronoAppViewModel @Inject constructor(
     observeSession: ObserveSessionUseCase,

@@ -354,6 +354,7 @@ internal fun FormErrorMessage(message: String, modifier: Modifier = Modifier) {
     }
 }
 
+/** Recurso de `strings.xml` con el texto en español de este mensaje. */
 @StringRes
 internal fun AuthMessage.stringRes(): Int = when (this) {
     AuthMessage.EmptyFields -> R.string.auth_error_empty_fields

@@ -19,6 +19,7 @@ class FirebaseAuthDataSource @Inject constructor(
     private val auth: FirebaseAuth,
 ) : AuthRemoteDataSource {
 
+    /** Emite el usuario de Firebase cada vez que cambia la sesión. */
     override fun observeUser(): Flow<User?> = callbackFlow {
         // Firebase invoca el listener al registrarlo, así que la sesión actual llega de inmediato.
         val listener = FirebaseAuth.AuthStateListener { trySend(it.currentUser?.toDomain()) }
@@ -26,16 +27,20 @@ class FirebaseAuthDataSource @Inject constructor(
         awaitClose { auth.removeAuthStateListener(listener) }
     }
 
+    /** Inicia sesión con correo y contraseña; las fallas del SDK se propagan como excepción. */
     override suspend fun signIn(email: String, password: String): User =
         auth.signInWithEmailAndPassword(email, password).await().requireUser()
 
+    /** Crea la cuenta en Firebase y deja la sesión iniciada. */
     override suspend fun createAccount(email: String, password: String): User =
         auth.createUserWithEmailAndPassword(email, password).await().requireUser()
 
+    /** Pide a Firebase el correo de recuperación de contraseña. */
     override suspend fun sendPasswordReset(email: String) {
         auth.sendPasswordResetEmail(email).await()
     }
 
+    /** Cierra la sesión local de Firebase. */
     override fun signOut() {
         auth.signOut()
     }

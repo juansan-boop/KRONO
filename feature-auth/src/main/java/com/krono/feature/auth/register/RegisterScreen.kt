@@ -53,6 +53,7 @@ import com.krono.feature.auth.ui.FormErrorMessage
 import com.krono.feature.auth.ui.GlassBadge
 import com.krono.feature.auth.ui.stringRes
 
+/** Punto de entrada con estado: conecta [RegisterViewModel] con la pantalla. [onBack] regresa al login y [onRegistered] continúa tras crear la cuenta. */
 @Composable
 internal fun RegisterRoute(
     onBack: () -> Unit,

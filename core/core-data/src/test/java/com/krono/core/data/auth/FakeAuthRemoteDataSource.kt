@@ -19,17 +19,22 @@ class FakeAuthRemoteDataSource : AuthRemoteDataSource {
     /** Correos a los que se pidió enviar el enlace de recuperación. */
     val resetEmailsSent = mutableListOf<String>()
 
+    /** Emite el usuario actual de [user]. */
     override fun observeUser(): Flow<User?> = user
 
+    /** Inicia sesión sin validar la contraseña, o lanza [failure]. */
     override suspend fun signIn(email: String, password: String): User = startSession(email)
 
+    /** Crea la cuenta e inicia sesión, o lanza [failure]. */
     override suspend fun createAccount(email: String, password: String): User = startSession(email)
 
+    /** Registra el correo en [resetEmailsSent], o lanza [failure]. */
     override suspend fun sendPasswordReset(email: String) {
         failure?.let { throw it }
         resetEmailsSent += email
     }
 
+    /** Limpia la sesión, o lanza [failure]. */
     override fun signOut() {
         failure?.let { throw it }
         user.value = null

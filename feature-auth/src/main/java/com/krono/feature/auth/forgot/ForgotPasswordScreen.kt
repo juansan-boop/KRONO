@@ -41,6 +41,7 @@ import com.krono.feature.auth.ui.AuthTextLink
 import com.krono.feature.auth.ui.GlassBadge
 import com.krono.feature.auth.ui.stringRes
 
+/** Punto de entrada con estado: conecta [ForgotPasswordViewModel] con la pantalla. [onBack] regresa al login. */
 @Composable
 internal fun ForgotPasswordRoute(
     onBack: () -> Unit,
