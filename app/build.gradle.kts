@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    // Solo `app` aplica este plugin: lee google-services.json (no versionado; el CI genera uno de relleno).
+    alias(libs.plugins.google.services)
 }
 
 android {
