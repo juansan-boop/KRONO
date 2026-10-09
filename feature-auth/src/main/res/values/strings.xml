@@ -43,8 +43,8 @@
     <string name="auth_forgot_loading">Enviando…</string>
     <string name="auth_forgot_back_to_login">Volver a Iniciar Sesión</string>
     <string name="auth_forgot_success_title">¡Enlace Enviado!</string>
-    <string name="auth_forgot_success_body">Confirmamos que tu correo está registrado en KRONO.</string>
-    <string name="auth_forgot_success_simulated">Por ahora la recuperación es simulada: no se envía ningún correo real.</string>
+    <!-- Neutro a propósito: no revela si el correo tiene cuenta (D-10). -->
+    <string name="auth_forgot_success_body">Si el correo está registrado, te enviamos un enlace</string>
 
     <!-- Mensajes de error: cortos, en español y sin detalles técnicos -->
     <string name="auth_error_empty_fields">Por favor, completa todos los campos obligatorios</string>
@@ -53,6 +53,7 @@
     <string name="auth_error_passwords_mismatch">Las contraseñas no coinciden</string>
     <string name="auth_error_invalid_credentials">Correo o contraseña incorrectos</string>
     <string name="auth_error_email_already_registered">Este correo ya está registrado. Inicia sesión</string>
-    <string name="auth_error_email_not_registered">Este correo no está registrado en KRONO</string>
+    <string name="auth_error_no_connection">Sin conexión a internet. Revisa tu conexión e inténtalo de nuevo</string>
+    <string name="auth_error_too_many_requests">Demasiados intentos. Espera unos minutos e inténtalo de nuevo</string>
     <string name="auth_error_unexpected">Algo salió mal. Inténtalo de nuevo</string>
 </resources>

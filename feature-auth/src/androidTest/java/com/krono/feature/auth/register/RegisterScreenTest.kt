@@ -91,6 +91,13 @@ class RegisterScreenTest {
     }
 
     @Test
+    fun sinConexionMuestraElMensajeSobreElBoton() {
+        show(RegisterUiState(email = "ana@correo.com", error = AuthMessage.NoConnection))
+
+        composeRule.onNodeWithText(str(R.string.auth_error_no_connection)).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
     fun mientrasCargaElBotonEstaDeshabilitado() {
         show(RegisterUiState(isLoading = true))
 

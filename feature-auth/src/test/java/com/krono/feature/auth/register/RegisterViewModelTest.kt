@@ -1,6 +1,7 @@
 package com.krono.feature.auth.register
 
 import androidx.lifecycle.SavedStateHandle
+import com.krono.core.domain.auth.AuthError
 import com.krono.core.domain.auth.FakeAuthRepository
 import com.krono.core.domain.auth.PasswordRequirements
 import com.krono.core.domain.auth.RegisterUseCase
@@ -127,8 +128,21 @@ class RegisterViewModelTest {
     }
 
     @Test
+    fun sinConexionMuestraElMensajeDeSinConexionSinCrearLaCuenta() = runTest {
+        repository.failure = AuthError.NoConnection
+        val vm = viewModel()
+        vm.fill("ana@correo.com", "krono2026!", "krono2026!")
+
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(AuthMessage.NoConnection, vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isRegistered)
+    }
+
+    @Test
     fun unaFallaInesperadaMuestraUnMensajeGenerico() = runTest {
-        repository.failure = RuntimeException("disk I/O error")
+        repository.failure = RuntimeException("INTERNAL_ERROR")
         val vm = viewModel()
         vm.fill("ana@correo.com", "krono2026!", "krono2026!")
 

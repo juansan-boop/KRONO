@@ -15,12 +15,13 @@ class AuthMessageTest {
         assertEquals(AuthMessage.PasswordsDoNotMatch, AuthError.PasswordsDoNotMatch.toAuthMessage())
         assertEquals(AuthMessage.InvalidCredentials, AuthError.InvalidCredentials.toAuthMessage())
         assertEquals(AuthMessage.EmailAlreadyRegistered, AuthError.EmailAlreadyRegistered.toAuthMessage())
-        assertEquals(AuthMessage.EmailNotRegistered, AuthError.EmailNotRegistered.toAuthMessage())
+        assertEquals(AuthMessage.NoConnection, AuthError.NoConnection.toAuthMessage())
+        assertEquals(AuthMessage.TooManyRequests, AuthError.TooManyRequests.toAuthMessage())
         assertEquals(AuthMessage.Unexpected, AuthError.Unexpected(RuntimeException()).toAuthMessage())
     }
 
     @Test
     fun unaExcepcionQueNoEsDeDominioSeMuestraComoErrorInesperado() {
-        assertEquals(AuthMessage.Unexpected, IllegalStateException("SQLITE_BUSY").toAuthMessage())
+        assertEquals(AuthMessage.Unexpected, IllegalStateException("INTERNAL_ERROR").toAuthMessage())
     }
 }

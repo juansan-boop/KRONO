@@ -2,6 +2,7 @@ package com.krono.feature.auth.login
 
 import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
+import com.krono.core.domain.auth.AuthError
 import com.krono.core.domain.auth.FakeAuthRepository
 import com.krono.core.domain.auth.LoginUseCase
 import com.krono.feature.auth.AuthMessage
@@ -112,8 +113,35 @@ class LoginViewModelTest {
     }
 
     @Test
+    fun sinConexionMuestraElMensajeDeSinConexion() = runTest {
+        repository.failure = AuthError.NoConnection
+        val vm = viewModel()
+        vm.onEmailChange("ana@correo.com")
+        vm.onPasswordChange("krono2026!")
+
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(AuthMessage.NoConnection, vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isLoading)
+    }
+
+    @Test
+    fun conDemasiadosIntentosMuestraElMensajeDeEspera() = runTest {
+        repository.failure = AuthError.TooManyRequests
+        val vm = viewModel()
+        vm.onEmailChange("ana@correo.com")
+        vm.onPasswordChange("krono2026!")
+
+        vm.onSubmit()
+        advanceUntilIdle()
+
+        assertEquals(AuthMessage.TooManyRequests, vm.uiState.value.error)
+    }
+
+    @Test
     fun unaFallaInesperadaMuestraUnMensajeGenericoNoTecnico() = runTest {
-        repository.failure = IllegalStateException("SQLITE_BUSY")
+        repository.failure = IllegalStateException("INTERNAL_ERROR")
         val vm = viewModel()
         vm.onEmailChange("ana@correo.com")
         vm.onPasswordChange("krono2026!")

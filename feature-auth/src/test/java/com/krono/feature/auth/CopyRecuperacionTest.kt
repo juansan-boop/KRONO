@@ -1,28 +1,40 @@
 package com.krono.feature.auth
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Evita que el copy de recuperación prometa un correo real mientras el envío es simulado. */
+/**
+ * Vigila el copy de recuperar contraseña (F-24 CA-3, D-10): el envío es real y
+ * ningún texto revela si un correo tiene cuenta en KRONO.
+ */
 class CopyRecuperacionTest {
 
+    private val xml = File("src/main/res/values/strings.xml").readText()
+
     private fun cadena(nombre: String): String {
-        val xml = File("src/main/res/values/strings.xml").readText()
         val regex = Regex("""<string name="$nombre">(.*?)</string>""")
         return requireNotNull(regex.find(xml)) { "Falta $nombre" }.groupValues[1]
     }
 
     @Test
-    fun elCuerpoDeExitoNoPrometeUnEnvioReal() {
-        val cuerpo = cadena("auth_forgot_success_body").lowercase()
-        assertFalse(cuerpo.contains("enviamos"))
-        assertFalse(cuerpo.contains("enlace"))
+    fun elTituloDeExitoConservaElDelDiseno() {
+        assertEquals("¡Enlace Enviado!", cadena("auth_forgot_success_title"))
     }
 
     @Test
-    fun elAvisoIndicaQueElEnvioEsSimulado() {
-        assertTrue(cadena("auth_forgot_success_simulated").contains("simulada"))
+    fun elCuerpoDeExitoEsNeutroSobreSiElCorreoTieneCuenta() {
+        assertEquals("Si el correo está registrado, te enviamos un enlace", cadena("auth_forgot_success_body"))
+    }
+
+    @Test
+    fun ningunTextoDiceQueElCorreoNoEstaRegistrado() {
+        assertFalse(xml.lowercase().contains("no está registrado"))
+    }
+
+    @Test
+    fun ningunTextoDiceQueLaRecuperacionEsSimulada() {
+        assertFalse(xml.lowercase().contains("simulad"))
     }
 }

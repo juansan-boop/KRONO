@@ -57,7 +57,9 @@ internal fun ForgotPasswordRoute(
 }
 
 /**
- * Recuperar contraseña (F-24), simulado mientras no haya backend. Referencia:
+ * Recuperar contraseña (F-24): envía el enlace real por correo. El error solo
+ * aparece con un correo mal formado o sin conexión; un correo sin cuenta muestra
+ * el mismo éxito neutro (D-10). Referencia:
  * `/design/recuperar_contrase_a_estilo_lumina_glass_1`, `..._error_correo_no_encontrado`
  * y `recuperar_contrase_a_xito_lumina_style_1`.
  */
@@ -154,14 +156,6 @@ private fun ForgotPasswordSuccessContent(onBack: () -> Unit, modifier: Modifier 
                 .glassSurface()
                 .padding(KronoSpacing.lg),
         ) {
-            Text(
-                text = stringResource(R.string.auth_forgot_success_simulated),
-                style = MaterialTheme.typography.bodySmall,
-                color = OnSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(KronoSpacing.md))
             AuthPrimaryButton(
                 text = stringResource(R.string.auth_forgot_back_to_login),
                 onClick = onBack,
@@ -176,7 +170,7 @@ private fun ForgotPasswordSuccessContent(onBack: () -> Unit, modifier: Modifier 
 private fun ForgotPasswordErrorPreview() {
     KronoTheme {
         ForgotPasswordScreen(
-            state = ForgotPasswordUiState(email = "ejemplo@correo.com", error = AuthMessage.EmailNotRegistered),
+            state = ForgotPasswordUiState(email = "ejemplo@correo.com", error = AuthMessage.NoConnection),
             onEmailChange = {},
             onSubmit = {},
             onBack = {},
