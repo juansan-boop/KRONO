@@ -12,7 +12,7 @@
 > Lo marcado como **(propuesta)** es una sugerencia inicial que el equipo debe
 > confirmar en la sección 9 antes de implementarlo.
 
-**Versión:** 0.4 · **Última actualización:** 2026-10-06
+**Versión:** 0.5 · **Última actualización:** 2026-10-08
 
 ---
 
@@ -60,7 +60,7 @@ Categorías de tareas: **Estudio**, **Trabajo**, **Personal**.
 | Sistema de diseño | Lumina Glass System: siempre oscuro, tokens solo desde `core-ui` (`KronoTheme`, `KronoSpacing`, `KronoShapes`, `Modifier.glassSurface()`) |
 | Idioma | Todo el copy de la UI en español, en `strings.xml` del módulo |
 | Accesibilidad | Áreas táctiles mínimas de 48dp y `contentDescription` en íconos interactivos |
-| Datos | Local primero: la app funciona sin conexión y los datos viven en Room |
+| Datos | Local primero: la app funciona sin conexión y los datos viven en Room (la autenticación usa Firebase Authentication, D-1) |
 | Fechas | `kotlinx.datetime` en dominio; `kotlin.time.Duration` para duraciones |
 | Errores | Las capas de dominio y datos devuelven `KronoResult` (de `core-common`), sin excepciones cruzando módulos |
 | Calidad | Cada PR pasa `./gradlew lint testDebugUnitTest assembleDebug` (igual que el CI) |
@@ -297,21 +297,22 @@ Algoritmo **(propuesta, confirmar en D-4)**: promedio de `actualDuration` de las
 - **Estado:** Pendiente · **Prioridad:** Baja · **Módulos:** `feature-profile` · **Depende de:** F-02 · **PR:** —
 
 - **CA-1:** Dada la zona de seguridad, cuando se elige "Restablecer configuración y datos" y se confirma en un segundo paso, entonces se borran los datos locales y se restauran los valores por defecto.
-- **CA-2:** "Eliminar cuenta y perfil completo" queda **Bloqueada** hasta contar con el servicio de backend (D-1 se resolvió de forma temporal con autenticación local en Room).
+- **CA-2:** "Eliminar cuenta y perfil completo" queda **Bloqueada** hasta definir cómo se borran la cuenta de Firebase y los datos asociados (D-1 cubre la autenticación con Firebase Authentication, sin Firestore ni sincronización de datos).
 
 ### Fase 3 — Cuenta, sincronización e IA avanzada
 
 #### F-22 a F-25 — Iniciar sesión, crear cuenta, recuperar contraseña, cerrar sesión
-- **Estado:** Hecho · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00 · **PR:** #7
+- **Estado:** En progreso (migración a Firebase) · **Prioridad:** Alta · **Módulos:** `feature-auth`, `core-domain`, `core-data`, `app` · **Depende de:** F-00 · **PR:** —
 
-Por ahora la autenticación es local con Room (D-1); `AuthRepository` en `core-domain` aísla la implementación para sustituirla por un backend en un hito futuro.
+La autenticación usa Firebase Authentication con correo y contraseña (D-1); `AuthRepository` en `core-domain` aísla la implementación. El PR #7 (hito 1) entregó una versión local con Room, que se descarta junto con sus cuentas de prueba.
 
-- **CA-1 (registro):** El formulario tiene los campos correo, contraseña y confirmación, sin campo de nombre (el nombre se pide en el onboarding, F-26). La contraseña exige mínimo 8 caracteres, al menos un número y un carácter especial, con indicadores que se marcan en vivo; si la confirmación no coincide se muestra "Las contraseñas no coinciden". La contraseña se guarda solo como hash con sal.
+- **CA-1 (registro):** El formulario tiene los campos correo, contraseña y confirmación, sin campo de nombre (el nombre se pide en el onboarding, F-26). La contraseña exige mínimo 8 caracteres, al menos un número y un carácter especial, con indicadores que se marcan en vivo; si la confirmación no coincide se muestra "Las contraseñas no coinciden". La contraseña la gestiona Firebase (la app no la almacena ni le aplica hash propio).
 - **CA-2 (login):** Con campos vacíos se muestra "Por favor, completa todos los campos obligatorios"; durante el envío el botón muestra progreso y no permite doble envío.
-- **CA-3 (recuperar):** Mientras no haya backend, el envío es simulado. Con un correo no registrado se muestra "Este correo no está registrado en KRONO"; con uno registrado, la pantalla de éxito, sin enviar un correo real.
+- **CA-3 (recuperar):** El envío es real por correo mediante Firebase (`sendPasswordResetEmail`) y se muestra la pantalla de éxito. Con un correo no registrado se muestra "Este correo no está registrado en KRONO" **(propuesta)**: Firebase puede devolver éxito aunque el correo no exista (protección contra enumeración de correos), por lo que este punto depende de D-10.
 - **CA-4 (cerrar sesión):** Por ahora solo existe el caso de uso `LogoutUseCase`; el diálogo de confirmación ("Permanecer en KRONO" y "Cerrar Sesión") vive luego en `feature-profile`. Mientras no exista `feature-profile`, la pantalla provisional de `app` tiene un botón temporal "Cerrar sesión" sin confirmación: invoca `LogoutUseCase` y vuelve al login limpiando el back stack; se elimina cuando existan F-01/F-19.
 - **CA-5 (pantalla provisional):** Dado un inicio de sesión exitoso, cuando termina, entonces la app lleva por ahora a una pantalla provisional en `app` con el texto "Este módulo se desarrollará en el siguiente hito" (estilo Lumina Glass), que F-01 reemplazará.
-- **CA-6 (sesión persistente):** Dada una sesión activa, cuando se reabre la app, entonces se entra directamente sin pasar por el login.
+- **CA-6 (sesión persistente):** Dada una sesión activa de Firebase, cuando se reabre la app, entonces se entra directamente sin pasar por el login.
+- **CA-7 (errores):** Dadas credenciales inválidas, un correo ya en uso o la falta de conexión, cuando se intenta iniciar sesión o crear la cuenta, entonces se muestra un mensaje en español sin que la app falle. Los errores cruzan los módulos como `KronoResult.Error`.
 
 #### F-26 — Onboarding: completar perfil
 - **Estado:** Pendiente · **Prioridad:** Media · **Módulos:** `feature-onboarding` · **Depende de:** F-23 (autenticación, D-1 resuelta) · **PR:** —
@@ -332,7 +333,7 @@ reportan al orquestador.
 
 | # | Pregunta | Afecta a | Decisión |
 |---|---|---|---|
-| D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? Hoy el proyecto no tiene librerías de red | F-21 (CA-2), F-22 a F-26, sincronización | Por ahora, autenticación y datos locales con Room (sin Firebase ni red). En un hito futuro se reemplaza por un servicio de backend con persistencia; `AuthRepository` en `core-domain` permite cambiar la implementación sin tocar los casos de uso ni la UI. Las contraseñas se guardan solo como hash con sal. |
+| D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? Hoy el proyecto no tiene librerías de red | F-21 (CA-2), F-22 a F-26, sincronización | Resuelta (Juan Fernando Sánchez Otero, 2026-10-08): autenticación con Firebase Authentication (correo y contraseña). Los datos (tareas, etc.) siguen locales en Room; no hay Firestore ni sincronización por ahora. Las cuentas locales de Room de prueba se descartan. `AuthRepository` en `core-domain` sigue aislando la implementación. Queda sin efecto el hash con sal y la recuperación simulada: la contraseña la gestiona Firebase y la recuperación es real por correo. |
 | D-2 | ¿Qué proveedores de login social ("o continúa con")? | F-22 | Ninguno: sin login social por ahora. |
 | D-3 | ¿Se aprueba el modelo de datos propuesto de la sección 6? | F-02 en adelante | Pendiente |
 | D-4 | ¿Se aprueba el algoritmo de estimación propuesto en F-11? | F-11 | Pendiente |
@@ -341,6 +342,7 @@ reportan al orquestador.
 | D-7 | `CONTRIBUTING.md` define la rama `develop`, pero solo existe `main` en el remoto. ¿Se crea `develop` como base de los PRs? | Flujo de PRs | Resuelta: `develop` existe y es la base de los PRs. |
 | D-8 | ¿Qué integrante es responsable de cada módulo? Los agentes solo deben tocar los módulos asignados a quien los ejecuta | Todas | Parcial: Juan Fernando Sánchez Otero en `app`, `core-*` y `feature-auth`; demás módulos sin asignar |
 | D-9 | Ajustes muestra "Tema de pantalla: Cyber Dark", pero no hay tema claro. ¿Se omite la opción o queda informativa? | F-20 | Pendiente |
+| D-10 | Firebase puede devolver éxito al recuperar la contraseña aunque el correo no exista (protección contra enumeración de correos, activa por defecto en proyectos nuevos). ¿Se desactiva esa protección en la consola de Firebase para conservar el mensaje del diseño "Este correo no está registrado en KRONO", o se cambia el copy a un mensaje neutro ("Si el correo está registrado, te enviamos un enlace")? | F-24 (CA-3) | Pendiente |
 
 ### Responsables por módulo (D-8, parcial)
 
@@ -363,3 +365,4 @@ reportan al orquestador.
 | 2026-10-05 | v0.3: decisiones de Juan Fernando Sánchez Otero: F-00 con PR #5; D-1 (autenticación y datos locales con Room, hash con sal), D-2 (sin login social) y D-8 (responsable de `app`, `core-*` y `feature-auth`; demás módulos sin asignar); F-22 a F-26 pasan a Pendiente con criterios ajustados (registro sin nombre, recuperación simulada, pantalla provisional, sesión persistente, `LogoutUseCase`); aclaración: el proyecto usa AGP 8.7.0 con Gradle 9.6.0 (compila, con aviso de incompatibilidad futura con Gradle 10; subir AGP queda como tarea aparte), por lo que la nota de v0.2 sobre AGP 9.4.1 no aplica |
 | 2026-10-06 | F-22 a F-25: CA-4 aclarado con un botón temporal "Cerrar sesión" (sin confirmación) en la pantalla provisional de `app` mientras no exista `feature-profile`; decisión de Juan Fernando Sánchez Otero |
 | 2026-10-06 | v0.4: cierre del hito 1: F-22 a F-25 marcadas como Hechas (PR #7): autenticación local en Room, botón temporal "Cerrar sesión" en la pantalla provisional de `app`, ícono adaptativo y logo de KRONO |
+| 2026-10-08 | v0.5: D-1 pasa a autenticación con Firebase Authentication (correo y contraseña), datos locales en Room y sin Firestore ni sincronización; se descartan el hash con sal, la recuperación simulada y las cuentas locales de prueba; F-22 a F-25 vuelven a En progreso (migración, PR —) con CA-1, CA-3 y CA-6 ajustados y CA-7 (errores) nuevo; nueva decisión abierta D-10 (mensaje de correo no registrado); F-21 CA-2 sigue Bloqueada con razón actualizada; decisión de Juan Fernando Sánchez Otero |
