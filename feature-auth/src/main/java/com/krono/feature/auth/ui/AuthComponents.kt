@@ -6,8 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,12 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -50,6 +48,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import com.krono.core.ui.brand.KronoLogo
 import com.krono.core.ui.brand.KronoSymbol
+import com.krono.core.ui.icons.KronoIcons
 import com.krono.core.ui.theme.ErrorColor
 import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
@@ -87,13 +86,16 @@ internal fun AuthLayout(
 /**
  * Logo de KRONO (símbolo y palabra) sobre una superficie glass. Referencia:
  * `/design/iniciar_sesi_n_lumina_style_1` y `recuperar_contrase_a_estilo_lumina_glass_1`.
+ * Su tamaño es un mínimo: con la fuente ampliada la superficie crece para que la palabra
+ * KRONO no se recorte.
  */
 @Composable
 internal fun BrandLogo(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(KronoSizes.brandLogo)
-            .glassSurface(),
+            .defaultMinSize(minWidth = KronoSizes.brandLogo, minHeight = KronoSizes.brandLogo)
+            .glassSurface()
+            .padding(KronoSpacing.sm),
         contentAlignment = Alignment.Center,
     ) {
         KronoLogo(wordmark = stringResource(R.string.auth_brand_name))
@@ -150,7 +152,7 @@ internal fun AuthTopBar(onBack: (() -> Unit)?, modifier: Modifier = Modifier) {
         if (onBack != null) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                    painter = painterResource(KronoIcons.ArrowBack),
                     contentDescription = stringResource(R.string.auth_back),
                     tint = OnSurface,
                 )
@@ -222,7 +224,7 @@ internal fun AuthTextField(
             {
                 IconButton(onClick = onTogglePasswordVisibility) {
                     Icon(
-                        imageVector = if (isPasswordVisible) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        painter = painterResource(if (isPasswordVisible) KronoIcons.VisibilityOff else KronoIcons.Visibility),
                         contentDescription = stringResource(
                             if (isPasswordVisible) R.string.auth_hide_password else R.string.auth_show_password,
                         ),
@@ -257,7 +259,11 @@ internal fun AuthTextField(
     )
 }
 
-/** Botón primario con estado de carga: muestra progreso y queda deshabilitado (sin doble envío). */
+/**
+ * Botón primario con estado de carga: muestra progreso y queda deshabilitado (sin doble envío).
+ * Su alto es un mínimo y el texto puede ocupar varias líneas (centradas): con la fuente
+ * ampliada el botón crece en vez de recortar la etiqueta.
+ */
 @Composable
 internal fun AuthPrimaryButton(
     text: String,
@@ -272,7 +278,7 @@ internal fun AuthPrimaryButton(
         enabled = !isLoading,
         modifier = modifier
             .fillMaxWidth()
-            .height(KronoSizes.controlHeight),
+            .heightIn(min = KronoSizes.controlHeight),
         shape = MaterialTheme.shapes.small,
         colors = ButtonDefaults.buttonColors(
             containerColor = PrimaryMagenta,
@@ -288,13 +294,13 @@ internal fun AuthPrimaryButton(
                 strokeWidth = KronoSizes.progressStroke,
             )
             Spacer(Modifier.width(KronoSpacing.sm))
-            Text(text = loadingText, style = MaterialTheme.typography.titleMedium)
+            Text(text = loadingText, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
         } else {
-            Text(text = text, style = MaterialTheme.typography.titleMedium)
+            Text(text = text, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
             if (showArrow) {
                 Spacer(Modifier.width(KronoSpacing.sm))
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                    painter = painterResource(KronoIcons.ArrowForward),
                     contentDescription = null,
                     modifier = Modifier.size(KronoSizes.iconSmall),
                 )
@@ -315,7 +321,11 @@ internal fun AuthTextLink(text: String, onClick: () -> Unit, modifier: Modifier 
     }
 }
 
-/** "¿No tienes una cuenta? Crear una cuenta" y similares. */
+/**
+ * "¿No tienes una cuenta? Crear una cuenta" y similares. El texto y el enlace fluyen a otra
+ * línea como bloques completos cuando no caben (fuente ampliada), sin partir palabras.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun AuthFooterPrompt(
     prompt: String,
@@ -323,13 +333,18 @@ internal fun AuthFooterPrompt(
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = prompt, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
-        AuthTextLink(text = action, onClick = onAction)
+        Text(
+            text = prompt,
+            style = MaterialTheme.typography.bodyMedium,
+            color = OnSurfaceVariant,
+            modifier = Modifier.align(Alignment.CenterVertically),
+        )
+        AuthTextLink(text = action, onClick = onAction, modifier = Modifier.align(Alignment.CenterVertically))
     }
 }
 
@@ -344,7 +359,7 @@ internal fun FormErrorMessage(message: String, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = Icons.Outlined.ErrorOutline,
+            painter = painterResource(KronoIcons.Error),
             contentDescription = null,
             tint = ErrorColor,
             modifier = Modifier.size(KronoSizes.iconSmall),

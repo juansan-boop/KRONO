@@ -5,11 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -24,11 +23,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.krono.app.R
+import com.krono.core.ui.icons.KronoIcons
 import com.krono.core.ui.theme.ErrorColor
 import com.krono.core.ui.theme.KronoShapes
 import com.krono.core.ui.theme.KronoSizes
@@ -99,7 +100,7 @@ fun PantallaAjustes(
             enabled = !cerrando,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(KronoSizes.controlHeight),
+                .heightIn(min = KronoSizes.controlHeight),
             shape = MaterialTheme.shapes.small,
             border = ButtonDefaults.outlinedButtonBorder(enabled = !cerrando).copy(
                 brush = SolidColor(OutlineVariant),
@@ -107,7 +108,11 @@ fun PantallaAjustes(
             colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface),
         ) {
             IconoCerrarSesion()
-            Text(text = stringResource(R.string.cerrar_sesion), style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = stringResource(R.string.cerrar_sesion),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
         }
     }
     if (confirmacionVisible) {
@@ -152,26 +157,34 @@ fun DialogoCerrarSesion(
                 onClick = alConfirmar,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(KronoSizes.controlHeight),
+                    .heightIn(min = KronoSizes.controlHeight),
                 shape = MaterialTheme.shapes.small,
                 colors = ButtonDefaults.buttonColors(containerColor = ErrorColor, contentColor = OnError),
             ) {
                 IconoCerrarSesion()
-                Text(text = stringResource(R.string.cerrar_sesion), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(R.string.cerrar_sesion),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
             }
             Spacer(Modifier.height(KronoSpacing.sm))
             OutlinedButton(
                 onClick = alCancelar,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(KronoSizes.controlHeight),
+                    .heightIn(min = KronoSizes.controlHeight),
                 shape = MaterialTheme.shapes.small,
                 border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(
                     brush = SolidColor(OutlineVariant),
                 ),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = OnSurface),
             ) {
-                Text(text = stringResource(R.string.cancelar), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(R.string.cancelar),
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }
@@ -181,7 +194,7 @@ fun DialogoCerrarSesion(
 @Composable
 private fun IconoCerrarSesion() {
     Icon(
-        imageVector = Icons.AutoMirrored.Outlined.Logout,
+        painter = painterResource(KronoIcons.Logout),
         contentDescription = null,
         modifier = Modifier.size(KronoSizes.iconSmall),
     )

@@ -11,11 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Cancel
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked
-import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -27,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -34,6 +30,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.krono.core.ui.icons.KronoIcons
 import com.krono.core.ui.theme.ErrorColor
 import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
@@ -247,15 +244,15 @@ private fun RequirementRow(label: Int, isMet: Boolean, submitAttempted: Boolean)
         else -> OnSurfaceVariant
     }
     val icon = when {
-        isMet -> Icons.Outlined.CheckCircle
-        submitAttempted -> Icons.Outlined.Cancel
-        else -> Icons.Outlined.RadioButtonUnchecked
+        isMet -> KronoIcons.CheckCircle
+        submitAttempted -> KronoIcons.Cancel
+        else -> KronoIcons.RadioButtonUnchecked
     }
     Row(
         modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = description },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(KronoSizes.iconSmall))
+        Icon(painter = painterResource(icon), contentDescription = null, tint = color, modifier = Modifier.size(KronoSizes.iconSmall))
         Spacer(Modifier.width(KronoSpacing.sm))
         Text(text = text, style = MaterialTheme.typography.bodyMedium, color = color)
     }
@@ -281,7 +278,7 @@ private fun RegisterSuccessContent(onContinue: () -> Unit, modifier: Modifier = 
         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
             GlassBadge(content = {
                 Icon(
-                    imageVector = Icons.Outlined.TaskAlt,
+                    painter = painterResource(KronoIcons.TaskAlt),
                     contentDescription = null,
                     tint = PrimaryFixedDim,
                     modifier = Modifier.size(KronoSizes.iconLarge),

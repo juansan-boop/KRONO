@@ -4,7 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
-/** Todo múltiplo de 8dp, consistente con el grid del Lumina Glass System. */
+/** Radios de esquina del Lumina Glass System: todos múltiplos de 8dp, el módulo base del grid. */
 val KronoShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(16.dp),
