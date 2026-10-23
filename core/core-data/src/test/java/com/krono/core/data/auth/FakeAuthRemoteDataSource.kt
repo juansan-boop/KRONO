@@ -22,6 +22,10 @@ class FakeAuthRemoteDataSource : AuthRemoteDataSource {
     /** Emite el usuario actual de [user]. */
     override fun observeUser(): Flow<User?> = user
 
+    /** Usuario con sesión actualmente en memoria. */
+    override val currentUser: User?
+        get() = user.value
+
     /** Inicia sesión sin validar la contraseña, o lanza [failure]. */
     override suspend fun signIn(email: String, password: String): User = startSession(email)
 

@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cabecera general -->
+    <string name="profile_settings_title">Ajustes</string>
+    <string name="profile_settings_core_badge" translatable="false">CORE v2.4</string>
+    <string name="profile_back_home">Volver al Inicio</string>
+    <string name="profile_cd_back">Volver a la pantalla anterior</string>
+
+    <!-- Tarjeta de Identidad de Usuario (F-19) -->
+    <string name="profile_default_name">Usuario</string>
+    <string name="profile_default_role">Estudiante y trabajador</string>
+    <string name="profile_edit_info">Editar Información Personal</string>
+    <string name="profile_edit_info_desc">Nombre, rol académico y contactos</string>
+    <string name="profile_ai_sync_label">Sincronización KRONO AI</string>
+    <string name="profile_ai_sync_active">Activa</string>
+    <string name="profile_ai_sync_completed" formatted="false">100% al día</string>
+    <string name="profile_cd_avatar">Foto de perfil del usuario</string>
+    <string name="profile_cd_online_status">Usuario en línea</string>
+    <string name="profile_cd_edit_profile">Editar información de perfil</string>
+
+    <!-- Sección: Ritmo y Descanso (F-20) -->
+    <string name="settings_section_rhythm">RITMO Y DESCANSO</string>
+    <string name="settings_badge_ai_sync" translatable="false">IA SYNC</string>
+    <string name="settings_dynamic_breaks_title">Sugerencia dinámica de descansos</string>
+    <string name="settings_dynamic_breaks_desc">Aumenta las pausas en tareas nocturnas o sesiones largas</string>
+    <string name="settings_silence_notifs_title">Silenciar notificaciones internas</string>
+    <string name="settings_silence_notifs_desc">Bloqueo de alertas externas y apps en sesiones</string>
+
+    <!-- Sección: Configuración de Sesiones (F-10 / F-20) -->
+    <string name="settings_section_sessions">CONFIGURACIÓN DE SESIONES</string>
+    <string name="settings_templates_title">Plantillas de Concentración</string>
+    <string name="settings_templates_presets">%1$d Presets activos</string>
+    <string name="settings_templates_desc">Presets de tiempo para el temporizador</string>
+    <string name="settings_cd_open_templates">Abrir configuración de plantillas de concentración</string>
+
+    <!-- Sección: Preferencias del Sistema (F-20) -->
+    <string name="settings_section_system">PREFERENCIAS DEL SISTEMA</string>
+    <string name="settings_priority_alerts_title">Alertas prioritarias P1</string>
+    <string name="settings_priority_alerts_desc">Avisos anticipados antes de deadline crítico</string>
+    <string name="settings_screen_theme_title">Tema de pantalla</string>
+    <string name="settings_screen_theme_desc">Ahorro de batería y contraste extremo OLED</string>
+    <string name="settings_theme_cyber_dark">Cyber Dark</string>
+    <string name="settings_cd_theme_selector">Seleccionar tema de pantalla</string>
+
+    <!-- Sección: Zona de Seguridad (F-21) -->
+    <string name="settings_security_zone_title">Zona de seguridad y purga de datos…</string>
+    <string name="settings_cd_security_zone">Abrir zona de seguridad y purga de datos</string>
+
+    <!-- Pie de página -->
+    <string name="settings_build_info" translatable="false">KRONO Cyber Productivity // Build 2.4.12</string>
+    <string name="settings_logout_action">Cerrar sesión activa</string>
+
+    <!-- Diálogo Oficial de Cierre de Sesión (F-25 CA-4) -->
+    <string name="logout_dialog_title">¿Cerrar sesión de KRONO?</string>
+    <string name="logout_dialog_message">Tus tareas y sesiones de concentración locales se sincronizarán en la nube antes de desconectar este dispositivo. Podrás volver a ingresar en cualquier momento.</string>
+    <string name="logout_dialog_stay">Permanecer en KRONO</string>
+    <string name="logout_dialog_confirm">Cerrar Sesión</string>
+    <string name="logout_dialog_in_progress">Cerrando sesión…</string>
+    <string name="logout_dialog_cd_icon">Aviso de cierre de sesión</string>
+    <string name="logout_dialog_error_fallback">No fue posible cerrar la sesión. Intenta de nuevo.</string>
+
+    <!-- Edición de Perfil (F-19 CA-2) -->
+    <string name="edit_profile_title">Editar Perfil</string>
+    <string name="edit_profile_cd_back">Volver a Ajustes</string>
+    <string name="edit_profile_cd_avatar">Foto de perfil actual</string>
+    <string name="edit_profile_cd_change_photo">Cambiar foto de perfil</string>
+    <string name="edit_profile_hint_change_photo">Toca la cámara para actualizar foto</string>
+    <string name="edit_profile_label_name">Nombre Completo</string>
+    <string name="edit_profile_placeholder_name">Tu nombre completo</string>
+    <string name="edit_profile_error_name_empty">El nombre completo es obligatorio</string>
+    <string name="edit_profile_label_role">Rol Académico / Profesional</string>
+    <string name="edit_profile_label_email">Correo electrónico / Contacto</string>
+    <string name="edit_profile_email_readonly_note">El correo está vinculado a tu cuenta KRONO</string>
+    <string name="edit_profile_action_save">Guardar Cambios</string>
+    <string name="edit_profile_action_saving">Guardando…</string>
+    <string name="edit_profile_action_cancel">Cancelar</string>
+    <string name="edit_profile_success_toast">Perfil actualizado exitosamente</string>
+    <string name="edit_profile_error_generic">Ocurrió un error al guardar los cambios</string>
+    <string name="edit_profile_role_student_worker">Estudiante y trabajador</string>
+    <string name="edit_profile_role_student">Estudiante</string>
+    <string name="edit_profile_role_full_time_worker">Trabajador tiempo completo</string>
+    <string name="edit_profile_role_part_time_worker">Trabajador tiempo parcial</string>
+    <string name="edit_profile_cd_role_selector">Seleccionar rol académico y profesional</string>
+    <string name="edit_profile_cd_lock_email">Campo de correo bloqueado para edición</string>
+
+    <!-- Zona de Seguridad (F-21 CA-1, CA-2) -->
+    <string name="security_zone_title">Zona de Seguridad</string>
+    <string name="security_zone_badge" translatable="false">ZONA DE RIESGO</string>
+    <string name="security_zone_cd_back">Volver a Ajustes</string>
+    <string name="security_zone_hero_title">¿Qué deseas eliminar?</string>
+    <string name="security_zone_hero_subtitle">Selecciona el nivel de limpieza que deseas realizar en el dispositivo.</string>
+    <string name="security_zone_cd_warning_icon">Aviso de advertencia de zona de seguridad</string>
+    <string name="security_zone_reset_opt_title">Restablecer configuración y datos</string>
+    <string name="security_zone_reset_opt_badge">SEGURO</string>
+    <string name="security_zone_reset_opt_desc">Borra todas las tareas, sesiones, plantillas y avisos en Cloud Firestore, restaurando valores por defecto y conservando tu cuenta.</string>
+    <string name="security_zone_cd_select_reset">Seleccionar opción restablecer configuración y datos</string>
+    <string name="security_zone_delete_opt_title">Eliminar cuenta y perfil completo</string>
+    <string name="security_zone_delete_opt_badge">PERMANENTE</string>
+    <string name="security_zone_delete_opt_desc">Borra definitivamente tus datos en Cloud Firestore y tu cuenta en Firebase Authentication. Esta acción es irreversible.</string>
+    <string name="security_zone_cd_select_delete">Seleccionar opción eliminar cuenta y perfil completo</string>
+    <string name="security_zone_info_note">Se requerirá confirmación de seguridad final en el siguiente paso.</string>
+    <string name="security_zone_action_continue">Continuar a Confirmación</string>
+    <string name="security_zone_action_cancel">Cancelar y volver a Ajustes</string>
+    <string name="security_dialog_reset_title">¿Restablecer configuración y datos?</string>
+    <string name="security_dialog_reset_message">Se borrarán todas tus tareas, sesiones de concentración, plantillas y avisos en Cloud Firestore. Se restaurarán los valores por defecto del sistema, pero conservarás tu cuenta activa.</string>
+    <string name="security_dialog_reset_confirm">Restablecer Datos</string>
+    <string name="security_dialog_reset_in_progress">Restableciendo…</string>
+    <string name="security_dialog_reset_success">Configuración y datos restablecidos correctamente</string>
+    <string name="security_dialog_delete_title">¿Eliminar cuenta definitivamente?</string>
+    <string name="security_dialog_delete_message">Esta acción no se puede deshacer. Todos tus datos en Cloud Firestore y tu cuenta de acceso en Firebase Authentication serán eliminados permanentemente.</string>
+    <string name="security_dialog_delete_reauth_label">Contraseña actual</string>
+    <string name="security_dialog_delete_reauth_placeholder">Ingresa tu contraseña para confirmar</string>
+    <string name="security_dialog_delete_reauth_error_empty">Ingresa tu contraseña actual para confirmar</string>
+    <string name="security_dialog_delete_confirm">Eliminar Cuenta</string>
+    <string name="security_dialog_delete_in_progress">Eliminando cuenta…</string>
+    <string name="security_dialog_delete_cancel">Cancelar</string>
+    <string name="security_dialog_cd_show_password">Mostrar contraseña de reautenticación</string>
+    <string name="security_dialog_cd_hide_password">Ocultar contraseña de reautenticación</string>
+    <string name="security_error_generic">No fue posible completar la operación de seguridad. Intenta de nuevo.</string>
+
+    <!-- F-15: Recordatorios y preferencias de notificación -->
+    <string name="notification_prefs_title">Notificaciones y Alarmas</string>
+    <string name="notification_prefs_subtitle">Configura recordatorios y avisos esenciales para tu jornada.</string>
+    <string name="notification_prefs_badge">AJUSTES</string>
+    <string name="notification_prefs_back">Volver al Perfil</string>
+    <string name="notification_prefs_cd_back">Volver a la pantalla anterior</string>
+    <string name="notification_prefs_permission_banner_title">Permiso de notificaciones pendiente</string>
+    <string name="notification_prefs_permission_banner_desc">Activa el permiso para recibir alertas de tus entregas y bloques de concentración.</string>
+    <string name="notification_prefs_permission_action_grant">Conceder permiso</string>
+    <string name="notification_prefs_permission_granted_badge">NOTIFICACIONES ACTIVAS</string>
+    <string name="notification_prefs_section_tasks">RECORDATORIOS DE TAREAS</string>
+    <string name="notification_prefs_deadline_title">Avisos de entrega</string>
+    <string name="notification_prefs_deadline_desc">Notificar %1$d min antes del plazo</string>
+    <string name="notification_prefs_anticipation_label">Tiempo de anticipación</string>
+    <string name="notification_prefs_min_10">10 min</string>
+    <string name="notification_prefs_min_15">15 min</string>
+    <string name="notification_prefs_min_30">30 min (Por defecto)</string>
+    <string name="notification_prefs_min_60">60 min</string>
+    <string name="notification_prefs_cd_select_minutes">Seleccionar %1$d minutos de anticipación</string>
+    <string name="notification_prefs_sound_title">Alarma sonora de inicio</string>
+    <string name="notification_prefs_sound_desc">Tono discreto al empezar bloque</string>
+    <string name="notification_prefs_action_save">Guardar Preferencias</string>
+    <string name="notification_prefs_action_saving">Guardando…</string>
+    <string name="notification_prefs_action_reset">Restablecer valores predeterminados</string>
+    <string name="notification_prefs_success_saved">Preferencias guardadas correctamente</string>
+    <string name="notification_prefs_defaults_restored">Valores predeterminados restablecidos</string>
+    <string name="notification_prefs_error_generic">Ocurrió un error al guardar las preferencias</string>
+    <string name="notification_prefs_cd_deadline_icon">Ícono de avisos de entrega</string>
+    <string name="notification_prefs_cd_sound_icon">Ícono de alarma sonora</string>
+    <string name="notification_prefs_cd_permission_icon">Ícono de permiso de notificaciones</string>
+
+    <!-- Navegación a notificaciones desde Ajustes -->
+    <string name="settings_notifications_title">Notificaciones y Alarmas</string>
+    <string name="settings_notifications_desc">Configura recordatorios y avisos esenciales</string>
+    <string name="settings_cd_open_notifications">Abrir preferencias de notificaciones y alarmas</string>
+
+    <!-- Aviso de Tema Cyber Dark -->
+    <string name="settings_theme_permanent_notice">Lumina Glass: El modo Cyber Dark está activo permanentemente para optimización OLED.</string>
+
+    <!-- Diálogo de Plantillas de Concentración (F-10 / F-20) -->
+    <string name="focus_templates_dialog_title">Plantillas de Concentración</string>
+    <string name="focus_templates_dialog_desc">Presets predefinidos del sistema Lumina Glass para optimizar tus bloques de enfoque y descansos según tu ritmo circadiano:</string>
+    <string name="focus_template_deep_work_title">Estudio Profundo</string>
+    <string name="focus_template_deep_work_desc">45 min concentración • 10 min descanso circadiano</string>
+    <string name="focus_template_deep_work_badge" translatable="false">45/10</string>
+    <string name="focus_template_quick_sprint_title">Sprint Rápido</string>
+    <string name="focus_template_quick_sprint_desc">25 min concentración • 5 min descanso ágil</string>
+    <string name="focus_template_quick_sprint_badge" translatable="false">25/5</string>
+    <string name="focus_template_night_reading_title">Lectura Nocturna</string>
+    <string name="focus_template_night_reading_desc">60 min concentración • 15 min pausa restaurativa</string>
+    <string name="focus_template_night_reading_badge" translatable="false">60/15</string>
+    <string name="focus_templates_dialog_understood">Entendido</string>
+
+    <!-- Selector de tonos de alarma sonora (F-15) -->
+    <string name="notification_prefs_sound_tone_title">Tono de inicio de concentración</string>
+    <string name="notification_prefs_sound_tone_desc">Tono para alertas al iniciar un bloque: %1$s</string>
+    <string name="notification_prefs_dialog_tone_title">Seleccionar Tono de Alarma</string>
+    <string name="notification_prefs_tone_chime">Chime</string>
+    <string name="notification_prefs_tone_pulse">Pulse</string>
+    <string name="notification_prefs_tone_campana">Campana</string>
+    <string name="notification_prefs_tone_silencioso">Silencioso</string>
+    <string name="notification_prefs_cd_tone_selector">Abrir selector de tono sonoro</string>
+</resources>

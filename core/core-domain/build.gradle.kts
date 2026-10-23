@@ -15,7 +15,7 @@ dependencies {
     // KronoResult y Flow forman parte de la API pública del dominio (AuthRepository, casos de uso).
     api(project(":core:core-common"))
     implementation(libs.kotlinx.coroutines.android)
-    implementation(libs.kotlinx.datetime)
+    api(libs.kotlinx.datetime)
 
     testFixturesImplementation(project(":core:core-common"))
     testFixturesImplementation(libs.kotlinx.coroutines.android)

@@ -13,6 +13,9 @@ interface AuthRemoteDataSource {
     /** Usuario con sesión cada vez que cambia, o `null` sin sesión. */
     fun observeUser(): Flow<User?>
 
+    /** Usuario con sesión activa actualmente, o `null` si no hay sesión iniciada. */
+    val currentUser: User?
+
     /** Inicia sesión con correo y contraseña. */
     suspend fun signIn(email: String, password: String): User
 

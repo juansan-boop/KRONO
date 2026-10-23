@@ -27,6 +27,10 @@ class FirebaseAuthDataSource @Inject constructor(
         awaitClose { auth.removeAuthStateListener(listener) }
     }
 
+    /** Retorna el usuario autenticado actualmente en Firebase, o `null`. */
+    override val currentUser: User?
+        get() = auth.currentUser?.toDomain()
+
     /** Inicia sesión con correo y contraseña; las fallas del SDK se propagan como excepción. */
     override suspend fun signIn(email: String, password: String): User =
         auth.signInWithEmailAndPassword(email, password).await().requireUser()

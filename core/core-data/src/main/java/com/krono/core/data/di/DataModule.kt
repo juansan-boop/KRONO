@@ -30,6 +30,12 @@ object FirebaseModule {
     @Singleton
     fun provideFirebaseAuth(): FirebaseAuth =
         FirebaseAuth.getInstance().apply { setLanguageCode(EMAIL_LANGUAGE_CODE) }
+
+    /** Instancia única de Cloud Firestore con persistencia offline habilitada por defecto. */
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): com.google.firebase.firestore.FirebaseFirestore =
+        com.google.firebase.firestore.FirebaseFirestore.getInstance()
 }
 
 /** Enlaza el contrato de autenticación del dominio con su implementación en Firebase (D-1). */
@@ -76,3 +82,51 @@ object AuthModule {
     @Provides
     fun provideObserveSessionUseCase(repository: AuthRepository) = ObserveSessionUseCase(repository)
 }
+
+/** Enlaza los contratos de datos y repositorio de tareas con sus implementaciones de Firestore (F-02). */
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class TaskBindingsModule {
+
+    /** Fuente remota de tareas: Cloud Firestore. */
+    @Binds
+    @Singleton
+    abstract fun bindTaskRemoteDataSource(impl: com.krono.core.data.task.FirestoreTaskDataSource): com.krono.core.data.task.TaskRemoteDataSource
+
+    /** Repositorio de tareas de la app. */
+    @Binds
+    @Singleton
+    abstract fun bindTaskRepository(impl: com.krono.core.data.task.FirestoreTaskRepository): com.krono.core.domain.task.TaskRepository
+}
+
+/** Provee los casos de uso de tareas de `core-domain`. */
+@Module
+@InstallIn(SingletonComponent::class)
+object TaskModule {
+
+    /** Caso de uso para observar las tareas en tiempo real. */
+    @Provides
+    fun provideObserveTasksUseCase(repository: com.krono.core.domain.task.TaskRepository) =
+        com.krono.core.domain.task.ObserveTasksUseCase(repository)
+
+    /** Caso de uso para observar una tarea puntual. */
+    @Provides
+    fun provideObserveTaskByIdUseCase(repository: com.krono.core.domain.task.TaskRepository) =
+        com.krono.core.domain.task.ObserveTaskByIdUseCase(repository)
+
+    /** Caso de uso para obtener una tarea por su id. */
+    @Provides
+    fun provideGetTaskByIdUseCase(repository: com.krono.core.domain.task.TaskRepository) =
+        com.krono.core.domain.task.GetTaskByIdUseCase(repository)
+
+    /** Caso de uso para crear o actualizar tareas. */
+    @Provides
+    fun provideUpsertTaskUseCase(repository: com.krono.core.domain.task.TaskRepository) =
+        com.krono.core.domain.task.UpsertTaskUseCase(repository)
+
+    /** Caso de uso para eliminar tareas. */
+    @Provides
+    fun provideDeleteTaskUseCase(repository: com.krono.core.domain.task.TaskRepository) =
+        com.krono.core.domain.task.DeleteTaskUseCase(repository)
+}
+

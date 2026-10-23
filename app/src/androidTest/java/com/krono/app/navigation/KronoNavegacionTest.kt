@@ -65,6 +65,7 @@ class KronoNavegacionTest {
                     destinoInicial = inicio,
                     grafoAuth = grafoAuthFalso(),
                     ajustes = { alCerrarSesion -> AjustesDePrueba(alCerrarSesion) },
+                    tareas = { SeccionProvisional(R.string.seccion_tareas) },
                 )
             }
         }
