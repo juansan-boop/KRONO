@@ -53,12 +53,15 @@ import com.krono.feature.tasks.TasksViewModel
 /**
  * Punto de entrada con estado para la pantalla de tareas (F-03, F-07).
  * Conecta [TasksViewModel] con la interfaz reactiva.
+ *
+ * @param onOpenAssistant abre el asistente de prioridades (F-12); sin él no se muestra el acceso.
  */
 @Composable
 fun TasksRoute(
     onAddTask: () -> Unit,
     modifier: Modifier = Modifier,
     onTaskClick: ((String) -> Unit)? = null,
+    onOpenAssistant: (() -> Unit)? = null,
     viewModel: TasksViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -83,6 +86,7 @@ fun TasksRoute(
         onAddTask = onAddTask,
         modifier = modifier,
         onTaskClick = onTaskClick,
+        onOpenAssistant = onOpenAssistant,
         snackbarHostState = snackbarHostState,
     )
 }
@@ -104,6 +108,7 @@ fun TasksScreen(
     onConfirmDeleteTask: (() -> Unit)? = null,
     onPostponeTask: ((Task) -> Unit)? = null,
     onTaskClick: ((String) -> Unit)? = null,
+    onOpenAssistant: (() -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val addTaskLabel = stringResource(R.string.action_add_task)
@@ -158,7 +163,7 @@ fun TasksScreen(
                     verticalArrangement = Arrangement.spacedBy(KronoSpacing.md),
                 ) {
                     item {
-                        TasksHeader()
+                        TasksHeader(onOpenAssistant = onOpenAssistant)
                     }
 
                     item {

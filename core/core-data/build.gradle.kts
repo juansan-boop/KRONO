@@ -26,6 +26,8 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    // Firebase AI Logic: redacta las explicaciones del asistente de prioridades (F-12, D-5).
+    implementation(libs.firebase.ai)
     implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.kotlinx.coroutines.android)

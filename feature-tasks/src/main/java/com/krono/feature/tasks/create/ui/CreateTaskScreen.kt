@@ -86,6 +86,7 @@ fun CreateTaskRoute(
         onTimeSelected = viewModel::onTimeSelected,
         onPrioritySelected = viewModel::onPrioritySelected,
         onDurationSelected = viewModel::onDurationSelected,
+        onApplyDurationSuggestion = viewModel::onApplyDurationSuggestion,
         onSaveTask = viewModel::saveTask,
         snackbarHostState = snackbarHostState,
         modifier = modifier,
@@ -104,6 +105,7 @@ fun CreateTaskRoute(
  * @param onTimeSelected Selección de hora límite.
  * @param onPrioritySelected Selección de prioridad.
  * @param onDurationSelected Selección de duración estimada opcional.
+ * @param onApplyDurationSuggestion Aplica la duración sugerida por historial (F-11).
  * @param onSaveTask Intento de guardado del formulario.
  * @param modifier Modificador de diseño.
  * @param snackbarHostState Estado para mensajes temporales.
@@ -119,6 +121,7 @@ fun CreateTaskScreen(
     onPrioritySelected: (TaskPriority) -> Unit,
     onDurationSelected: (Duration?) -> Unit,
     onSaveTask: () -> Unit,
+    onApplyDurationSuggestion: () -> Unit = {},
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
@@ -209,6 +212,16 @@ fun CreateTaskScreen(
                         selectedDuration = state.estimatedDuration,
                         onDurationSelected = onDurationSelected,
                     )
+
+                    // Sugerencia por historial (F-11 CA-1, CA-2)
+                    if (state.showDurationSuggestion) {
+                        state.durationSuggestion?.let { suggestion ->
+                            DurationSuggestionChip(
+                                suggestion = suggestion,
+                                onApply = onApplyDurationSuggestion,
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(KronoSpacing.xs))
 

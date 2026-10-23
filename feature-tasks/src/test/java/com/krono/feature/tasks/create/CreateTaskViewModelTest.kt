@@ -1,7 +1,9 @@
 package com.krono.feature.tasks.create
 
 import app.cash.turbine.test
+import com.krono.core.domain.assistant.EstimateTaskDurationUseCase
 import com.krono.core.domain.task.FakeTaskRepository
+import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
@@ -25,6 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -45,6 +48,8 @@ class CreateTaskViewModelTest {
         fakeRepository = FakeTaskRepository()
         viewModel = CreateTaskViewModel(
             upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
         ).apply {
             currentDateTimeProvider = { fixedNow }
         }
@@ -159,5 +164,52 @@ class CreateTaskViewModelTest {
         viewModel.onTitleChanged("Nuevo título")
         assertNull(viewModel.uiState.value.titleErrorRes)
         assertFalse(viewModel.uiState.value.isTitleError)
+    }
+
+    @Test
+    fun conHistorialSuficiente_muestraSugerenciaYSeAplicaConUnToque() = runTest {
+        givenCompletedStudyTasks(count = 3, actual = 40.minutes)
+        advanceUntilIdle()
+
+        assertEquals(40.minutes, viewModel.uiState.value.durationSuggestion)
+        assertTrue(viewModel.uiState.value.showDurationSuggestion)
+
+        viewModel.onApplyDurationSuggestion()
+
+        assertEquals(40.minutes, viewModel.uiState.value.estimatedDuration)
+        assertFalse(viewModel.uiState.value.showDurationSuggestion)
+    }
+
+    @Test
+    fun conHistorialInsuficiente_noMuestraSugerencia() = runTest {
+        givenCompletedStudyTasks(count = 2, actual = 40.minutes)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.durationSuggestion)
+        assertFalse(viewModel.uiState.value.showDurationSuggestion)
+    }
+
+    @Test
+    fun alCambiarDeCategoria_recalculaLaSugerencia() = runTest {
+        givenCompletedStudyTasks(count = 3, actual = 40.minutes)
+        advanceUntilIdle()
+
+        viewModel.onCategorySelected(TaskCategory.TRABAJO)
+
+        assertNull(viewModel.uiState.value.durationSuggestion)
+    }
+
+    private fun givenCompletedStudyTasks(count: Int, actual: Duration) {
+        val tasks = (1..count).map { index ->
+            Task(
+                id = "historial-$index",
+                title = "Lectura $index",
+                category = TaskCategory.ESTUDIO,
+                dueDate = LocalDateTime(2026, 10, index, 10, 0),
+                actualDuration = actual,
+                isCompleted = true,
+            )
+        }
+        fakeRepository.givenTasks(*tasks.toTypedArray())
     }
 }

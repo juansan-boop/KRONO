@@ -144,4 +144,56 @@
     <string name="delete_task_confirm_action">Sí, eliminar tarea</string>
     <string name="delete_task_postpone_action">O posponer para mañana sin borrar</string>
     <string name="cd_confirm_delete_dialog">Confirmar eliminación de tarea</string>
+
+    <!-- Estimación por historial (F-11) -->
+    <string name="duration_suggestion">Sugerencia IA: ~%d min · Basado en historial</string>
+    <string name="cd_apply_duration_suggestion">%s. Toca para aplicarla</string>
+
+    <!-- Asistente de prioridades (F-12) -->
+    <string name="action_open_assistant">Asistente IA</string>
+    <string name="cd_open_assistant">Abrir el asistente de prioridades</string>
+    <string name="assistant_back">Volver</string>
+    <string name="assistant_mode_chip">IA híbrida</string>
+    <string name="assistant_title">Asistente de Prioridades</string>
+    <string name="assistant_subtitle">Calculado con tus fechas de entrega, prioridades y tiempos reales.</string>
+    <string name="assistant_suggestion_label">Sugerencia de la IA para hoy</string>
+    <string name="assistant_confidence">Confianza: %d%%</string>
+    <string name="assistant_priority_high">Prioridad alta</string>
+    <string name="assistant_priority_medium">Prioridad media</string>
+    <string name="assistant_priority_low">Prioridad baja</string>
+    <string name="assistant_explanation_loading">Redactando la explicación…</string>
+    <string name="assistant_explanation_ai">Redactado con IA a partir de tus datos</string>
+    <string name="assistant_explanation_template">Explicación automática (IA sin conexión)</string>
+    <string name="assistant_reason_overdue">La entrega ya venció: termínala cuanto antes para reducir el retraso.</string>
+    <string name="assistant_reason_due_very_soon">Vence en pocas horas y es lo más urgente de tu lista.</string>
+    <string name="assistant_reason_due_today">Vence en menos de un día.</string>
+    <string name="assistant_reason_due_soon">Vence en los próximos días; adelantarla te deja margen.</string>
+    <string name="assistant_reason_high_priority">La marcaste como prioridad alta.</string>
+    <string name="assistant_reason_tight_schedule">Tu estimación ocupa buena parte del tiempo que queda.</string>
+    <string name="assistant_reason_default">Es la tarea pendiente con mejor puntuación según tus fechas y prioridades.</string>
+    <string name="assistant_estimate_manual">Tu estimación</string>
+    <string name="assistant_estimate_history">Según tu historial</string>
+    <string name="assistant_estimate_default">Estimación por defecto</string>
+    <string name="assistant_duration_with_source">%1$s · %2$s</string>
+    <string name="assistant_time_range">%1$s - %2$s</string>
+    <string name="assistant_clock_time">%1$02d:%2$02d</string>
+    <string name="assistant_due_in">Vence en %s</string>
+    <string name="assistant_overdue_by">Venció hace %s</string>
+    <string name="assistant_no_due_date">Sin fecha de entrega</string>
+    <string name="assistant_open_task">Abrir tarea</string>
+    <string name="assistant_sequence_title">Secuencia del día</string>
+    <plurals name="assistant_sequence_remaining">
+        <item quantity="one">%d restante</item>
+        <item quantity="other">%d restantes</item>
+    </plurals>
+    <string name="assistant_sequence_subtitle">Ordenada por urgencia y prioridad, en bloques consecutivos.</string>
+    <string name="assistant_sequence_item_detail">%1$s · %2$s</string>
+    <string name="assistant_balance_title">Balance del plan</string>
+    <string name="assistant_balance_subtitle">Reparto del tiempo planificado por categoría.</string>
+    <string name="assistant_balance_item">%1$s (%2$d%%)</string>
+    <string name="assistant_empty_title">No tienes tareas pendientes</string>
+    <string name="assistant_empty_body">Cuando agregues tareas, el asistente te dirá por dónde empezar.</string>
+    <string name="assistant_error">No pudimos cargar tus tareas.</string>
+    <string name="assistant_retry">Reintentar</string>
+    <string name="assistant_refresh">Recalcular</string>
 </resources>
