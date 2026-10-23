@@ -36,7 +36,9 @@ import com.krono.feature.tasks.navigation.editTaskScreen
 import com.krono.feature.tasks.navigation.navigateToCreateTask
 import com.krono.feature.tasks.navigation.navigateToEditTask
 import com.krono.feature.tasks.navigation.navigateToTaskDetail
+import com.krono.feature.tasks.navigation.navigateToTaskTimer
 import com.krono.feature.tasks.navigation.taskDetailScreen
+import com.krono.feature.tasks.navigation.taskTimerScreen
 import com.krono.feature.tasks.ui.TasksRoute
 
 /**
@@ -127,6 +129,8 @@ fun KronoShell(
                 alVolverDeDetalleTarea = { navController.popBackStack() },
                 alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
                 alIniciarEnfoqueDesdeDetalle = { /* Navegación a F-09 */ },
+                alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
+                alVolverDeCronometro = { navController.popBackStack() },
                 alVolverDeEditarPerfil = { navController.popBackStack() },
                 alVolverDeZonaSeguridad = { navController.popBackStack() },
                 alVolverDeNotificaciones = { navController.popBackStack() },
@@ -145,6 +149,8 @@ private fun NavGraphBuilder.grafoPrincipal(
     alVolverDeDetalleTarea: () -> Unit = {},
     alEditarDesdeDetalle: (String) -> Unit = {},
     alIniciarEnfoqueDesdeDetalle: (String) -> Unit = {},
+    alAbrirCronometro: (String) -> Unit = {},
+    alVolverDeCronometro: () -> Unit = {},
     alVolverDeEditarPerfil: () -> Unit = {},
     alVolverDeZonaSeguridad: () -> Unit = {},
     alVolverDeNotificaciones: () -> Unit = {},
@@ -160,7 +166,9 @@ private fun NavGraphBuilder.grafoPrincipal(
             onBack = alVolverDeDetalleTarea,
             onEditTask = alEditarDesdeDetalle,
             onStartFocus = alIniciarEnfoqueDesdeDetalle,
+            onStartTimer = alAbrirCronometro,
         )
+        taskTimerScreen(onBack = alVolverDeCronometro)
         editTaskScreen(onBack = alVolverDeEditarTarea)
         composable(KronoDestination.Calendario.route) { SeccionProvisional(R.string.seccion_calendario) }
         composable(KronoDestination.Ajustes.route) { ajustes() }

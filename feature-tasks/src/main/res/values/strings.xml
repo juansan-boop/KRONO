@@ -144,4 +144,30 @@
     <string name="delete_task_confirm_action">Sí, eliminar tarea</string>
     <string name="delete_task_postpone_action">O posponer para mañana sin borrar</string>
     <string name="cd_confirm_delete_dialog">Confirmar eliminación de tarea</string>
+
+    <!-- Cronómetro (F-08) -->
+    <string name="task_detail_timer_button">Cronómetro</string>
+    <string name="cd_task_detail_timer_button">Medir el tiempo real de esta tarea con el cronómetro</string>
+    <string name="timer_back">Volver</string>
+    <string name="timer_chip_idle">Cronómetro</string>
+    <string name="timer_chip_running">Midiendo tiempo</string>
+    <string name="timer_chip_paused">En pausa</string>
+    <string name="timer_estimate">~%s estimado</string>
+    <string name="timer_actual_total">Tiempo real acumulado: %s</string>
+    <string name="timer_caption">Tiempo trabajado</string>
+    <string name="timer_start">Iniciar</string>
+    <string name="timer_pause">Pausar</string>
+    <string name="timer_resume">Reanudar</string>
+    <string name="timer_finish">Finalizar</string>
+    <string name="cd_timer_start">Iniciar el cronómetro</string>
+    <string name="cd_timer_pause">Pausar el cronómetro</string>
+    <string name="cd_timer_resume">Reanudar el cronómetro</string>
+    <string name="cd_timer_clock">Tiempo trabajado: %s</string>
+    <string name="timer_background_hint">El tiempo sigue contando aunque salgas de la app.</string>
+    <string name="timer_saved">Sesión guardada: %s sumados a la tarea.</string>
+    <string name="timer_switch_title">¿Detener el cronómetro actual?</string>
+    <string name="timer_switch_body">Ya tienes un cronómetro en curso en otra tarea. Se guardará su tiempo y empezará el de esta.</string>
+    <string name="timer_switch_confirm">Detener y empezar</string>
+    <string name="timer_switch_cancel">Cancelar</string>
+    <string name="timer_task_not_found">No encontramos esta tarea.</string>
 </resources>

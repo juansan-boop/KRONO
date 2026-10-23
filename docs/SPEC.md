@@ -219,7 +219,15 @@ La persistencia usa Cloud Firestore (D-1) con el modelo de la sección 6 (D-3): 
 - **CA-4:** Dada una tarea eliminada, cuando se recalculan estadísticas, entonces sus sesiones de tiempo ya no cuentan para la estimación.
 
 #### F-08 — Cronómetro de duración real
-- **Estado:** Pendiente · **Prioridad:** Alta (diferenciador) · **Módulos:** `feature-tasks`, `core-domain`, `core-data` · **Depende de:** F-02 · **PR:** —
+- **Estado:** En progreso · **Prioridad:** Alta (diferenciador) · **Responsable:** Kevin Vuskovit García González · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-02 · **PR:** —
+
+Implementación: el cronómetro en curso es un único documento `users/{uid}/timer/active`
+(`taskId`, `startedAtMillis`, `runningSinceMillis`, `accumulatedMillis`), así solo puede
+haber uno (CA-4) y sobrevive a cerrar la app (CA-3). Al finalizar, una escritura atómica
+crea la sesión en `users/{uid}/timeSessions/{id}`, suma su duración a
+`tasks/{id}.actualDurationMillis` con `FieldValue.increment` y borra el cronómetro. Las
+pausas no cuentan como tiempo trabajado. Se abre con el botón "Cronómetro" del detalle de
+la tarea.
 
 - **CA-1:** Dada una tarea, cuando se inicia el cronómetro, entonces cuenta el tiempo transcurrido y se puede pausar, reanudar y finalizar.
 - **CA-2:** Dado un cronómetro finalizado, cuando se guarda, entonces se registra una `TimeSession` y `actualDuration` de la tarea aumenta en esa duración.
@@ -377,6 +385,7 @@ reportan al orquestador.
 | 2026-10-08 | v0.6: D-3 resuelta (modelo de datos aprobado en Firestore bajo `users/{uid}`, subtareas embebidas, demás entidades en subcolecciones; F-02 ya no depende de D-3); D-10 resuelta (texto neutro en recuperar contraseña, F-24 CA-3); F-21 CA-1 borra los datos del usuario en Firestore y CA-2 deja de estar Bloqueada (borrado de datos, reautenticación y eliminación de la cuenta); se quita de D-1 la frase obsoleta sobre librerías de red; decisión de Juan Fernando Sánchez Otero |
 | 2026-10-09 | v0.7: cierre de la fase 0 (decisiones de Juan Fernando Sánchez Otero). Estados: F-22 a F-25 Hechas (PR #13, Firebase Authentication), F-01 Hecha (PR #16), F-27 Hecha (PR #17). F-22 a F-25: CA-4 (botón temporal "Cerrar sesión" en Ajustes provisional con diálogo de confirmación) y CA-5 (se elimina la pantalla "Próximo hito"; se entra al flujo principal con barra inferior) ajustados a lo implementado en el PR #16 (decisión del 2026-10-08). D-8: `feature-tasks` asignado a Juan Fernando Sánchez Otero; sigue Parcial para onboarding, dashboard, calendar y profile. D-11 resuelta (etiquetas de la barra inferior limitadas a 1,3x, PR #18). Nuevas decisiones abiertas D-12 (backdrop blur real) y D-13 (escala de íconos pequeños). Nueva sección 11 "Deuda técnica conocida". Se corrige la referencia obsoleta a Room en la nota de F-22 a F-25 |
 | 2026-10-13 | D-8 actualizada: se asigna formalmente a Janer García (Janer-Garcia) la responsabilidad de F-02 (persistencia de tareas en Cloud Firestore — core-domain / core-data) y del módulo feature-tasks completo (F-03, F-04, F-05, F-06 y F-07) |
+| 2026-10-23 | F-08 pasa a En progreso con Kevin Vuskovit García González como responsable: cronómetro persistido en `users/{uid}/timer/active` y sesiones en `users/{uid}/timeSessions` |
 
 ## 11. Deuda técnica conocida
 
@@ -392,3 +401,8 @@ decisiones abiertas.
 - Firebase puede rechazar una contraseña aunque los indicadores de fortaleza estén en verde.
 - La sesión en caché persiste si la cuenta se borra desde la consola de Firebase.
 - Firebase BoM queda en 34.12.0, limitado por Kotlin 2.1.0.
+
+**Cronómetro (F-08)**
+- La zona de seguridad (F-21) debe borrar también `timer` y `timeSessions` al restablecer los datos del usuario.
+- Las reglas de seguridad de Firestore deben permitir `users/{uid}/timer` y `users/{uid}/timeSessions` al propio usuario.
+- No hay notificación persistente mientras el cronómetro corre; el tiempo no se pierde (se calcula con marcas de tiempo), pero el usuario no lo ve fuera de la app.
