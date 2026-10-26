@@ -1,0 +1,24 @@
+{
+  "descripcion": "Regresión lineal log-log (Ridge) entrenada con historial_train.csv",
+  "formula": "duracion_min = exp(intercepto + sum(coeficientes[x] * valor_x))",
+  "variables": {
+    "log_estimacion": "ln(estimación del usuario en minutos)",
+    "dias_a_fecha_limite": "días entre el inicio y la fecha límite",
+    "prioridad": "1 baja, 2 media, 3 alta",
+    "bloque_horario_*": "1 si la tarea empieza en ese bloque (manana < 12 h, tarde < 18 h, noche)"
+  },
+  "intercepto": 0.865886,
+  "coeficientes": {
+    "dias_a_fecha_limite": -0.001996,
+    "prioridad": -0.003219,
+    "log_estimacion": 0.860647,
+    "bloque_horario_manana": -0.098162,
+    "bloque_horario_noche": 0.164887,
+    "bloque_horario_tarde": -0.066725
+  },
+  "factor_global_b1": 1.4,
+  "hibrido": {
+    "K": 5,
+    "ventana": 10
+  }
+}

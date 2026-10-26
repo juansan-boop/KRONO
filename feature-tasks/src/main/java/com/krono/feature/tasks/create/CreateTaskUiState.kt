@@ -16,6 +16,8 @@ import kotlin.time.Duration
  * @property dueTime Hora límite seleccionada, o `null` si aún no se define.
  * @property priority Nivel de prioridad asignado (Baja, Media, Alta).
  * @property estimatedDuration Duración estimada opcional (CA-4).
+ * @property durationSuggestion Duración sugerida por el historial de la categoría (F-11), o
+ * `null` si no hay historial suficiente.
  * @property titleErrorRes Recurso de texto de error de validación de título (CA-2).
  * @property dateErrorRes Recurso de texto de error cuando falta la fecha (CA-2).
  * @property dateTimeErrorRes Recurso de texto cuando la fecha/hora es en el pasado (CA-3).
@@ -29,6 +31,7 @@ data class CreateTaskUiState(
     val dueTime: LocalTime? = null,
     val priority: TaskPriority = TaskPriority.MEDIA,
     val estimatedDuration: Duration? = null,
+    val durationSuggestion: Duration? = null,
     @StringRes val titleErrorRes: Int? = null,
     @StringRes val dateErrorRes: Int? = null,
     @StringRes val dateTimeErrorRes: Int? = null,
@@ -43,6 +46,10 @@ data class CreateTaskUiState(
 
     /** Indica si hay un error visual asociado al selector de hora. */
     val isTimeError: Boolean get() = dateTimeErrorRes != null
+
+    /** Indica si se muestra la sugerencia: existe y aún no se ha aplicado (F-11 CA-1). */
+    val showDurationSuggestion: Boolean
+        get() = durationSuggestion != null && durationSuggestion != estimatedDuration
 
     /** Permite enviar el formulario si no hay un guardado en curso. */
     val canSubmit: Boolean get() = !isSaving

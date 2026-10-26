@@ -35,8 +35,10 @@ import com.krono.feature.tasks.navigation.createTaskScreen
 import com.krono.feature.tasks.navigation.editTaskScreen
 import com.krono.feature.tasks.navigation.navigateToCreateTask
 import com.krono.feature.tasks.navigation.navigateToEditTask
+import com.krono.feature.tasks.navigation.navigateToPriorityAssistant
 import com.krono.feature.tasks.navigation.navigateToTaskDetail
 import com.krono.feature.tasks.navigation.navigateToTaskTimer
+import com.krono.feature.tasks.navigation.priorityAssistantScreen
 import com.krono.feature.tasks.navigation.taskDetailScreen
 import com.krono.feature.tasks.navigation.taskTimerScreen
 import com.krono.feature.tasks.ui.TasksRoute
@@ -75,6 +77,7 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
             TasksRoute(
                 onAddTask = { navController.navigateToCreateTask() },
                 onTaskClick = { taskId -> navController.navigateToTaskDetail(taskId) },
+                onOpenAssistant = { navController.navigateToPriorityAssistant() },
             )
         },
     )
@@ -131,6 +134,8 @@ fun KronoShell(
                 alIniciarEnfoqueDesdeDetalle = { /* Navegación a F-09 */ },
                 alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
                 alVolverDeCronometro = { navController.popBackStack() },
+                alVolverDeAsistente = { navController.popBackStack() },
+                alAbrirTareaDesdeAsistente = { taskId -> navController.navigateToTaskDetail(taskId) },
                 alVolverDeEditarPerfil = { navController.popBackStack() },
                 alVolverDeZonaSeguridad = { navController.popBackStack() },
                 alVolverDeNotificaciones = { navController.popBackStack() },
@@ -151,6 +156,8 @@ private fun NavGraphBuilder.grafoPrincipal(
     alIniciarEnfoqueDesdeDetalle: (String) -> Unit = {},
     alAbrirCronometro: (String) -> Unit = {},
     alVolverDeCronometro: () -> Unit = {},
+    alVolverDeAsistente: () -> Unit = {},
+    alAbrirTareaDesdeAsistente: (String) -> Unit = {},
     alVolverDeEditarPerfil: () -> Unit = {},
     alVolverDeZonaSeguridad: () -> Unit = {},
     alVolverDeNotificaciones: () -> Unit = {},
@@ -170,6 +177,10 @@ private fun NavGraphBuilder.grafoPrincipal(
         )
         taskTimerScreen(onBack = alVolverDeCronometro)
         editTaskScreen(onBack = alVolverDeEditarTarea)
+        priorityAssistantScreen(
+            onBack = alVolverDeAsistente,
+            onOpenTask = alAbrirTareaDesdeAsistente,
+        )
         composable(KronoDestination.Calendario.route) { SeccionProvisional(R.string.seccion_calendario) }
         composable(KronoDestination.Ajustes.route) { ajustes() }
         editProfileScreen(
