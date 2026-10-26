@@ -1,6 +1,7 @@
 package com.krono.feature.tasks.timer
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTaskByIdUseCase
 import com.krono.core.domain.task.Task
@@ -14,6 +15,7 @@ import com.krono.core.domain.timer.ResumeTimerUseCase
 import com.krono.core.domain.timer.StartTimerUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -36,7 +38,8 @@ import kotlin.time.Duration.Companion.seconds
  * Pruebas de [TaskTimerViewModel] (F-08 CA-1 a CA-4).
  *
  * El cronómetro refresca la pantalla en un bucle infinito, así que las pruebas avanzan el
- * tiempo con `runCurrent`/`advanceTimeBy` en lugar de `advanceUntilIdle`.
+ * tiempo con `runCurrent`/`advanceTimeBy` en lugar de `advanceUntilIdle`, y cada prueba
+ * cancela al final los ViewModels creados para que `runTest` no se quede esperando ese bucle.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskTimerViewModelTest {
@@ -47,6 +50,7 @@ class TaskTimerViewModelTest {
     private lateinit var tasks: FakeTaskRepository
     private lateinit var timers: FakeTimerRepository
     private lateinit var viewModel: TaskTimerViewModel
+    private val createdViewModels = mutableListOf<TaskTimerViewModel>()
 
     @Before
     fun setUp() {
@@ -62,7 +66,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun alAbrir_cargaLaTareaSinCronometro() = runTest {
+    fun alAbrir_cargaLaTareaSinCronometro() = runTimerTest {
         runCurrent()
 
         val state = viewModel.uiState.value
@@ -71,7 +75,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun alIniciar_corrigeElTiempoCadaSegundoDesdeElReloj() = runTest {
+    fun alIniciar_corrigeElTiempoCadaSegundoDesdeElReloj() = runTimerTest {
         runCurrent()
         viewModel.onStart()
         runCurrent()
@@ -86,7 +90,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun alPausar_elTiempoSeDetiene() = runTest {
+    fun alPausar_elTiempoSeDetiene() = runTimerTest {
         runCurrent()
         viewModel.onStart()
         runCurrent()
@@ -102,7 +106,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun alFinalizar_guardaLaSesionYVuelveAReposo() = runTest {
+    fun alFinalizar_guardaLaSesionYVuelveAReposo() = runTimerTest {
         runCurrent()
         viewModel.onStart()
         runCurrent()
@@ -118,7 +122,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun alVolverALaPantalla_recuperaElCronometroEnCurso() = runTest {
+    fun alVolverALaPantalla_recuperaElCronometroEnCurso() = runTimerTest {
         timers.givenActiveTimer(ActiveTimer("informe", clock.now(), clock.now(), 0.minutes))
         clock.advanceBy(40.minutes)
 
@@ -130,7 +134,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun conCronometroEnOtraTarea_pideConfirmarYAlAceptarCambia() = runTest {
+    fun conCronometroEnOtraTarea_pideConfirmarYAlAceptarCambia() = runTimerTest {
         timers.givenActiveTimer(ActiveTimer("otra", clock.now(), clock.now(), 0.minutes))
         runCurrent()
         clock.advanceBy(15.minutes)
@@ -149,7 +153,7 @@ class TaskTimerViewModelTest {
     }
 
     @Test
-    fun siFallaLaPersistencia_muestraElError() = runTest {
+    fun siFallaLaPersistencia_muestraElError() = runTimerTest {
         runCurrent()
         timers.failure = IllegalStateException("Sin permisos")
 
@@ -159,6 +163,14 @@ class TaskTimerViewModelTest {
         assertEquals("Sin permisos", viewModel.uiState.value.errorMessage)
         assertFalse(viewModel.uiState.value.isBusy)
         assertNull(timers.currentTimer)
+    }
+
+    private fun runTimerTest(block: suspend TestScope.() -> Unit) = runTest {
+        try {
+            block()
+        } finally {
+            createdViewModels.forEach { it.viewModelScope.cancel() }
+        }
     }
 
     private fun TestScope.tick() {
@@ -177,6 +189,6 @@ class TaskTimerViewModelTest {
             resumeTimer = ResumeTimerUseCase(timers, clock),
             finishTimer = finish,
             clock = clock,
-        )
+        ).also { createdViewModels += it }
     }
 }
