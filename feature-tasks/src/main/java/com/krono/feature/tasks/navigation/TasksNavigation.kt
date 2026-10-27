@@ -6,6 +6,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.krono.feature.tasks.assistant.ui.PriorityAssistantRoute
 import com.krono.feature.tasks.create.ui.CreateTaskRoute
 import com.krono.feature.tasks.detail.TaskDetailViewModel.Companion.TASK_ID_NAV_ARG
 import com.krono.feature.tasks.detail.ui.TaskDetailRoute
@@ -44,6 +45,11 @@ const val EDIT_TASK_ROUTE_BASE = "tareas/editar"
 const val EDIT_TASK_ROUTE = "$EDIT_TASK_ROUTE_BASE/{$EDIT_TASK_ID_NAV_ARG}"
 
 /**
+ * Ruta canónica del asistente de prioridades (F-12).
+ */
+const val PRIORITY_ASSISTANT_ROUTE = "tareas/asistente"
+
+/**
  * Navega hacia la pantalla de tareas.
  */
 fun NavController.navigateToTasks(navOptions: NavOptions? = null) {
@@ -72,19 +78,47 @@ fun NavController.navigateToEditTask(taskId: String, navOptions: NavOptions? = n
 }
 
 /**
+ * Navega hacia el asistente de prioridades (F-12).
+ */
+fun NavController.navigateToPriorityAssistant(navOptions: NavOptions? = null) {
+    navigate(PRIORITY_ASSISTANT_ROUTE, navOptions)
+}
+
+/**
+ * Registra el destino del asistente de prioridades (F-12) en el grafo de navegación.
+ *
+ * @param onBack Callback invocado para regresar a la pantalla anterior.
+ * @param onOpenTask Callback invocado para abrir el detalle de una tarea del plan (F-06).
+ */
+fun NavGraphBuilder.priorityAssistantScreen(
+    onBack: () -> Unit,
+    onOpenTask: (String) -> Unit,
+) {
+    composable(route = PRIORITY_ASSISTANT_ROUTE) {
+        PriorityAssistantRoute(
+            onBack = onBack,
+            onOpenTask = onOpenTask,
+        )
+    }
+}
+
+/**
  * Registra el destino de la lista de tareas (F-03) en el grafo de navegación.
  *
  * @param onAddTask Callback invocado al pulsar el botón de crear nueva tarea (F-04).
  * @param onTaskClick Callback opcional al pulsar sobre una tarjeta de tarea.
+ * @param onOpenAssistant Callback opcional para abrir el asistente de prioridades (F-12).
  */
 fun NavGraphBuilder.tasksScreen(
     onAddTask: () -> Unit,
     onTaskClick: ((String) -> Unit)? = null,
+    onOpenAssistant: (() -> Unit)? = null,
 ) {
     composable(route = TASKS_ROUTE) {
         TasksRoute(
             onAddTask = onAddTask,
             onTaskClick = onTaskClick,
+            onOpenAssistant = onOpenAssistant,
         )
     }
 }

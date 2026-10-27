@@ -1,0 +1,13 @@
+estimador,variables,MAE_min,MAPE_pct,R2,aciertos_20pct,sesgo_medio_min
+B0 estimación usuario,-,60.6,34.8,0.372,23.8,-56.4
+B1 factor global,-,44.1,28.8,0.652,43.8,-18.1
+B2 regla app (F-11),-,70.7,50.6,0.233,24.6,-15.2
+M1 regresión lineal,APP,43.0,26.7,0.637,45.0,-22.8
+M2 bosque aleatorio,APP,45.3,28.6,0.615,40.8,-22.5
+H agente híbrido,APP,40.3,26.8,0.68,47.1,-14.0
+M1 regresión lineal,+SUBCAT,41.5,25.8,0.664,47.1,-23.6
+M2 bosque aleatorio,+SUBCAT,43.0,27.4,0.66,42.9,-22.1
+H agente híbrido,+SUBCAT,38.2,25.3,0.724,51.7,-14.6
+M1 regresión lineal,COMPLETO,40.4,25.4,0.683,46.2,-22.0
+M2 bosque aleatorio,COMPLETO,41.5,26.9,0.689,45.0,-20.7
+H agente híbrido,COMPLETO,37.5,25.0,0.729,52.9,-14.0

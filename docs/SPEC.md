@@ -241,10 +241,15 @@ La persistencia usa Cloud Firestore (D-1) con el modelo de la sección 6 (D-3): 
 - **CA-3:** Dada una plantilla, cuando se muestra, entonces indica el porcentaje de foco y descanso del ciclo.
 
 #### F-11 — Estimación basada en historial
-- **Estado:** Pendiente · **Prioridad:** Alta · **Módulos:** `core-domain`, `feature-tasks` · **Depende de:** F-08 · **PR:** —
+- **Estado:** En progreso · **Prioridad:** Alta · **Responsable:** Kevin Vuskovit García González · **Módulos:** `core-domain`, `feature-tasks` · **Depende de:** F-08 · **PR:** —
 
 Algoritmo **(propuesta, confirmar en D-4)**: promedio de `actualDuration` de las
 últimas 5 tareas completadas de la misma categoría, redondeado a 5 minutos.
+
+Implementación (`EstimateTaskDurationUseCase`): solo cuentan las tareas completadas con
+tiempo real medido (`actualDuration > 0`), así que la sugerencia aparece cuando exista el
+cronómetro (F-08). `Task` no guarda la fecha en que se completó, por lo que "últimas" se
+aproxima con la fecha de entrega más reciente.
 
 - **CA-1:** Dadas al menos 3 tareas completadas de una categoría, cuando se crea una tarea de esa categoría, entonces se muestra "Sugerencia IA: ~X min · Basado en historial" y se puede aplicar con un toque.
 - **CA-2:** Dado que hay menos de 3 tareas completadas en la categoría, cuando se crea una tarea, entonces no se muestra sugerencia.
@@ -325,8 +330,20 @@ La autenticación usa Firebase Authentication con correo y contraseña (D-1); `A
 - **CA-1:** Tras crear cuenta, se muestra la bienvenida y luego "Completa tu Perfil" (donde se pide el nombre); con campos obligatorios vacíos no avanza.
 
 #### F-12 — Asistente de prioridades
-- **Estado:** Bloqueada (D-5) · **Prioridad:** Media · **Módulos:** `feature-tasks`, `core-domain` · **PR:** —
+- **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Kevin Vuskovit García González · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **PR:** —
+
+Enfoque híbrido (D-5): `BuildPriorityPlanUseCase` (heurística local en `core-domain`) puntúa
+las tareas pendientes por urgencia de la entrega, prioridad y margen de tiempo, sugiere la
+primera y encadena las demás en bloques desde la hora actual. La confianza mostrada sale de
+la diferencia de puntuación con la segunda tarea y de la calidad de los datos (estimación y
+fecha). Gemini, vía Firebase AI Logic (`core-data`), solo redacta el motivo en español a
+partir de esos datos; sin conexión o si falla, la UI arma el motivo con plantillas. El
+balance por categoría reemplaza la "Telemetría Cognitiva" del diseño. Se accede desde el
+botón "Asistente IA" de la lista de tareas.
+
 - **CA-1:** Dadas tareas pendientes, cuando se abre el asistente, entonces sugiere la tarea a hacer ahora con su motivo y una secuencia ordenada para el resto del día.
+- **CA-2:** Dado que el servicio de IA no responde, cuando se abre el asistente, entonces la recomendación y la secuencia se muestran igual y el motivo usa el texto de plantilla.
+- **CA-3:** La heurística vive en casos de uso de `core-domain` con pruebas unitarias; el modelo de lenguaje nunca decide el orden.
 
 #### F-18 — Sincronización con calendarios externos
 - **Estado:** Bloqueada (D-6) · **Prioridad:** Baja · **Módulos:** `feature-calendar`, `core-data` · **PR:** —
@@ -342,8 +359,8 @@ reportan al orquestador.
 | D-1 | ¿Qué backend de autenticación y nube se usa (Firebase, propio, ninguno)? | F-21 (CA-2), F-22 a F-26, sincronización | Resuelta (Juan Fernando Sánchez Otero, 2026-10-08): el backend es Firebase. Autenticación con Firebase Authentication (correo y contraseña) y Cloud Firestore como única fuente de datos, con su persistencia offline; Room se elimina. Las cuentas locales de prueba se descartan. `AuthRepository` y los repositorios de `core-domain` aíslan la implementación. Orden de trabajo: primero Auth (F-22 a F-25), luego Firestore (datos de tareas), cada uno en su PR. Queda sin efecto el hash con sal y la recuperación simulada: la contraseña la gestiona Firebase y la recuperación es real por correo. |
 | D-2 | ¿Qué proveedores de login social ("o continúa con")? | F-22 | Ninguno: sin login social por ahora. |
 | D-3 | ¿Se aprueba el modelo de datos propuesto de la sección 6? | F-02 en adelante | Resuelta (Juan Fernando Sánchez Otero, 2026-10-08): se aprueba el modelo de la sección 6, almacenado en Cloud Firestore bajo `users/{uid}`: subtareas embebidas en el documento de la tarea; sesiones de tiempo y demás entidades en subcolecciones de `users/{uid}`. El diseño fino queda para F-02. |
-| D-4 | ¿Se aprueba el algoritmo de estimación propuesto en F-11? | F-11 | Pendiente |
-| D-5 | ¿El asistente de prioridades es una heurística local o usa un servicio de IA externo? Los diseños mencionan "ritmo circadiano" y "confianza 94%": definir qué datos los respaldan | F-12 | Pendiente |
+| D-4 | ¿Se aprueba el algoritmo de estimación propuesto en F-11? | F-11 | Pendiente de aprobación: la propuesta quedó implementada en `EstimateTaskDurationUseCase` (Kevin Vuskovit García González, 2026-10-22) |
+| D-5 | ¿El asistente de prioridades es una heurística local o usa un servicio de IA externo? Los diseños mencionan "ritmo circadiano" y "confianza 94%": definir qué datos los respaldan | F-12 | Resuelta (Kevin Vuskovit García González, 2026-10-22): híbrido. La heurística local de `core-domain` decide el orden y la confianza; Gemini vía Firebase AI Logic solo redacta el motivo, con texto de plantilla si no responde. No se muestran datos "circadianos" porque la app no los mide; la confianza se calcula con datos reales de las tareas. Requiere habilitar la Gemini Developer API en la consola de Firebase. |
 | D-6 | ¿Entra la sincronización con Google Calendar y Outlook en el alcance del proyecto académico? | F-18 | Pendiente |
 | D-7 | `CONTRIBUTING.md` define la rama `develop`, pero solo existe `main` en el remoto. ¿Se crea `develop` como base de los PRs? | Flujo de PRs | Resuelta: `develop` existe y es la base de los PRs. |
 | D-8 | ¿Qué integrante es responsable de cada módulo? Los agentes solo deben tocar los módulos asignados a quien los ejecuta | Todas | Actualizada (2026-10-13): Janer García (Janer-Garcia) es responsable de F-02 (Persistencia de tareas en Cloud Firestore — core-domain / core-data) y del módulo `:feature-tasks` completo: F-03 (Lista de tareas), F-04 (Crear tarea), F-05 (Editar tarea), F-06 (Detalle de tarea y subtareas) y F-07 (Eliminar o posponer tarea); Juan Esteban Sora Ariza es responsable exclusivo del módulo `:feature-profile` (F-15, F-19, F-20, F-21, F-25 CA-4); Juan Fernando Sánchez Otero mantiene `app` y `feature-auth`; `feature-onboarding`, `feature-dashboard` y `feature-calendar` quedan sin asignar para hitos posteriores. |
@@ -360,6 +377,7 @@ reportan al orquestador.
 | `:feature-profile` | **Juan Esteban Sora Ariza** (responsable exclusivo) | **F-19** (Perfil de Usuario y Edición), **F-20** (Hub de Ajustes, Ritmo Circadiano y Enfoque Adaptativo), **F-21** (Zona de Seguridad y Purga de Caché), **F-15** (Preferencias de Notificaciones) y **F-25 CA-4** (Flujo y Modal Oficial de Cierre de Sesión). |
 | `:feature-tasks`, `:core` (persistencia de tareas) | **Janer García (Janer-Garcia)** | **F-02** (Persistencia de tareas en Cloud Firestore — `core-domain` / `core-data`) y módulo `:feature-tasks` completo: **F-03** (Lista de tareas), **F-04** (Crear tarea), **F-05** (Editar tarea), **F-06** (Detalle de tarea y subtareas) y **F-07** (Eliminar o posponer tarea). |
 | `app`, `feature-auth` | **Juan Fernando Sánchez Otero** | Mantiene `app` y `feature-auth`. |
+| `:feature-tasks` (asistente), `core-domain` / `core-data` (`assistant`) | **Kevin Vuskovit García González** | **F-11** (Estimación basada en historial) y **F-12** (Asistente de prioridades con IA). |
 | `feature-onboarding` | Sin asignar | Hitos posteriores |
 | `feature-dashboard` | Sin asignar | Hitos posteriores |
 | `feature-calendar` | Sin asignar | Hitos posteriores |
@@ -377,6 +395,7 @@ reportan al orquestador.
 | 2026-10-08 | v0.6: D-3 resuelta (modelo de datos aprobado en Firestore bajo `users/{uid}`, subtareas embebidas, demás entidades en subcolecciones; F-02 ya no depende de D-3); D-10 resuelta (texto neutro en recuperar contraseña, F-24 CA-3); F-21 CA-1 borra los datos del usuario en Firestore y CA-2 deja de estar Bloqueada (borrado de datos, reautenticación y eliminación de la cuenta); se quita de D-1 la frase obsoleta sobre librerías de red; decisión de Juan Fernando Sánchez Otero |
 | 2026-10-09 | v0.7: cierre de la fase 0 (decisiones de Juan Fernando Sánchez Otero). Estados: F-22 a F-25 Hechas (PR #13, Firebase Authentication), F-01 Hecha (PR #16), F-27 Hecha (PR #17). F-22 a F-25: CA-4 (botón temporal "Cerrar sesión" en Ajustes provisional con diálogo de confirmación) y CA-5 (se elimina la pantalla "Próximo hito"; se entra al flujo principal con barra inferior) ajustados a lo implementado en el PR #16 (decisión del 2026-10-08). D-8: `feature-tasks` asignado a Juan Fernando Sánchez Otero; sigue Parcial para onboarding, dashboard, calendar y profile. D-11 resuelta (etiquetas de la barra inferior limitadas a 1,3x, PR #18). Nuevas decisiones abiertas D-12 (backdrop blur real) y D-13 (escala de íconos pequeños). Nueva sección 11 "Deuda técnica conocida". Se corrige la referencia obsoleta a Room en la nota de F-22 a F-25 |
 | 2026-10-13 | D-8 actualizada: se asigna formalmente a Janer García (Janer-Garcia) la responsabilidad de F-02 (persistencia de tareas en Cloud Firestore — core-domain / core-data) y del módulo feature-tasks completo (F-03, F-04, F-05, F-06 y F-07) |
+| 2026-10-22 | F-11 y F-12 pasan a En progreso con Kevin Vuskovit García González como responsable; D-5 resuelta (asistente híbrido: heurística local + Gemini vía Firebase AI Logic para redactar el motivo); D-4 con la propuesta implementada, pendiente de aprobación; F-12 suma CA-2 (respaldo sin IA) y CA-3 (heurística probada en `core-domain`) |
 
 ## 11. Deuda técnica conocida
 
@@ -392,3 +411,9 @@ decisiones abiertas.
 - Firebase puede rechazar una contraseña aunque los indicadores de fortaleza estén en verde.
 - La sesión en caché persiste si la cuenta se borra desde la consola de Firebase.
 - Firebase BoM queda en 34.12.0, limitado por Kotlin 2.1.0.
+
+**Asistente de prioridades (F-11, F-12)**
+- `firebase-ai` se toma del mismo Firebase BoM 34.12.0; si su versión no compila con Kotlin 2.1.0, hay que subir Kotlin o fijar una versión compatible de `firebase-ai`.
+- Falta Firebase App Check para que solo la app oficial pueda llamar a Gemini, y mover el nombre del modelo (`gemini-3.5-flash`) a Remote Config.
+- El prompt envía a Gemini el título, la categoría, la prioridad y la fecha de las tareas del plan; conviene mencionarlo en la política de privacidad.
+- La sugerencia de F-11 depende del tiempo real medido por el cronómetro (F-08), todavía pendiente.

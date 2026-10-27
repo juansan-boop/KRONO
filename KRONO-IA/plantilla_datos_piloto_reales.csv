@@ -1,0 +1,2 @@
+usuario_id,tarea_id,categoria,hora_inicio,bloque_horario,dias_a_fecha_limite,prioridad,estimacion_usuario_min,fatiga,duracion_real_min
+REAL01,REAL01-T001,lectura,20,noche,3,2,45,3,60

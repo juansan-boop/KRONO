@@ -3,6 +3,8 @@ package com.krono.feature.tasks.create
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.assistant.EstimateTaskDurationUseCase
+import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
@@ -15,6 +17,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -35,6 +38,8 @@ import kotlin.time.Duration
 @HiltViewModel
 class CreateTaskViewModel @Inject constructor(
     private val upsertTaskUseCase: UpsertTaskUseCase,
+    private val observeTasksUseCase: ObserveTasksUseCase,
+    private val estimateTaskDuration: EstimateTaskDurationUseCase,
 ) : ViewModel() {
 
     /** Proveedor del instante actual; modificable en pruebas unitarias para aislar el tiempo. */
@@ -47,6 +52,13 @@ class CreateTaskViewModel @Inject constructor(
 
     private val _events = MutableSharedFlow<CreateTaskEvent>()
     val events: SharedFlow<CreateTaskEvent> = _events.asSharedFlow()
+
+    /** Historial de tareas del usuario, base de la sugerencia de duración (F-11). */
+    private var taskHistory: List<Task> = emptyList()
+
+    init {
+        observeTaskHistory()
+    }
 
     /**
      * Actualiza el título de la tarea y limpia errores previos del campo.
@@ -65,6 +77,7 @@ class CreateTaskViewModel @Inject constructor(
      */
     fun onCategorySelected(newCategory: TaskCategory) {
         _uiState.update { it.copy(category = newCategory) }
+        refreshDurationSuggestion()
     }
 
     /**
@@ -104,6 +117,13 @@ class CreateTaskViewModel @Inject constructor(
      */
     fun onDurationSelected(newDuration: Duration?) {
         _uiState.update { it.copy(estimatedDuration = newDuration) }
+    }
+
+    /**
+     * Aplica con un toque la duración sugerida por historial, si existe (F-11 CA-1).
+     */
+    fun onApplyDurationSuggestion() {
+        _uiState.value.durationSuggestion?.let(::onDurationSelected)
     }
 
     /**
@@ -191,6 +211,25 @@ class CreateTaskViewModel @Inject constructor(
                 }
                 is KronoResult.Loading -> Unit
             }
+        }
+    }
+
+    // Sin historial la sugerencia simplemente no aparece (F-11 CA-2), así que un fallo al
+    // leer las tareas no se muestra como error en el formulario.
+    private fun observeTaskHistory() {
+        viewModelScope.launch {
+            observeTasksUseCase()
+                .catch { taskHistory = emptyList() }
+                .collect { tasks ->
+                    taskHistory = tasks
+                    refreshDurationSuggestion()
+                }
+        }
+    }
+
+    private fun refreshDurationSuggestion() {
+        _uiState.update { current ->
+            current.copy(durationSuggestion = estimateTaskDuration(current.category, taskHistory))
         }
     }
 }
