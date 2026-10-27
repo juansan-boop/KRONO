@@ -79,6 +79,7 @@ import kotlinx.datetime.toLocalDateTime
  * @param onEditTask Callback para navegar al formulario de edición (F-05).
  * @param onStartFocus Callback para iniciar el modo enfoque con esta tarea (F-09).
  * @param modifier Modificador de diseño.
+ * @param onStartTimer Callback para abrir el cronómetro de esta tarea (F-08); sin él no se muestra el botón.
  * @param viewModel Instancia inyectada de [TaskDetailViewModel].
  */
 @Composable
@@ -87,6 +88,7 @@ fun TaskDetailRoute(
     onEditTask: (String) -> Unit,
     onStartFocus: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onStartTimer: ((String) -> Unit)? = null,
     viewModel: TaskDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -116,6 +118,7 @@ fun TaskDetailRoute(
         onDismissAddStepDialog = viewModel::onDismissAddSubtaskDialog,
         onConfirmAddStep = viewModel::onAddSubtask,
         onStartFocus = viewModel::onStartFocusClicked,
+        onStartTimer = onStartTimer?.let { open -> fun() { state.task?.id?.let(open) } },
         snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
@@ -137,6 +140,7 @@ fun TaskDetailRoute(
  * @param onDismissDeleteDialog Callback para descartar el diálogo de eliminación (F-07).
  * @param onConfirmDelete Callback para confirmar la eliminación de la tarea (F-07).
  * @param onPostpone Callback para posponer la tarea para mañana (F-07).
+ * @param onStartTimer Abre el cronómetro de la tarea (F-08); sin él no se muestra el botón.
  * @param snackbarHostState Estado para mensajes temporales.
  */
 @Composable
@@ -154,6 +158,7 @@ fun TaskDetailScreen(
     onDismissDeleteDialog: (() -> Unit)? = null,
     onConfirmDelete: (() -> Unit)? = null,
     onPostpone: (() -> Unit)? = null,
+    onStartTimer: (() -> Unit)? = null,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val context = LocalContext.current
@@ -190,30 +195,39 @@ fun TaskDetailScreen(
                         stringResource(R.string.task_detail_focus_button_no_time)
                     }
 
-                    Button(
-                        onClick = onStartFocus,
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .widthIn(max = KronoSizes.formMaxWidth)
-                            .heightIn(min = KronoSizes.controlHeight),
-                        shape = KronoShapes.small,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryMagenta,
-                            contentColor = OnSurface,
-                        ),
+                            .widthIn(max = KronoSizes.formMaxWidth),
+                        verticalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_auto_awesome),
-                            contentDescription = null,
-                            tint = OnSurface,
-                            modifier = Modifier.size(KronoSizes.iconMedium),
-                        )
-                        Spacer(modifier = Modifier.width(KronoSpacing.sm))
-                        Text(
-                            text = focusButtonText,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        // Cronómetro de duración real (F-08)
+                        onStartTimer?.let { TimerButton(onClick = it) }
+
+                        Button(
+                            onClick = onStartFocus,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = KronoSizes.controlHeight),
+                            shape = KronoShapes.small,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryMagenta,
+                                contentColor = OnSurface,
+                            ),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_auto_awesome),
+                                contentDescription = null,
+                                tint = OnSurface,
+                                modifier = Modifier.size(KronoSizes.iconMedium),
+                            )
+                            Spacer(modifier = Modifier.width(KronoSpacing.sm))
+                            Text(
+                                text = focusButtonText,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }

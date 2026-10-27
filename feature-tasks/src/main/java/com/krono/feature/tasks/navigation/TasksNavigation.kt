@@ -12,6 +12,8 @@ import com.krono.feature.tasks.detail.TaskDetailViewModel.Companion.TASK_ID_NAV_
 import com.krono.feature.tasks.detail.ui.TaskDetailRoute
 import com.krono.feature.tasks.edit.EditTaskViewModel.Companion.TASK_ID_NAV_ARG as EDIT_TASK_ID_NAV_ARG
 import com.krono.feature.tasks.edit.ui.EditTaskRoute
+import com.krono.feature.tasks.timer.TaskTimerViewModel.Companion.TASK_ID_NAV_ARG as TIMER_TASK_ID_NAV_ARG
+import com.krono.feature.tasks.timer.ui.TaskTimerRoute
 import com.krono.feature.tasks.ui.TasksRoute
 
 /**
@@ -43,6 +45,16 @@ const val EDIT_TASK_ROUTE_BASE = "tareas/editar"
  * Ruta canónica con argumento de la pantalla de edición de tarea (F-05).
  */
 const val EDIT_TASK_ROUTE = "$EDIT_TASK_ROUTE_BASE/{$EDIT_TASK_ID_NAV_ARG}"
+
+/**
+ * Ruta base del cronómetro de una tarea (F-08).
+ */
+const val TASK_TIMER_ROUTE_BASE = "tareas/cronometro"
+
+/**
+ * Ruta canónica con argumento del cronómetro de una tarea (F-08).
+ */
+const val TASK_TIMER_ROUTE = "$TASK_TIMER_ROUTE_BASE/{$TIMER_TASK_ID_NAV_ARG}"
 
 /**
  * Ruta canónica del asistente de prioridades (F-12).
@@ -129,11 +141,13 @@ fun NavGraphBuilder.tasksScreen(
  * @param onBack Callback invocado para regresar a la lista de tareas.
  * @param onEditTask Callback invocado para editar la tarea (F-05).
  * @param onStartFocus Callback invocado para iniciar el modo enfoque con la tarea (F-09).
+ * @param onStartTimer Callback opcional para abrir el cronómetro de la tarea (F-08).
  */
 fun NavGraphBuilder.taskDetailScreen(
     onBack: () -> Unit,
     onEditTask: (String) -> Unit,
     onStartFocus: (String) -> Unit,
+    onStartTimer: ((String) -> Unit)? = null,
 ) {
     composable(
         route = TASK_DETAIL_ROUTE,
@@ -145,6 +159,7 @@ fun NavGraphBuilder.taskDetailScreen(
             onBack = onBack,
             onEditTask = onEditTask,
             onStartFocus = onStartFocus,
+            onStartTimer = onStartTimer,
         )
     }
 }
@@ -184,3 +199,27 @@ fun NavGraphBuilder.editTaskScreen(
     }
 }
 
+/**
+ * Navega hacia el cronómetro de la tarea [taskId] (F-08).
+ */
+fun NavController.navigateToTaskTimer(taskId: String, navOptions: NavOptions? = null) {
+    navigate("$TASK_TIMER_ROUTE_BASE/$taskId", navOptions)
+}
+
+/**
+ * Registra el destino del cronómetro de una tarea (F-08) en el grafo de navegación.
+ *
+ * @param onBack Callback invocado para regresar; el cronómetro sigue corriendo.
+ */
+fun NavGraphBuilder.taskTimerScreen(
+    onBack: () -> Unit,
+) {
+    composable(
+        route = TASK_TIMER_ROUTE,
+        arguments = listOf(
+            navArgument(TIMER_TASK_ID_NAV_ARG) { type = NavType.StringType },
+        ),
+    ) {
+        TaskTimerRoute(onBack = onBack)
+    }
+}

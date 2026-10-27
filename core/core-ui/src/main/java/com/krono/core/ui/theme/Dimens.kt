@@ -38,4 +38,13 @@ object KronoSizes {
 
     /** Grosor de los indicadores de progreso circulares dentro de botones. */
     val progressStroke = 2.dp
+
+    /** Diámetro del anillo del cronómetro (F-08). */
+    val timerRing = 240.dp
+
+    /** Grosor del anillo del cronómetro (F-08). */
+    val timerRingStroke = 12.dp
+
+    /** Diámetro del botón principal de iniciar o pausar el cronómetro (F-08). */
+    val timerMainButton = 72.dp
 }

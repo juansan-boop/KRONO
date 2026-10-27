@@ -37,8 +37,10 @@ import com.krono.feature.tasks.navigation.navigateToCreateTask
 import com.krono.feature.tasks.navigation.navigateToEditTask
 import com.krono.feature.tasks.navigation.navigateToPriorityAssistant
 import com.krono.feature.tasks.navigation.navigateToTaskDetail
+import com.krono.feature.tasks.navigation.navigateToTaskTimer
 import com.krono.feature.tasks.navigation.priorityAssistantScreen
 import com.krono.feature.tasks.navigation.taskDetailScreen
+import com.krono.feature.tasks.navigation.taskTimerScreen
 import com.krono.feature.tasks.ui.TasksRoute
 
 /**
@@ -130,6 +132,8 @@ fun KronoShell(
                 alVolverDeDetalleTarea = { navController.popBackStack() },
                 alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
                 alIniciarEnfoqueDesdeDetalle = { /* Navegación a F-09 */ },
+                alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
+                alVolverDeCronometro = { navController.popBackStack() },
                 alVolverDeAsistente = { navController.popBackStack() },
                 alAbrirTareaDesdeAsistente = { taskId -> navController.navigateToTaskDetail(taskId) },
                 alVolverDeEditarPerfil = { navController.popBackStack() },
@@ -150,6 +154,8 @@ private fun NavGraphBuilder.grafoPrincipal(
     alVolverDeDetalleTarea: () -> Unit = {},
     alEditarDesdeDetalle: (String) -> Unit = {},
     alIniciarEnfoqueDesdeDetalle: (String) -> Unit = {},
+    alAbrirCronometro: (String) -> Unit = {},
+    alVolverDeCronometro: () -> Unit = {},
     alVolverDeAsistente: () -> Unit = {},
     alAbrirTareaDesdeAsistente: (String) -> Unit = {},
     alVolverDeEditarPerfil: () -> Unit = {},
@@ -167,7 +173,9 @@ private fun NavGraphBuilder.grafoPrincipal(
             onBack = alVolverDeDetalleTarea,
             onEditTask = alEditarDesdeDetalle,
             onStartFocus = alIniciarEnfoqueDesdeDetalle,
+            onStartTimer = alAbrirCronometro,
         )
+        taskTimerScreen(onBack = alVolverDeCronometro)
         editTaskScreen(onBack = alVolverDeEditarTarea)
         priorityAssistantScreen(
             onBack = alVolverDeAsistente,
