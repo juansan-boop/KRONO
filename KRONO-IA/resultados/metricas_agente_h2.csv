@@ -1,0 +1,5 @@
+politica,entregas_a_tiempo_pct,entregas_std,aprovechamiento_bloques_pct,aprovechamiento_std,reordenamientos_emergencia_prom,reordenamientos_std
+1. FIFO + Estimación Usuario (B0),49.9,22.6,6.8,6.1,7.37,1.97
+2. EDF (Fecha Límite) + Estimación Usuario (B0),49.7,32.6,6.3,7.0,7.38,1.8
+3. Búsqueda Informada H2 + Estimación Usuario (B0),50.3,28.5,6.3,7.1,7.37,1.69
+4. Agente KRONO-AI Completo (Búsqueda H2 + Predicción Híbrida H1),66.0,26.2,23.0,13.0,5.28,1.98

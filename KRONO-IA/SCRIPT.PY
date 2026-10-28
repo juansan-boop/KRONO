@@ -29,7 +29,7 @@ import numpy as np
 import pandas as pd
 
 SEMILLA = 42
-CARPETA_SALIDA = "datos"
+CARPETA_SALIDA = os.path.dirname(os.path.abspath(__file__))
 
 # ----------------------------------------------------------------------------
 # Parámetros del mundo simulado (AJÚSTENLOS y documenten los cambios)
@@ -37,12 +37,12 @@ CARPETA_SALIDA = "datos"
 # categoria: (d0 mediana en min, dispersión lognormal de d0, sesgo de subestimación)
 # sesgo > 1 => la tarea tarda MÁS de lo que "debería" -> el usuario subestima
 CATEGORIAS = {
-    "lectura":         (45, 0.45, 1.00),
-    "programacion":    (120, 0.50, 1.20),
-    "redaccion":       (90, 0.45, 1.12),
-    "estudio_parcial": (100, 0.40, 1.05),
-    "ejercicios":      (60, 0.40, 1.08),
-    "exposicion":      (75, 0.40, 1.15),
+    "lectura": (35, 0.25, 1.05),
+    "programacion": (65, 0.30, 1.20),
+    "redaccion": (50, 0.28, 1.12),
+    "estudio_parcial": (60, 0.28, 1.08),
+    "ejercicios": (45, 0.25, 1.08),
+    "exposicion": (50, 0.25, 1.15),
 }
 
 # Efecto de la hora del día sobre la velocidad (>1 = más lento)
@@ -67,15 +67,15 @@ def crear_usuarios(rng, n, desplazamiento=False):
     for _ in range(n):
         u = {
             # qué tanto subestima en general (1.0 = estima bien)
-            "sesgo_usuario": rng.normal(1.00 if not desplazamiento else 1.06, 0.08),
+            "sesgo_usuario": rng.normal(1.00 if not desplazamiento else 1.05, 0.06),
             # qué tan sensible es a la fatiga
-            "sens_fatiga": max(0.02, rng.normal(EFECTO_FATIGA_BASE, 0.025)),
+            "sens_fatiga": max(0.02, rng.normal(EFECTO_FATIGA_BASE, 0.02)),
             # horas que trabaja al día (afecta la fatiga reportada)
             "horas_trabajo": rng.choice([4, 6, 8, 9]),
             # ruido propio del usuario (sigma del lognormal)
-            "sigma": rng.uniform(0.12, 0.22) * (1.5 if desplazamiento else 1.0),
+            "sigma": rng.uniform(0.08, 0.14) * (1.15 if desplazamiento else 1.0),
             # qué tan impreciso es al estimar
-            "error_estim": rng.uniform(0.15, 0.30),
+            "error_estim": rng.uniform(0.10, 0.18),
         }
         usuarios.append(u)
     return usuarios
@@ -247,9 +247,9 @@ def main():
     os.makedirs(CARPETA_SALIDA, exist_ok=True)
     rng = np.random.default_rng(SEMILLA)
 
-    train = generar_historial(rng, n_usuarios=10, tareas_por_usuario=80,
+    train = generar_historial(rng, n_usuarios=30, tareas_por_usuario=100,
                               desplazamiento=False, prefijo_usuario="U")
-    test = generar_historial(rng, n_usuarios=4, tareas_por_usuario=60,
+    test = generar_historial(rng, n_usuarios=10, tareas_por_usuario=80,
                              desplazamiento=True, prefijo_usuario="N")  # usuarios nuevos
     esc_tareas, esc_bloques = generar_escenarios(rng, n_escenarios=60)
 

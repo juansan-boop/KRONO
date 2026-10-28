@@ -59,8 +59,8 @@ F11_VENTANA = 5
 F11_REDONDEO = 5
 
 # Agente híbrido: cuánto confía en el sesgo personal tras n tareas: n / (n + K).
-HIBRIDO_K = 5
-HIBRIDO_VENTANA = 10
+HIBRIDO_K = 2
+HIBRIDO_VENTANA = 15
 
 # Tolerancia para contar una predicción como "acertada".
 TOLERANCIA = 0.20
