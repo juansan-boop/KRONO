@@ -1,0 +1,20 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Todo lo que no coincide con una regla se deniega por defecto: la app
+    // solo accede a datos bajo users/{userId}.
+    //
+    // Cada usuario autenticado lee y escribe unicamente su propio documento
+    // users/{userId} y todas sus subcolecciones (tasks, timer, timeSessions...),
+    // para que nadie vea ni modifique los datos de otra cuenta.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /{allSubcollections=**} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}
