@@ -380,23 +380,18 @@ class SecurityZoneViewModelTest {
     }
 
     @Test
-    fun restablecerDatosToleraFalloRemotoYReseteaLocalStoreExitosamente() = runTest {
+    fun restablecerDatosConFalloRemotoMuestraErrorYConservaElAlmacenLocal() = runTest {
         val store = ProfileLocalStore()
         store.saveProfile("Usuario Modificado", "Rol Modificado")
         val taskRepo = object : NoOpTaskRepository() {
-            override suspend fun deleteTask(taskId: String): KronoResult<Unit> {
-                throw RuntimeException("PERMISSION_DENIED")
-            }
+            override suspend fun deleteTask(taskId: String): KronoResult<Unit> =
+                KronoResult.Error(RuntimeException("PERMISSION_DENIED"))
         }
-        val remoteDataSource = object : NoOpProfileRemoteDataSource() {
-            override suspend fun resetUserData(userId: String): KronoResult<Unit> {
-                throw RuntimeException("PERMISSION_DENIED")
-            }
-        }
+        taskRepo.tasksFlow.value = listOf(Task(id = "task-1", title = "Tarea 1"))
         val resetUseCase = ResetUserDataUseCase(
             localStore = store,
             taskRepository = taskRepo,
-            remoteDataSource = remoteDataSource,
+            remoteDataSource = NoOpProfileRemoteDataSource(),
         )
         val deleteUseCase = DeleteAccountUseCase(store)
         val vm = SecurityZoneViewModel(resetUseCase, deleteUseCase)
@@ -406,10 +401,10 @@ class SecurityZoneViewModelTest {
         vm.onConfirmResetData()
         advanceUntilIdle()
 
-        assertEquals(ProfileLocalStore.DEFAULT_NAME, store.userName.value)
-        assertEquals(ProfileLocalStore.DEFAULT_ROLE, store.userRole.value)
+        assertEquals("Usuario Modificado", store.userName.value)
+        assertEquals("Rol Modificado", store.userRole.value)
         assertFalse(vm.uiState.value.isResettingData)
-        assertNotNull(vm.uiState.value.successMessage)
+        assertNull(vm.uiState.value.successMessage)
+        assertEquals("PERMISSION_DENIED", vm.uiState.value.errorMessage)
     }
 }
-

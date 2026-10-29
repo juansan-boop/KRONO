@@ -2,6 +2,7 @@ package com.krono.feature.profile.data
 
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -197,26 +198,35 @@ class FirestoreProfileDataSource(
         }
     }
 
-    override suspend fun deleteAccount(password: String): KronoResult<Unit> = runCatchingSafe {
-        val auth = authProvider() ?: return@runCatchingSafe
-        val user = auth.currentUser ?: throw IllegalStateException("No hay sesión activa para eliminar")
+    override suspend fun reauthenticate(password: String): KronoResult<Unit> = runCatchingSafe {
+        val user = requireCurrentUser()
         val email = user.email ?: throw IllegalStateException("El usuario no tiene correo asociado")
-
-        // 1. Reautenticación sensible exigida por Firebase
         val credential = EmailAuthProvider.getCredential(email, password)
         user.reauthenticate(credential).await()
+    }
 
-        // 2. Borrar documento del perfil en Firestore (tolerante si las reglas aún no están desplegadas)
+    override suspend fun clearActiveTimer(userId: String): KronoResult<Unit> = runCatchingSafe {
+        val targetUid = userId.ifBlank { authProvider()?.currentUser?.uid.orEmpty() }
         val firestore = firestoreProvider()
-        try {
-            firestore?.collection(COLLECTION_USERS)?.document(user.uid)?.delete()?.await()
-        } catch (_: Throwable) {
-            // Continúa para no bloquear el borrado de la cuenta en Firebase Auth
+        if (targetUid.isNotBlank() && firestore != null) {
+            firestore.collection(COLLECTION_USERS)
+                .document(targetUid)
+                .collection(COLLECTION_TIMER)
+                .document(DOCUMENT_ACTIVE_TIMER)
+                .delete()
+                .await()
         }
+    }
 
-        // 3. Eliminar cuenta de Firebase Authentication
+    override suspend fun deleteAccount(): KronoResult<Unit> = runCatchingSafe {
+        val user = requireCurrentUser()
+        // El perfil se borra primero: si falla, la cuenta de acceso sigue viva y el usuario puede reintentar.
+        firestoreProvider()?.collection(COLLECTION_USERS)?.document(user.uid)?.delete()?.await()
         user.delete().await()
     }
+
+    private fun requireCurrentUser(): FirebaseUser =
+        authProvider()?.currentUser ?: throw IllegalStateException("No hay sesión activa")
 
     override suspend fun syncFromRemote(
         userId: String,
@@ -355,6 +365,8 @@ class FirestoreProfileDataSource(
 
     companion object {
         const val COLLECTION_USERS = "users"
+        const val COLLECTION_TIMER = "timer"
+        const val DOCUMENT_ACTIVE_TIMER = "active"
 
         const val FIELD_NAME = "name"
         const val FIELD_LAST_NAME = "lastName"

@@ -6,7 +6,10 @@ import com.krono.feature.profile.domain.NotificationPrefs
 /**
  * Implementación no-op de [ProfileRemoteDataSource] para pruebas unitarias sin emulador ni red.
  */
-open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
+open class NoOpProfileRemoteDataSource(
+    /** Registro ordenado de las operaciones invocadas, para verificar la secuencia de borrado. */
+    val calls: MutableList<String> = mutableListOf(),
+) : ProfileRemoteDataSource {
     var lastSavedName: String? = null
     var lastSavedRole: String? = null
     var lastSavedAvatarUri: String? = null
@@ -14,6 +17,9 @@ open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
     var resetUserDataCalled = false
     var deleteAccountCalled = false
     var lastDeletePassword: String? = null
+    var clearActiveTimerCalled = false
+    var reauthenticateFailure: Throwable? = null
+    var clearActiveTimerFailure: Throwable? = null
     var syncFromRemoteCalled = false
     var lastSyncUserId: String? = null
     var shouldFail: Throwable? = null
@@ -52,14 +58,29 @@ open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
 
     override suspend fun resetUserData(userId: String): KronoResult<Unit> {
         shouldFail?.let { return KronoResult.Error(it) }
+        calls += CALL_RESET_USER_DATA
         resetUserDataCalled = true
         return KronoResult.Success(Unit)
     }
 
-    override suspend fun deleteAccount(password: String): KronoResult<Unit> {
+    override suspend fun reauthenticate(password: String): KronoResult<Unit> {
+        calls += CALL_REAUTHENTICATE
+        reauthenticateFailure?.let { return KronoResult.Error(it) }
+        lastDeletePassword = password
+        return KronoResult.Success(Unit)
+    }
+
+    override suspend fun clearActiveTimer(userId: String): KronoResult<Unit> {
+        calls += CALL_CLEAR_ACTIVE_TIMER
+        clearActiveTimerFailure?.let { return KronoResult.Error(it) }
+        clearActiveTimerCalled = true
+        return KronoResult.Success(Unit)
+    }
+
+    override suspend fun deleteAccount(): KronoResult<Unit> {
+        calls += CALL_DELETE_ACCOUNT
         shouldFail?.let { return KronoResult.Error(it) }
         deleteAccountCalled = true
-        lastDeletePassword = password
         return KronoResult.Success(Unit)
     }
 
@@ -71,5 +92,12 @@ open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
         syncFromRemoteCalled = true
         lastSyncUserId = userId
         return KronoResult.Success(Unit)
+    }
+
+    companion object {
+        const val CALL_REAUTHENTICATE = "reauthenticate"
+        const val CALL_CLEAR_ACTIVE_TIMER = "clearActiveTimer"
+        const val CALL_RESET_USER_DATA = "resetUserData"
+        const val CALL_DELETE_ACCOUNT = "deleteAccount"
     }
 }

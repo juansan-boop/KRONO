@@ -6,13 +6,13 @@ import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.NoOpTaskRepository
 import com.krono.feature.profile.data.ProfileLocalStore
 import com.krono.feature.profile.data.ProfileRemoteDataSource
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
  * Caso de uso para restablecer la configuración y datos del usuario (F-21 CA-1).
  *
- * Borra todas las tareas del usuario en Cloud Firestore (`users/{uid}/tasks`),
+ * Borra todas las tareas del usuario en Cloud Firestore (`users/{uid}/tasks`) y su cronómetro
+ * activo (`users/{uid}/timer/active`),
  * restaura los valores por defecto del perfil en Firestore (`users/{uid}`) y el almacén local,
  * conservando activa la cuenta del usuario.
  *
@@ -39,30 +39,25 @@ open class ResetUserDataUseCase @Inject constructor(
     /**
      * Ejecuta el restablecimiento integral de datos y configuración del usuario.
      *
+     * Orden: borrar tareas, borrar `timer/active`, restablecer el perfil remoto y, por último,
+     * restaurar el almacén local. Ante el primer error se detiene y lo devuelve: no se limpia
+     * el almacén local ni se informa éxito si algo falló.
+     *
      * @return [KronoResult.Success] si la purga y restauración culminaron exitosamente,
-     * o [KronoResult.Error] si ocurrió un fallo crítico durante la operación.
+     * o el primer [KronoResult.Error] ocurrido durante la operación.
      */
     open suspend operator fun invoke(): KronoResult<Unit> {
-        // 1. Borrar tareas del usuario en Cloud Firestore (users/{uid}/tasks)
-        try {
-            val tasks = taskRepository.observeTasks().first()
-            for (task in tasks) {
-                taskRepository.deleteTask(task.id)
-            }
-        } catch (_: Throwable) {
-            // Tolera lista vacía o falta de conexión temporal
+        val steps = listOf<suspend () -> KronoResult<Unit>>(
+            { taskRepository.deleteAllTasks() },
+            { remoteDataSource.clearActiveTimer(localStore.activeUserId) },
+            { remoteDataSource.resetUserData(localStore.activeUserId) },
+        )
+        for (step in steps) {
+            val result = step()
+            if (result is KronoResult.Error) return result
         }
 
-        // 2. Restablecer documento users/{uid} en Firestore (best-effort)
-        try {
-            remoteDataSource.resetUserData(localStore.activeUserId)
-        } catch (_: Throwable) {
-            // Tolera si las reglas de Firestore aún no están desplegadas en consola o sin red
-        }
-
-        // 3. Restaurar valores por defecto en el almacén local
         localStore.resetToDefaults()
         return KronoResult.Success(Unit)
     }
 }
-

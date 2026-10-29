@@ -44,10 +44,24 @@ interface ProfileRemoteDataSource {
     suspend fun resetUserData(userId: String): KronoResult<Unit>
 
     /**
-     * Reautentica al usuario con su contraseña actual, elimina su documento en Firestore
-     * y da de baja la cuenta en Firebase Authentication (F-21 CA-2).
+     * Reautentica al usuario con su contraseña actual (F-21 CA-2).
+     *
+     * Debe ejecutarse y resolverse con éxito ANTES de cualquier borrado destructivo: si falla
+     * (contraseña incorrecta o sesión no reciente), no se debe eliminar ningún dato.
      */
-    suspend fun deleteAccount(password: String): KronoResult<Unit>
+    suspend fun reauthenticate(password: String): KronoResult<Unit>
+
+    /**
+     * Elimina el documento del cronómetro en curso `users/{userId}/timer/active`, para que no
+     * quede un cronómetro fantasma apuntando a tareas borradas (F-21 CA-1, CA-2).
+     */
+    suspend fun clearActiveTimer(userId: String): KronoResult<Unit>
+
+    /**
+     * Elimina el documento de perfil `users/{uid}` y da de baja la cuenta en Firebase Authentication
+     * (F-21 CA-2). Requiere una reautenticación previa exitosa con [reauthenticate].
+     */
+    suspend fun deleteAccount(): KronoResult<Unit>
 
     /**
      * Sincroniza bidireccionalmente los datos del documento remoto `users/{userId}` en Cloud Firestore
