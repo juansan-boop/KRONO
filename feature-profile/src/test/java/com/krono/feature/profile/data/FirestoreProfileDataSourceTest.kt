@@ -150,7 +150,7 @@ class FirestoreProfileDataSourceTest {
             authProvider = { null },
         )
 
-        val result = dataSource.deleteAccount()
+        val result = dataSource.deleteAccount("user-123")
         assertTrue(result is KronoResult.Error)
     }
 
@@ -163,17 +163,6 @@ class FirestoreProfileDataSourceTest {
 
         val result = dataSource.reauthenticate("password123")
         assertTrue(result is KronoResult.Error)
-    }
-
-    @Test
-    fun clearActiveTimer_conFirebaseNulo_retornaExito() = runTest {
-        val dataSource = FirestoreProfileDataSource(
-            firestoreProvider = { null },
-            authProvider = { null },
-        )
-
-        val result = dataSource.clearActiveTimer("user-123")
-        assertTrue(result is KronoResult.Success)
     }
 
     @Test

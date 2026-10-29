@@ -1,88 +1,68 @@
 package com.krono.feature.profile.domain
 
 import com.krono.core.common.KronoResult
-import com.krono.core.domain.task.Task
+import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
-import com.krono.feature.profile.data.NoOpTaskRepository
 import com.krono.feature.profile.data.ProfileLocalStore
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Pruebas de [ResetUserDataUseCase]: propagación de errores y limpieza del cronómetro (F-21 CA-1). */
+/** Pruebas de [ResetUserDataUseCase]: conectividad previa, atomicidad y propagación de errores (F-21 CA-1). */
 class ResetUserDataUseCaseTest {
 
     private val log = mutableListOf<String>()
     private val remote = NoOpProfileRemoteDataSource(log)
+    private var online = true
     private val store = ProfileLocalStore().apply {
         bindUser(USER_ID, "user@krono.app")
         saveProfile(MODIFIED_NAME, MODIFIED_ROLE)
     }
-    private val tasks = listOf(Task(id = "t1", title = "Uno"), Task(id = "t2", title = "Dos"))
 
-    private fun useCase(taskRepo: NoOpTaskRepository) = ResetUserDataUseCase(store, taskRepo, remote)
+    private fun useCase() = ResetUserDataUseCase(store, remote, ConnectivityChecker { online })
 
     @Test
-    fun errorAlBorrarUnaTareaDevuelveErrorYDejaIntactoElAlmacenLocal() = runTest {
-        val taskRepo = RecordingTaskRepository(tasks, log, failingTaskId = "t1")
+    fun sinRedFallaRapidoConNetworkUnavailableSinEmitirNingunaEscritura() = runTest {
+        online = false
 
-        val result = useCase(taskRepo)()
+        val result = useCase()()
 
         assertTrue(result is KronoResult.Error)
-        assertTrue(NoOpProfileRemoteDataSource.CALL_RESET_USER_DATA !in log)
+        assertTrue((result as KronoResult.Error).throwable is NetworkUnavailableException)
+        assertTrue("No debe emitirse ninguna operación remota", log.isEmpty())
         assertEquals(MODIFIED_NAME, store.userName.value)
         assertEquals(MODIFIED_ROLE, store.userRole.value)
     }
 
     @Test
-    fun errorAlObservarLasTareasDevuelveErrorYDejaIntactoElAlmacenLocal() = runTest {
-        val taskRepo = object : NoOpTaskRepository() {
-            override fun observeTasks(): Flow<List<Task>> = flow { throw IllegalStateException("sin red") }
-        }
-
-        val result = useCase(taskRepo)()
-
-        assertTrue(result is KronoResult.Error)
-        assertEquals(MODIFIED_NAME, store.userName.value)
-    }
-
-    @Test
-    fun errorRemotoAlRestablecerElPerfilDevuelveErrorYDejaIntactoElAlmacenLocal() = runTest {
+    fun errorRemotoDevuelveErrorYDejaIntactoElAlmacenLocal() = runTest {
         remote.shouldFail = IllegalStateException("PERMISSION_DENIED")
 
-        val result = useCase(RecordingTaskRepository(tasks, log))()
+        val result = useCase()()
 
         assertTrue(result is KronoResult.Error)
+        assertEquals(MODIFIED_NAME, store.userName.value)
+        assertEquals(MODIFIED_ROLE, store.userRole.value)
+    }
+
+    @Test
+    fun tiempoLimiteAgotadoDevuelveErrorYDejaIntactoElAlmacenLocal() = runTest {
+        remote.shouldFail = RemoteTimeoutException()
+
+        val result = useCase()()
+
+        assertTrue((result as KronoResult.Error).throwable is RemoteTimeoutException)
         assertEquals(MODIFIED_NAME, store.userName.value)
     }
 
     @Test
-    fun errorAlBorrarElCronometroActivoDevuelveErrorYDejaIntactoElAlmacenLocal() = runTest {
-        remote.clearActiveTimerFailure = IllegalStateException("sin permiso")
-
-        val result = useCase(RecordingTaskRepository(tasks, log))()
-
-        assertTrue(result is KronoResult.Error)
-        assertEquals(MODIFIED_NAME, store.userName.value)
-    }
-
-    @Test
-    fun exitoCompletoBorraTareasYCronometroRestableceElPerfilYLimpiaElAlmacenLocal() = runTest {
-        val result = useCase(RecordingTaskRepository(tasks, log))()
+    fun exitoEmiteUnaSolaOperacionRemotaAtomicaYLimpiaElAlmacenLocal() = runTest {
+        val result = useCase()()
 
         assertTrue(result is KronoResult.Success)
-        assertEquals(
-            listOf(
-                "deleteTask:t1",
-                "deleteTask:t2",
-                NoOpProfileRemoteDataSource.CALL_CLEAR_ACTIVE_TIMER,
-                NoOpProfileRemoteDataSource.CALL_RESET_USER_DATA,
-            ),
-            log,
-        )
+        assertEquals(listOf(NoOpProfileRemoteDataSource.CALL_RESET_USER_DATA), log)
+        assertEquals(USER_ID, remote.lastResetUserId)
         assertEquals(ProfileLocalStore.DEFAULT_ROLE, store.userRole.value)
     }
 

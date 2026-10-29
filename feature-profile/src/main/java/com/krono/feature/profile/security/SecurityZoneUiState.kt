@@ -26,6 +26,25 @@ sealed interface SecurityZoneEvent {
 }
 
 /**
+ * Error de una operación de la Zona de Seguridad, mostrado dentro del diálogo abierto.
+ *
+ * La UI lo traduce a copy en `strings.xml`; el ViewModel no contiene texto de interfaz.
+ */
+sealed interface SecurityZoneError {
+    /** La contraseña de reautenticación es incorrecta. */
+    data object WrongPassword : SecurityZoneError
+
+    /** No hay conexión: la operación no se inició y no se modificó ningún dato. */
+    data object NetworkUnavailable : SecurityZoneError
+
+    /** El servidor no confirmó la operación a tiempo. */
+    data object Timeout : SecurityZoneError
+
+    /** Error no previsto; [message] es el texto técnico del origen, si lo hay. */
+    data class Unexpected(val message: String?) : SecurityZoneError
+}
+
+/**
  * Estado inmutable de la pantalla de Zona de Seguridad (F-21 CA-1, CA-2).
  *
  * @property selectedAction Acción seleccionada en el paso 1 (Restablecer o Eliminar).
@@ -34,10 +53,10 @@ sealed interface SecurityZoneEvent {
  * @property isResettingData Indica si la purga de datos y restauración está en curso.
  * @property isDeletingAccount Indica si la reautenticación y eliminación de cuenta está en curso.
  * @property reauthPassword Contraseña ingresada para la reautenticación sensible de Firebase (CA-2).
- * @property reauthPasswordError Error de validación de la contraseña de reautenticación.
+ * @property isReauthPasswordEmpty Indica que se intentó confirmar con la contraseña vacía.
  * @property isPasswordVisible Alterna la visibilidad en texto claro de la contraseña.
- * @property errorMessage Mensaje de error general si alguna operación falla.
- * @property successMessage Mensaje informativo tras completar una operación con éxito.
+ * @property error Error de la última operación, visible dentro del diálogo abierto; `null` si no hay.
+ * @property isResetSuccessful Indica que el restablecimiento de datos terminó con éxito.
  */
 data class SecurityZoneUiState(
     val selectedAction: SecurityActionType = SecurityActionType.RESET_DATA,
@@ -46,10 +65,10 @@ data class SecurityZoneUiState(
     val isResettingData: Boolean = false,
     val isDeletingAccount: Boolean = false,
     val reauthPassword: String = "",
-    val reauthPasswordError: String? = null,
+    val isReauthPasswordEmpty: Boolean = false,
     val isPasswordVisible: Boolean = false,
-    val errorMessage: String? = null,
-    val successMessage: String? = null,
+    val error: SecurityZoneError? = null,
+    val isResetSuccessful: Boolean = false,
 ) {
     /**
      * Indica si hay alguna operación sensible en curso en segundo plano.

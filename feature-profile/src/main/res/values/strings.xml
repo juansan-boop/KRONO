@@ -116,6 +116,12 @@
     <string name="security_dialog_delete_cancel">Cancelar</string>
     <string name="security_dialog_cd_show_password">Mostrar contraseña de reautenticación</string>
     <string name="security_dialog_cd_hide_password">Ocultar contraseña de reautenticación</string>
+    <string name="security_error_wrong_password">La contraseña es incorrecta. Inténtalo de nuevo.</string>
+    <string name="security_error_network_reset">Necesitas conexión para restablecer tus datos. No se modificó nada.</string>
+    <string name="security_error_network_delete">Necesitas conexión para eliminar tu cuenta. No se modificó nada.</string>
+    <string name="security_error_timeout">La operación tardó demasiado. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="security_error_generic_reset">No fue posible restablecer los datos. Intenta de nuevo.</string>
+    <string name="security_error_generic_delete">No fue posible eliminar la cuenta. Verifica tu contraseña.</string>
     <string name="security_error_generic">No fue posible completar la operación de seguridad. Intenta de nuevo.</string>
 
     <!-- F-15: Recordatorios y preferencias de notificación -->

@@ -2,13 +2,14 @@ package com.krono.feature.profile.security
 
 import app.cash.turbine.test
 import com.krono.core.common.KronoResult
-import com.krono.core.domain.task.Task
 import com.krono.feature.profile.MainDispatcherRule
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
-import com.krono.feature.profile.data.NoOpTaskRepository
+import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.ProfileLocalStore
 import com.krono.feature.profile.domain.DeleteAccountUseCase
-
+import com.krono.feature.profile.domain.InvalidPasswordException
+import com.krono.feature.profile.domain.NetworkUnavailableException
+import com.krono.feature.profile.domain.RemoteTimeoutException
 import com.krono.feature.profile.domain.ResetUserDataUseCase
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,7 +17,6 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -97,10 +97,10 @@ class SecurityZoneViewModelTest {
         assertFalse(state.isResettingData)
         assertFalse(state.isDeletingAccount)
         assertEquals("", state.reauthPassword)
-        assertNull(state.reauthPasswordError)
+        assertFalse(state.isReauthPasswordEmpty)
         assertFalse(state.isPasswordVisible)
-        assertNull(state.errorMessage)
-        assertNull(state.successMessage)
+        assertNull(state.error)
+        assertFalse(state.isResetSuccessful)
         assertFalse(state.isOperationInProgress)
     }
 
@@ -141,7 +141,7 @@ class SecurityZoneViewModelTest {
             val state = vm.uiState.value
             assertFalse(state.isResettingData)
             assertFalse(state.showResetConfirmationDialog)
-            assertNotNull(state.successMessage)
+            assertTrue(state.isResetSuccessful)
             assertEquals(1, resetUserDataUseCase.callCount)
 
             assertEquals(SecurityZoneEvent.DataResetSuccess, awaitItem())
@@ -162,7 +162,7 @@ class SecurityZoneViewModelTest {
 
             val state = vm.uiState.value
             assertFalse(state.isResettingData)
-            assertEquals("Error en Firestore al purgar", state.errorMessage)
+            assertEquals(SecurityZoneError.Unexpected("Error en Firestore al purgar"), state.error)
 
             expectNoEvents()
         }
@@ -179,8 +179,7 @@ class SecurityZoneViewModelTest {
         vm.onConfirmDeleteAccount()
 
         val state = vm.uiState.value
-        assertNotNull(state.reauthPasswordError)
-        assertEquals("Ingresa tu contraseña actual para confirmar", state.reauthPasswordError)
+        assertTrue(state.isReauthPasswordEmpty)
         assertFalse(state.isDeletingAccount)
         assertEquals(0, deleteAccountUseCase.callCount)
     }
@@ -192,10 +191,10 @@ class SecurityZoneViewModelTest {
         vm.onSelectAction(SecurityActionType.DELETE_ACCOUNT)
         vm.onContinueToConfirmation()
         vm.onConfirmDeleteAccount()
-        assertNotNull(vm.uiState.value.reauthPasswordError)
+        assertTrue(vm.uiState.value.isReauthPasswordEmpty)
 
         vm.onReauthPasswordChange("MiClaveSegura123!")
-        assertNull(vm.uiState.value.reauthPasswordError)
+        assertFalse(vm.uiState.value.isReauthPasswordEmpty)
         assertEquals("MiClaveSegura123!", vm.uiState.value.reauthPassword)
 
         assertFalse(vm.uiState.value.isPasswordVisible)
@@ -239,14 +238,14 @@ class SecurityZoneViewModelTest {
 
             val state = vm.uiState.value
             assertFalse(state.isDeletingAccount)
-            assertEquals("Credenciales de reautenticación inválidas", state.errorMessage)
+            assertEquals(SecurityZoneError.Unexpected("Credenciales de reautenticación inválidas"), state.error)
 
             expectNoEvents()
         }
     }
 
     @Test
-    fun operacionEnCursoBloqueaDobleEnvioYDescarteDeModal() = runTest {
+    fun operacionEnCursoBloqueaDobleEnvio() = runTest {
         val gate = CompletableDeferred<Unit>()
         resetUserDataUseCase.gate = gate
         val vm = createViewModel()
@@ -256,18 +255,12 @@ class SecurityZoneViewModelTest {
             vm.onContinueToConfirmation()
             vm.onConfirmResetData()
 
-            // Estado bloqueado por suspensión
             assertTrue(vm.uiState.value.isResettingData)
             assertTrue(vm.uiState.value.isOperationInProgress)
 
             // Intento concurrente de volver a confirmar (doble clic)
             vm.onConfirmResetData()
 
-            // Intento de descartar el diálogo durante la ejecución (debe ignorarse)
-            vm.onDismissResetDialog()
-            assertTrue(vm.uiState.value.showResetConfirmationDialog)
-
-            // Liberamos compuerta
             gate.complete(Unit)
             advanceUntilIdle()
 
@@ -277,6 +270,134 @@ class SecurityZoneViewModelTest {
 
         assertEquals(1, resetUserDataUseCase.callCount)
         assertFalse(vm.uiState.value.isResettingData)
+    }
+
+    @Test
+    fun cancelarDuranteElRestablecimientoDetieneLaOperacionYCierraElDialogo() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        resetUserDataUseCase.gate = gate
+        val vm = createViewModel()
+
+        vm.events.test {
+            vm.onSelectAction(SecurityActionType.RESET_DATA)
+            vm.onContinueToConfirmation()
+            vm.onConfirmResetData()
+            assertTrue(vm.uiState.value.isResettingData)
+
+            vm.onDismissResetDialog()
+            // Si la operación siguiera viva, al liberar la compuerta terminaría con éxito.
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertFalse(state.isResettingData)
+            assertFalse(state.showResetConfirmationDialog)
+            assertFalse(state.isResetSuccessful)
+            assertNull(state.error)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun cancelarDuranteLaEliminacionDeCuentaDetieneLaOperacionYNoNavega() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        deleteAccountUseCase.gate = gate
+        val vm = createViewModel()
+
+        vm.events.test {
+            vm.onSelectAction(SecurityActionType.DELETE_ACCOUNT)
+            vm.onContinueToConfirmation()
+            vm.onReauthPasswordChange("Password123*")
+            vm.onConfirmDeleteAccount()
+            assertTrue(vm.uiState.value.isDeletingAccount)
+
+            vm.onDismissDeleteDialog()
+            gate.complete(Unit)
+            advanceUntilIdle()
+
+            val state = vm.uiState.value
+            assertFalse(state.isDeletingAccount)
+            assertFalse(state.showDeleteAccountDialog)
+            assertNull(state.error)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun contrasenaIncorrectaMantieneElDialogoAbiertoConElErrorParaLaUi() = runTest {
+        deleteAccountUseCase.failure = InvalidPasswordException()
+        val vm = createViewModel()
+
+        vm.onSelectAction(SecurityActionType.DELETE_ACCOUNT)
+        vm.onContinueToConfirmation()
+        vm.onReauthPasswordChange("incorrecta")
+        vm.onConfirmDeleteAccount()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue("El diálogo debe seguir abierto para mostrar el error", state.showDeleteAccountDialog)
+        assertFalse(state.isDeletingAccount)
+        assertEquals(SecurityZoneError.WrongPassword, state.error)
+    }
+
+    @Test
+    fun editarLaContrasenaTrasUnErrorLimpiaElError() = runTest {
+        deleteAccountUseCase.failure = InvalidPasswordException()
+        val vm = createViewModel()
+        vm.onSelectAction(SecurityActionType.DELETE_ACCOUNT)
+        vm.onContinueToConfirmation()
+        vm.onReauthPasswordChange("incorrecta")
+        vm.onConfirmDeleteAccount()
+        advanceUntilIdle()
+
+        vm.onReauthPasswordChange("otra")
+
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun restablecerSinRedExponeNetworkUnavailableEnElDialogo() = runTest {
+        resetUserDataUseCase.failure = NetworkUnavailableException()
+        val vm = createViewModel()
+
+        vm.onSelectAction(SecurityActionType.RESET_DATA)
+        vm.onContinueToConfirmation()
+        vm.onConfirmResetData()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.showResetConfirmationDialog)
+        assertFalse(state.isResettingData)
+        assertEquals(SecurityZoneError.NetworkUnavailable, state.error)
+    }
+
+    @Test
+    fun tiempoLimiteAgotadoExponeTimeoutYLiberaElBoton() = runTest {
+        resetUserDataUseCase.failure = RemoteTimeoutException()
+        val vm = createViewModel()
+
+        vm.onSelectAction(SecurityActionType.RESET_DATA)
+        vm.onContinueToConfirmation()
+        vm.onConfirmResetData()
+        advanceUntilIdle()
+
+        assertEquals(SecurityZoneError.Timeout, vm.uiState.value.error)
+        assertFalse(vm.uiState.value.isResettingData)
+    }
+
+    @Test
+    fun cerrarElDialogoTrasUnErrorLoLimpia() = runTest {
+        resetUserDataUseCase.failure = RemoteTimeoutException()
+        val vm = createViewModel()
+        vm.onSelectAction(SecurityActionType.RESET_DATA)
+        vm.onContinueToConfirmation()
+        vm.onConfirmResetData()
+        advanceUntilIdle()
+
+        vm.onDismissResetDialog()
+
+        assertNull(vm.uiState.value.error)
+        assertFalse(vm.uiState.value.showResetConfirmationDialog)
     }
 
     @Test
@@ -313,59 +434,28 @@ class SecurityZoneViewModelTest {
     }
 
     @Test
-    fun restablecerDatosEliminaTareasEnTaskRepositoryYSincronizaConRemoteDataSource() = runTest {
+    fun restablecerDatosInvocaUnaSolaPurgaAtomicaEnElOrigenRemoto() = runTest {
         val store = ProfileLocalStore()
         store.bindUser("user_abc", "user@krono.app")
-        val initialTasks = listOf(
-            Task(id = "task-1", title = "Tarea 1"),
-            Task(id = "task-2", title = "Tarea 2"),
-        )
-        val taskRepo = NoOpTaskRepository(initialTasks)
         val remoteDataSource = NoOpProfileRemoteDataSource()
-
-        val resetUseCase = ResetUserDataUseCase(
-            localStore = store,
-            taskRepository = taskRepo,
-            remoteDataSource = remoteDataSource,
-        )
-        val deleteUseCase = DeleteAccountUseCase(
-            localStore = store,
-            taskRepository = taskRepo,
-            remoteDataSource = remoteDataSource,
-        )
-        val vm = SecurityZoneViewModel(resetUseCase, deleteUseCase)
+        val vm = realViewModel(store, remoteDataSource)
 
         vm.onSelectAction(SecurityActionType.RESET_DATA)
         vm.onContinueToConfirmation()
         vm.onConfirmResetData()
         advanceUntilIdle()
 
-        assertEquals("Debe haber eliminado las 2 tareas en TaskRepository", 0, taskRepo.tasksFlow.value.size)
-        assertEquals("Debe haber llamado 2 veces a deleteTask", 2, taskRepo.deleteCalls)
-        assertTrue("Debe invocar resetUserData en remoteDataSource", remoteDataSource.resetUserDataCalled)
+        assertEquals(listOf(NoOpProfileRemoteDataSource.CALL_RESET_USER_DATA), remoteDataSource.calls)
+        assertEquals("user_abc", remoteDataSource.lastResetUserId)
+        assertTrue(vm.uiState.value.isResetSuccessful)
     }
 
     @Test
-    fun eliminarCuentaEliminaTareasEnTaskRepositoryYSincronizaConRemoteDataSource() = runTest {
+    fun eliminarCuentaReautenticaYLuegoBorraEnElOrigenRemoto() = runTest {
         val store = ProfileLocalStore()
         store.bindUser("user_abc", "user@krono.app")
-        val initialTasks = listOf(
-            Task(id = "task-1", title = "Tarea 1"),
-        )
-        val taskRepo = NoOpTaskRepository(initialTasks)
         val remoteDataSource = NoOpProfileRemoteDataSource()
-
-        val resetUseCase = ResetUserDataUseCase(
-            localStore = store,
-            taskRepository = taskRepo,
-            remoteDataSource = remoteDataSource,
-        )
-        val deleteUseCase = DeleteAccountUseCase(
-            localStore = store,
-            taskRepository = taskRepo,
-            remoteDataSource = remoteDataSource,
-        )
-        val vm = SecurityZoneViewModel(resetUseCase, deleteUseCase)
+        val vm = realViewModel(store, remoteDataSource)
 
         vm.onSelectAction(SecurityActionType.DELETE_ACCOUNT)
         vm.onContinueToConfirmation()
@@ -373,28 +463,40 @@ class SecurityZoneViewModelTest {
         vm.onConfirmDeleteAccount()
         advanceUntilIdle()
 
-        assertEquals("Debe haber eliminado la tarea", 0, taskRepo.tasksFlow.value.size)
-        assertEquals(1, taskRepo.deleteCalls)
-        assertTrue("Debe invocar deleteAccount en remoteDataSource", remoteDataSource.deleteAccountCalled)
+        assertEquals(
+            listOf(NoOpProfileRemoteDataSource.CALL_REAUTHENTICATE, NoOpProfileRemoteDataSource.CALL_DELETE_ACCOUNT),
+            remoteDataSource.calls,
+        )
         assertEquals("Password123*", remoteDataSource.lastDeletePassword)
+    }
+
+    @Test
+    fun restablecerDatosSinRedNoTocaElOrigenRemotoNiElAlmacenLocalYMuestraElError() = runTest {
+        val store = ProfileLocalStore()
+        store.saveProfile("Usuario Modificado", "Rol Modificado")
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        val vm = realViewModel(store, remoteDataSource, online = false)
+
+        vm.onSelectAction(SecurityActionType.RESET_DATA)
+        vm.onContinueToConfirmation()
+        vm.onConfirmResetData()
+        advanceUntilIdle()
+
+        assertTrue("No debe emitirse ninguna escritura sin red", remoteDataSource.calls.isEmpty())
+        assertEquals("Usuario Modificado", store.userName.value)
+        assertFalse(vm.uiState.value.isResettingData)
+        assertFalse(vm.uiState.value.isResetSuccessful)
+        assertEquals(SecurityZoneError.NetworkUnavailable, vm.uiState.value.error)
     }
 
     @Test
     fun restablecerDatosConFalloRemotoMuestraErrorYConservaElAlmacenLocal() = runTest {
         val store = ProfileLocalStore()
         store.saveProfile("Usuario Modificado", "Rol Modificado")
-        val taskRepo = object : NoOpTaskRepository() {
-            override suspend fun deleteTask(taskId: String): KronoResult<Unit> =
-                KronoResult.Error(RuntimeException("PERMISSION_DENIED"))
+        val remoteDataSource = NoOpProfileRemoteDataSource().apply {
+            shouldFail = RuntimeException("PERMISSION_DENIED")
         }
-        taskRepo.tasksFlow.value = listOf(Task(id = "task-1", title = "Tarea 1"))
-        val resetUseCase = ResetUserDataUseCase(
-            localStore = store,
-            taskRepository = taskRepo,
-            remoteDataSource = NoOpProfileRemoteDataSource(),
-        )
-        val deleteUseCase = DeleteAccountUseCase(store)
-        val vm = SecurityZoneViewModel(resetUseCase, deleteUseCase)
+        val vm = realViewModel(store, remoteDataSource)
 
         vm.onSelectAction(SecurityActionType.RESET_DATA)
         vm.onContinueToConfirmation()
@@ -404,7 +506,19 @@ class SecurityZoneViewModelTest {
         assertEquals("Usuario Modificado", store.userName.value)
         assertEquals("Rol Modificado", store.userRole.value)
         assertFalse(vm.uiState.value.isResettingData)
-        assertNull(vm.uiState.value.successMessage)
-        assertEquals("PERMISSION_DENIED", vm.uiState.value.errorMessage)
+        assertFalse(vm.uiState.value.isResetSuccessful)
+        assertEquals(SecurityZoneError.Unexpected("PERMISSION_DENIED"), vm.uiState.value.error)
+    }
+
+    private fun realViewModel(
+        store: ProfileLocalStore,
+        remoteDataSource: NoOpProfileRemoteDataSource,
+        online: Boolean = true,
+    ): SecurityZoneViewModel {
+        val connectivity = ConnectivityChecker { online }
+        return SecurityZoneViewModel(
+            ResetUserDataUseCase(store, remoteDataSource, connectivity),
+            DeleteAccountUseCase(store, remoteDataSource, connectivity),
+        )
     }
 }

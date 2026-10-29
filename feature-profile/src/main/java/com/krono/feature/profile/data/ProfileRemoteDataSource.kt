@@ -39,7 +39,12 @@ interface ProfileRemoteDataSource {
     ): KronoResult<Unit>
 
     /**
-     * Restablece los datos y configuración del documento `users/{userId}` a valores por defecto en Firestore.
+     * Restablece los datos del usuario en una única escritura atómica (F-21 CA-1): borra sus tareas
+     * (`users/{userId}/tasks`) y el cronómetro activo (`users/{userId}/timer/active`) y deja el
+     * documento `users/{userId}` con sus valores por defecto.
+     *
+     * Con la escritura atómica, o se aplica todo o no se aplica nada. Si el servidor no la confirma
+     * dentro del tiempo límite devuelve [com.krono.feature.profile.domain.RemoteTimeoutException].
      */
     suspend fun resetUserData(userId: String): KronoResult<Unit>
 
@@ -52,16 +57,13 @@ interface ProfileRemoteDataSource {
     suspend fun reauthenticate(password: String): KronoResult<Unit>
 
     /**
-     * Elimina el documento del cronómetro en curso `users/{userId}/timer/active`, para que no
-     * quede un cronómetro fantasma apuntando a tareas borradas (F-21 CA-1, CA-2).
+     * Elimina los datos del usuario en una única escritura atómica (tareas, `timer/active` y el
+     * documento `users/{userId}`) y, solo si esa escritura se confirmó, da de baja la cuenta en
+     * Firebase Authentication (F-21 CA-2). Requiere una reautenticación previa con [reauthenticate].
+     *
+     * No borra `timeSessions` ni otras subcolecciones (sin borrado en cascada).
      */
-    suspend fun clearActiveTimer(userId: String): KronoResult<Unit>
-
-    /**
-     * Elimina el documento de perfil `users/{uid}` y da de baja la cuenta en Firebase Authentication
-     * (F-21 CA-2). Requiere una reautenticación previa exitosa con [reauthenticate].
-     */
-    suspend fun deleteAccount(): KronoResult<Unit>
+    suspend fun deleteAccount(userId: String): KronoResult<Unit>
 
     /**
      * Sincroniza bidireccionalmente los datos del documento remoto `users/{userId}` en Cloud Firestore
