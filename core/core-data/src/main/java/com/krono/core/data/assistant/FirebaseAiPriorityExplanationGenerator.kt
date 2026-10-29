@@ -1,5 +1,6 @@
 package com.krono.core.data.assistant
 
+import android.util.Log
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
 import com.google.firebase.ai.ai
@@ -21,7 +22,7 @@ import kotlin.time.Duration.Companion.seconds
  * Firebase AI Logic llama al modelo con la configuración de `google-services.json`, así
  * que la app no guarda ninguna clave de API. Requiere habilitar la Gemini Developer API en
  * la consola de Firebase; si no está habilitada, no hay conexión o el modelo tarda más de
- * [TIMEOUT_SECONDS], devuelve [AssistantError] y la UI muestra el texto de plantilla.
+ * [TIMEOUT_SECONDS] segundos, devuelve [AssistantError] y la UI muestra el texto de plantilla.
  */
 class FirebaseAiPriorityExplanationGenerator @Inject constructor(
     private val promptBuilder: PriorityPromptBuilder,
@@ -36,16 +37,27 @@ class FirebaseAiPriorityExplanationGenerator @Inject constructor(
     }
 
     /** Pide la explicación de [plan] a Gemini y valida la respuesta. */
-    override suspend fun explain(plan: PriorityPlan): KronoResult<String> = try {
-        val text = withTimeout(TIMEOUT_SECONDS.seconds) {
-            model.generateContent(promptBuilder.build(plan)).text
-        }
+    override suspend fun explain(plan: PriorityPlan): KronoResult<String> =
+        explainWith(plan) { prompt -> model.generateContent(prompt).text }
+
+    /**
+     * Construye el prompt de [plan], lo envía con [generate] dentro del tiempo límite y valida
+     * el texto. Separado de [explain] para poder probar el límite y los fallos sin Firebase.
+     */
+    internal suspend fun explainWith(
+        plan: PriorityPlan,
+        generate: suspend (prompt: String) -> String?,
+    ): KronoResult<String> = try {
+        val text = withTimeout(TIMEOUT_SECONDS.seconds) { generate(promptBuilder.build(plan)) }
         validate(text)
     } catch (timeout: TimeoutCancellationException) {
+        Log.w(LOG_TAG, "Gemini superó el tiempo límite de $TIMEOUT_SECONDS s", timeout)
         KronoResult.Error(AssistantError.Unavailable(timeout))
     } catch (cancellation: CancellationException) {
         throw cancellation
     } catch (error: Exception) {
+        // Solo se registra la excepción: nunca el prompt, que contiene títulos de tareas.
+        Log.w(LOG_TAG, "Gemini no pudo generar la explicación", error)
         KronoResult.Error(AssistantError.Unavailable(error))
     }
 
@@ -60,8 +72,16 @@ class FirebaseAiPriorityExplanationGenerator @Inject constructor(
         /** Longitud máxima aceptada; las respuestas más largas se descartan. */
         const val MAX_EXPLANATION_LENGTH = 280
 
-        /** Tiempo máximo de espera antes de usar la plantilla. */
-        const val TIMEOUT_SECONDS = 10
+        /**
+         * Tiempo máximo de espera antes de usar la plantilla. Las mediciones reales de
+         * `gemini-3.5-flash` tardaron 5.0, 9.1 y 12.5 s, así que 10 s cortaba respuestas
+         * válidas; 20 s deja margen. La pantalla no se bloquea mientras tanto: muestra la
+         * plantilla y la reemplaza cuando llega el texto.
+         */
+        const val TIMEOUT_SECONDS = 20
+
+        /** Etiqueta de logcat para diagnosticar fallos del asistente. */
+        private const val LOG_TAG = "KronoAssistant"
 
         // Baja para que las explicaciones sean sobrias y apegadas a los datos.
         private const val TEMPERATURE = 0.3f
