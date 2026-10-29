@@ -2,12 +2,17 @@ package com.krono.feature.profile.data
 
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.WriteBatch
 import com.krono.core.common.KronoResult
 import com.krono.feature.profile.domain.NotificationPrefs
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -168,55 +173,106 @@ class FirestoreProfileDataSource(
         }
     }
 
-    override suspend fun resetUserData(userId: String): KronoResult<Unit> = runCatchingSafe {
+    override suspend fun resetUserData(userId: String): KronoResult<Unit> = runProtectedOperation {
         val targetUid = userId.ifBlank { authProvider()?.currentUser?.uid.orEmpty() }
-        if (targetUid.isNotBlank()) {
-            val firestore = firestoreProvider()
-            if (firestore != null) {
-                val currentUserEmail = authProvider()?.currentUser?.email.orEmpty()
-                val defaults = mapOf<String, Any?>(
-                    FIELD_NAME to DEFAULT_NAME,
-                    FIELD_LAST_NAME to "",
-                    FIELD_EMAIL to currentUserEmail,
-                    FIELD_ROLE to DEFAULT_ROLE,
-                    FIELD_AVATAR_URI to null,
-                    FIELD_DEADLINE_MINUTES to NotificationPrefs.DEFAULT_REMINDER_MINUTES,
-                    FIELD_FOCUS_SOUND to true,
-                    FIELD_SOUND_TONE to NotificationPrefs.DEFAULT_SOUND_TONE,
-                    FIELD_DEADLINE_ENABLED to true,
-                    FIELD_DYNAMIC_BREAKS to true,
-                    FIELD_SILENCE_NOTIFS to true,
-                    FIELD_PRIORITY_ALERTS to true,
-                    FIELD_UPDATED_AT to serverTimestampProvider(),
-                )
-                firestore.collection(COLLECTION_USERS)
-                    .document(targetUid)
-                    .set(defaults, SetOptions.merge())
-                    .await()
+        val firestore = firestoreProvider()
+        if (targetUid.isNotBlank() && firestore != null) {
+            val defaults = buildDefaultProfile(authProvider()?.currentUser?.email.orEmpty())
+            purgeUserData(firestore, targetUid) { batch, userRef ->
+                batch.set(userRef, defaults, SetOptions.merge())
             }
         }
     }
 
-    override suspend fun deleteAccount(password: String): KronoResult<Unit> = runCatchingSafe {
-        val auth = authProvider() ?: return@runCatchingSafe
-        val user = auth.currentUser ?: throw IllegalStateException("No hay sesión activa para eliminar")
+    override suspend fun reauthenticate(password: String): KronoResult<Unit> = runProtectedOperation {
+        val user = requireCurrentUser()
         val email = user.email ?: throw IllegalStateException("El usuario no tiene correo asociado")
-
-        // 1. Reautenticación sensible exigida por Firebase
         val credential = EmailAuthProvider.getCredential(email, password)
-        user.reauthenticate(credential).await()
-
-        // 2. Borrar documento del perfil en Firestore (tolerante si las reglas aún no están desplegadas)
-        val firestore = firestoreProvider()
-        try {
-            firestore?.collection(COLLECTION_USERS)?.document(user.uid)?.delete()?.await()
-        } catch (_: Throwable) {
-            // Continúa para no bloquear el borrado de la cuenta en Firebase Auth
+        withRemoteTimeout {
+            user.reauthenticate(credential).await()
+            Unit
         }
-
-        // 3. Eliminar cuenta de Firebase Authentication
-        user.delete().await()
     }
+
+    override suspend fun deleteAccount(userId: String): KronoResult<Unit> = runProtectedOperation {
+        val user = requireCurrentUser()
+        val targetUid = userId.ifBlank { user.uid }
+        // Los datos se borran primero: si falla, la cuenta de acceso sigue viva y el usuario puede reintentar.
+        firestoreProvider()?.let { firestore ->
+            purgeUserData(firestore, targetUid) { batch, userRef -> batch.delete(userRef) }
+        }
+        withRemoteTimeout {
+            user.delete().await()
+            Unit
+        }
+    }
+
+    /**
+     * Borra las tareas y el cronómetro activo del usuario y aplica [finalOperation] sobre su documento
+     * de perfil. El lote final (cronómetro y perfil, más las últimas tareas) es un único [WriteBatch],
+     * de modo que esas dos escrituras se encolan juntas o no se encolan; ver [purgeInBatches] para el
+     * orden de los lotes y el límite de tiempo por paso.
+     *
+     * Los identificadores de tareas se leen del servidor ([Source.SERVER]), de modo que sin red falla
+     * de inmediato antes de emitir ninguna escritura y no depende de una caché incompleta.
+     */
+    private suspend fun purgeUserData(
+        firestore: FirebaseFirestore,
+        userId: String,
+        finalOperation: (batch: WriteBatch, userRef: DocumentReference) -> Unit,
+    ) {
+        val userRef = firestore.collection(COLLECTION_USERS).document(userId)
+        purgeInBatches(
+            readTaskRefs = {
+                userRef.collection(COLLECTION_TASKS).get(Source.SERVER).await().documents.map { it.reference }
+            },
+            commitTaskBatch = { taskRefs ->
+                val batch = firestore.batch()
+                taskRefs.forEach(batch::delete)
+                batch.commit().await()
+            },
+            commitFinalBatch = { taskRefs ->
+                val batch = firestore.batch()
+                taskRefs.forEach(batch::delete)
+                batch.delete(userRef.collection(COLLECTION_TIMER).document(DOCUMENT_ACTIVE_TIMER))
+                finalOperation(batch, userRef)
+                batch.commit().await()
+            },
+        )
+    }
+
+    /** Documento de perfil con todos los valores por defecto, conservando el correo de la sesión. */
+    private fun buildDefaultProfile(email: String): Map<String, Any?> = mapOf(
+        FIELD_NAME to DEFAULT_NAME,
+        FIELD_LAST_NAME to "",
+        FIELD_EMAIL to email,
+        FIELD_ROLE to DEFAULT_ROLE,
+        FIELD_AVATAR_URI to null,
+        FIELD_DEADLINE_MINUTES to NotificationPrefs.DEFAULT_REMINDER_MINUTES,
+        FIELD_FOCUS_SOUND to true,
+        FIELD_SOUND_TONE to NotificationPrefs.DEFAULT_SOUND_TONE,
+        FIELD_DEADLINE_ENABLED to true,
+        FIELD_DYNAMIC_BREAKS to true,
+        FIELD_SILENCE_NOTIFS to true,
+        FIELD_PRIORITY_ALERTS to true,
+        FIELD_UPDATED_AT to serverTimestampProvider(),
+    )
+
+    /**
+     * Ejecuta una operación de F-21 devolviendo [KronoResult]: traduce los errores de Firebase a
+     * errores del dominio y deja pasar la cancelación para que "Cancelar" detenga la espera.
+     */
+    private suspend fun runProtectedOperation(block: suspend () -> Unit): KronoResult<Unit> = try {
+        block()
+        KronoResult.Success(Unit)
+    } catch (cancellation: CancellationException) {
+        throw cancellation
+    } catch (error: Throwable) {
+        KronoResult.Error(error.toProfileOperationError())
+    }
+
+    private fun requireCurrentUser(): FirebaseUser =
+        authProvider()?.currentUser ?: throw IllegalStateException("No hay sesión activa")
 
     override suspend fun syncFromRemote(
         userId: String,
@@ -355,6 +411,9 @@ class FirestoreProfileDataSource(
 
     companion object {
         const val COLLECTION_USERS = "users"
+        const val COLLECTION_TASKS = "tasks"
+        const val COLLECTION_TIMER = "timer"
+        const val DOCUMENT_ACTIVE_TIMER = "active"
 
         const val FIELD_NAME = "name"
         const val FIELD_LAST_NAME = "lastName"

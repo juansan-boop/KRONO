@@ -1,11 +1,16 @@
 package com.krono.feature.profile.security
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
 import com.krono.feature.profile.domain.DeleteAccountUseCase
+import com.krono.feature.profile.domain.InvalidPasswordException
+import com.krono.feature.profile.domain.NetworkUnavailableException
+import com.krono.feature.profile.domain.RemoteTimeoutException
 import com.krono.feature.profile.domain.ResetUserDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +44,9 @@ class SecurityZoneViewModel @Inject constructor(
     /** Flujo de estado visual inmutable observable por la UI. */
     val uiState: StateFlow<SecurityZoneUiState> = _uiState.asStateFlow()
 
+    /** Operación destructiva en curso, conservada para poder cancelarla desde el diálogo. */
+    private var operationJob: Job? = null
+
     private val _events = Channel<SecurityZoneEvent>(Channel.BUFFERED)
 
     /** Canal de eventos de un solo uso para navegación desacoplada. */
@@ -51,7 +59,7 @@ class SecurityZoneViewModel @Inject constructor(
      */
     fun onSelectAction(action: SecurityActionType) {
         if (_uiState.value.isOperationInProgress) return
-        _uiState.update { it.copy(selectedAction = action, errorMessage = null) }
+        _uiState.update { it.copy(selectedAction = action, error = null) }
     }
 
     /**
@@ -65,7 +73,7 @@ class SecurityZoneViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         showResetConfirmationDialog = true,
-                        errorMessage = null,
+                        error = null,
                     )
                 }
             }
@@ -74,8 +82,8 @@ class SecurityZoneViewModel @Inject constructor(
                     it.copy(
                         showDeleteAccountDialog = true,
                         reauthPassword = "",
-                        reauthPasswordError = null,
-                        errorMessage = null,
+                        isReauthPasswordEmpty = false,
+                        error = null,
                     )
                 }
             }
@@ -84,11 +92,15 @@ class SecurityZoneViewModel @Inject constructor(
 
     /**
      * Cierra el diálogo de restablecimiento de datos del paso 2.
-     * Si la operación está en curso ([SecurityZoneUiState.isResettingData]), la petición se ignora por seguridad.
+     *
+     * Si la operación está en curso ([SecurityZoneUiState.isResettingData]) la cancela: el usuario
+     * nunca queda atrapado esperando una confirmación del servidor que puede no llegar.
      */
     fun onDismissResetDialog() {
-        if (_uiState.value.isResettingData) return
-        _uiState.update { it.copy(showResetConfirmationDialog = false, errorMessage = null) }
+        cancelRunningOperation()
+        _uiState.update {
+            it.copy(showResetConfirmationDialog = false, isResettingData = false, error = null)
+        }
     }
 
     /**
@@ -103,28 +115,27 @@ class SecurityZoneViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isResettingData = true,
-                errorMessage = null,
+                error = null,
             )
         }
 
-        viewModelScope.launch {
+        operationJob = viewModelScope.launch {
             when (val result = resetUserData()) {
                 is KronoResult.Success -> {
                     _uiState.update {
                         it.copy(
                             isResettingData = false,
                             showResetConfirmationDialog = false,
-                            successMessage = "Configuración y datos restablecidos correctamente",
+                            isResetSuccessful = true,
                         )
                     }
                     _events.send(SecurityZoneEvent.DataResetSuccess)
                 }
                 is KronoResult.Error -> {
-                    val message = result.throwable.message ?: "No fue posible restablecer los datos. Intenta de nuevo."
                     _uiState.update {
                         it.copy(
                             isResettingData = false,
-                            errorMessage = message,
+                            error = result.throwable.toSecurityZoneError(),
                         )
                     }
                 }
@@ -137,16 +148,19 @@ class SecurityZoneViewModel @Inject constructor(
 
     /**
      * Cierra el diálogo de eliminación de cuenta del paso 2.
-     * Si la operación está en curso ([SecurityZoneUiState.isDeletingAccount]), la petición se ignora por seguridad.
+     *
+     * Si la operación está en curso ([SecurityZoneUiState.isDeletingAccount]) la cancela, por la
+     * misma razón que [onDismissResetDialog].
      */
     fun onDismissDeleteDialog() {
-        if (_uiState.value.isDeletingAccount) return
+        cancelRunningOperation()
         _uiState.update {
             it.copy(
                 showDeleteAccountDialog = false,
+                isDeletingAccount = false,
                 reauthPassword = "",
-                reauthPasswordError = null,
-                errorMessage = null,
+                isReauthPasswordEmpty = false,
+                error = null,
             )
         }
     }
@@ -160,8 +174,8 @@ class SecurityZoneViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 reauthPassword = password,
-                reauthPasswordError = if (password.isNotBlank()) null else current.reauthPasswordError,
-                errorMessage = null,
+                isReauthPasswordEmpty = current.isReauthPasswordEmpty && password.isBlank(),
+                error = null,
             )
         }
     }
@@ -183,19 +197,19 @@ class SecurityZoneViewModel @Inject constructor(
         if (currentState.isDeletingAccount) return
 
         if (currentState.reauthPassword.isBlank()) {
-            _uiState.update { it.copy(reauthPasswordError = "Ingresa tu contraseña actual para confirmar") }
+            _uiState.update { it.copy(isReauthPasswordEmpty = true) }
             return
         }
 
         _uiState.update {
             it.copy(
                 isDeletingAccount = true,
-                reauthPasswordError = null,
-                errorMessage = null,
+                isReauthPasswordEmpty = false,
+                error = null,
             )
         }
 
-        viewModelScope.launch {
+        operationJob = viewModelScope.launch {
             when (val result = deleteAccount(currentState.reauthPassword)) {
                 is KronoResult.Success -> {
                     _uiState.update {
@@ -207,11 +221,10 @@ class SecurityZoneViewModel @Inject constructor(
                     _events.send(SecurityZoneEvent.AccountDeleted)
                 }
                 is KronoResult.Error -> {
-                    val message = result.throwable.message ?: "No fue posible eliminar la cuenta. Verifica tu contraseña."
                     _uiState.update {
                         it.copy(
                             isDeletingAccount = false,
-                            errorMessage = message,
+                            error = result.throwable.toSecurityZoneError(),
                         )
                     }
                 }
@@ -230,5 +243,25 @@ class SecurityZoneViewModel @Inject constructor(
         viewModelScope.launch {
             _events.send(SecurityZoneEvent.NavigateBack)
         }
+    }
+
+    private fun cancelRunningOperation() {
+        operationJob?.cancel()
+        operationJob = null
+    }
+
+    private fun Throwable.toSecurityZoneError(): SecurityZoneError = when (this) {
+        is InvalidPasswordException -> SecurityZoneError.WrongPassword
+        is NetworkUnavailableException -> SecurityZoneError.NetworkUnavailable
+        is RemoteTimeoutException -> SecurityZoneError.Timeout
+        else -> {
+            // Solo el tipo de la excepción: el mensaje de Firebase puede incluir rutas con el id del usuario.
+            Log.w(LOG_TAG, "Fallo inesperado en la Zona de Seguridad: ${javaClass.name}")
+            SecurityZoneError.Unexpected
+        }
+    }
+
+    private companion object {
+        const val LOG_TAG = "KronoSecurityZone"
     }
 }

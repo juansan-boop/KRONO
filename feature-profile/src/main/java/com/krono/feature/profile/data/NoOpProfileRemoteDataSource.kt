@@ -6,14 +6,20 @@ import com.krono.feature.profile.domain.NotificationPrefs
 /**
  * Implementación no-op de [ProfileRemoteDataSource] para pruebas unitarias sin emulador ni red.
  */
-open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
+open class NoOpProfileRemoteDataSource(
+    /** Registro ordenado de las operaciones destructivas invocadas, para verificar la secuencia. */
+    val calls: MutableList<String> = mutableListOf(),
+) : ProfileRemoteDataSource {
     var lastSavedName: String? = null
     var lastSavedRole: String? = null
     var lastSavedAvatarUri: String? = null
     var lastSavedPrefs: NotificationPrefs? = null
     var resetUserDataCalled = false
+    var lastResetUserId: String? = null
     var deleteAccountCalled = false
+    var lastDeleteUserId: String? = null
     var lastDeletePassword: String? = null
+    var reauthenticateFailure: Throwable? = null
     var syncFromRemoteCalled = false
     var lastSyncUserId: String? = null
     var shouldFail: Throwable? = null
@@ -51,15 +57,25 @@ open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
     }
 
     override suspend fun resetUserData(userId: String): KronoResult<Unit> {
+        calls += CALL_RESET_USER_DATA
         shouldFail?.let { return KronoResult.Error(it) }
         resetUserDataCalled = true
+        lastResetUserId = userId
         return KronoResult.Success(Unit)
     }
 
-    override suspend fun deleteAccount(password: String): KronoResult<Unit> {
+    override suspend fun reauthenticate(password: String): KronoResult<Unit> {
+        calls += CALL_REAUTHENTICATE
+        reauthenticateFailure?.let { return KronoResult.Error(it) }
+        lastDeletePassword = password
+        return KronoResult.Success(Unit)
+    }
+
+    override suspend fun deleteAccount(userId: String): KronoResult<Unit> {
+        calls += CALL_DELETE_ACCOUNT
         shouldFail?.let { return KronoResult.Error(it) }
         deleteAccountCalled = true
-        lastDeletePassword = password
+        lastDeleteUserId = userId
         return KronoResult.Success(Unit)
     }
 
@@ -71,5 +87,11 @@ open class NoOpProfileRemoteDataSource : ProfileRemoteDataSource {
         syncFromRemoteCalled = true
         lastSyncUserId = userId
         return KronoResult.Success(Unit)
+    }
+
+    companion object {
+        const val CALL_REAUTHENTICATE = "reauthenticate"
+        const val CALL_RESET_USER_DATA = "resetUserData"
+        const val CALL_DELETE_ACCOUNT = "deleteAccount"
     }
 }

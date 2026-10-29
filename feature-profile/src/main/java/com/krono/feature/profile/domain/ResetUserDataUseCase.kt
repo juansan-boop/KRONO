@@ -1,68 +1,53 @@
 package com.krono.feature.profile.domain
 
 import com.krono.core.common.KronoResult
-import com.krono.core.domain.task.TaskRepository
+import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
-import com.krono.feature.profile.data.NoOpTaskRepository
 import com.krono.feature.profile.data.ProfileLocalStore
 import com.krono.feature.profile.data.ProfileRemoteDataSource
-import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
  * Caso de uso para restablecer la configuración y datos del usuario (F-21 CA-1).
  *
- * Borra todas las tareas del usuario en Cloud Firestore (`users/{uid}/tasks`),
- * restaura los valores por defecto del perfil en Firestore (`users/{uid}`) y el almacén local,
- * conservando activa la cuenta del usuario.
+ * Borra las tareas (`users/{uid}/tasks`) y el cronómetro activo (`users/{uid}/timer/active`),
+ * restaura los valores por defecto del perfil en Firestore y en el almacén local, y conserva
+ * activa la cuenta. El cronómetro y el perfil se escriben juntos en el último lote atómico: con más
+ * tareas de las que caben en un lote (498), un fallo en un lote previo puede dejar tareas ya borradas
+ * con el perfil y el cronómetro intactos; la operación es idempotente y reintentar converge.
  *
  * Devuelve siempre un [KronoResult] para evitar excepciones no controladas.
  */
 open class ResetUserDataUseCase @Inject constructor(
     private val localStore: ProfileLocalStore,
-    private val taskRepository: TaskRepository,
     private val remoteDataSource: ProfileRemoteDataSource,
+    private val connectivityChecker: ConnectivityChecker,
 ) {
 
     constructor(localStore: ProfileLocalStore) : this(
         localStore = localStore,
-        taskRepository = NoOpTaskRepository(),
         remoteDataSource = NoOpProfileRemoteDataSource(),
+        connectivityChecker = { true },
     )
 
-    constructor() : this(
-        localStore = ProfileLocalStore(),
-        taskRepository = NoOpTaskRepository(),
-        remoteDataSource = NoOpProfileRemoteDataSource(),
-    )
+    constructor() : this(ProfileLocalStore())
 
     /**
      * Ejecuta el restablecimiento integral de datos y configuración del usuario.
      *
-     * @return [KronoResult.Success] si la purga y restauración culminaron exitosamente,
-     * o [KronoResult.Error] si ocurrió un fallo crítico durante la operación.
+     * Sin conexión falla de inmediato con [NetworkUnavailableException], sin emitir ninguna
+     * escritura. Con conexión ejecuta la purga remota por lotes y, solo si tuvo éxito, restaura el
+     * almacén local; ante cualquier error no se limpia el almacén local ni se informa éxito.
+     *
+     * @return [KronoResult.Success] si la purga y la restauración culminaron, o el [KronoResult.Error] ocurrido.
      */
     open suspend operator fun invoke(): KronoResult<Unit> {
-        // 1. Borrar tareas del usuario en Cloud Firestore (users/{uid}/tasks)
-        try {
-            val tasks = taskRepository.observeTasks().first()
-            for (task in tasks) {
-                taskRepository.deleteTask(task.id)
-            }
-        } catch (_: Throwable) {
-            // Tolera lista vacía o falta de conexión temporal
-        }
+        if (!connectivityChecker.isOnline()) return KronoResult.Error(NetworkUnavailableException())
 
-        // 2. Restablecer documento users/{uid} en Firestore (best-effort)
-        try {
-            remoteDataSource.resetUserData(localStore.activeUserId)
-        } catch (_: Throwable) {
-            // Tolera si las reglas de Firestore aún no están desplegadas en consola o sin red
-        }
+        val result = remoteDataSource.resetUserData(localStore.activeUserId)
+        if (result is KronoResult.Error) return result
 
-        // 3. Restaurar valores por defecto en el almacén local
         localStore.resetToDefaults()
         return KronoResult.Success(Unit)
     }
 }
-
