@@ -12,7 +12,9 @@ import javax.inject.Inject
  *
  * Borra las tareas (`users/{uid}/tasks`) y el cronómetro activo (`users/{uid}/timer/active`),
  * restaura los valores por defecto del perfil en Firestore y en el almacén local, y conserva
- * activa la cuenta. El borrado remoto es una única escritura atómica: nunca queda un estado parcial.
+ * activa la cuenta. El cronómetro y el perfil se escriben juntos en el último lote atómico: con más
+ * tareas de las que caben en un lote (498), un fallo en un lote previo puede dejar tareas ya borradas
+ * con el perfil y el cronómetro intactos; la operación es idempotente y reintentar converge.
  *
  * Devuelve siempre un [KronoResult] para evitar excepciones no controladas.
  */
@@ -34,7 +36,7 @@ open class ResetUserDataUseCase @Inject constructor(
      * Ejecuta el restablecimiento integral de datos y configuración del usuario.
      *
      * Sin conexión falla de inmediato con [NetworkUnavailableException], sin emitir ninguna
-     * escritura. Con conexión ejecuta la purga remota atómica y, solo si tuvo éxito, restaura el
+     * escritura. Con conexión ejecuta la purga remota por lotes y, solo si tuvo éxito, restaura el
      * almacén local; ante cualquier error no se limpia el almacén local ni se informa éxito.
      *
      * @return [KronoResult.Success] si la purga y la restauración culminaron, o el [KronoResult.Error] ocurrido.

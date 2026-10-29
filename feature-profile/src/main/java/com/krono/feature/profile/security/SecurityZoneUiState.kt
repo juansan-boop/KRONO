@@ -40,8 +40,11 @@ sealed interface SecurityZoneError {
     /** El servidor no confirmó la operación a tiempo. */
     data object Timeout : SecurityZoneError
 
-    /** Error no previsto; [message] es el texto técnico del origen, si lo hay. */
-    data class Unexpected(val message: String?) : SecurityZoneError
+    /**
+     * Error no previsto. No transporta el texto de la excepción: es técnico, está en inglés y puede
+     * contener detalles internos; la UI muestra copy genérico y el detalle va solo a logcat.
+     */
+    data object Unexpected : SecurityZoneError
 }
 
 /**

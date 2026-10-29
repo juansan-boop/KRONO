@@ -39,12 +39,14 @@ interface ProfileRemoteDataSource {
     ): KronoResult<Unit>
 
     /**
-     * Restablece los datos del usuario en una única escritura atómica (F-21 CA-1): borra sus tareas
+     * Restablece los datos del usuario (F-21 CA-1): borra sus tareas
      * (`users/{userId}/tasks`) y el cronómetro activo (`users/{userId}/timer/active`) y deja el
      * documento `users/{userId}` con sus valores por defecto.
      *
-     * Con la escritura atómica, o se aplica todo o no se aplica nada. Si el servidor no la confirma
-     * dentro del tiempo límite devuelve [com.krono.feature.profile.domain.RemoteTimeoutException].
+     * El cronómetro y el perfil se escriben juntos en el último lote atómico. Con más tareas de las
+     * que caben en un lote, un fallo en un lote previo deja tareas parcialmente borradas con el perfil
+     * y el cronómetro intactos; reintentar converge. Si un lote no se confirma dentro del tiempo
+     * límite devuelve [com.krono.feature.profile.domain.RemoteTimeoutException].
      */
     suspend fun resetUserData(userId: String): KronoResult<Unit>
 
@@ -57,8 +59,8 @@ interface ProfileRemoteDataSource {
     suspend fun reauthenticate(password: String): KronoResult<Unit>
 
     /**
-     * Elimina los datos del usuario en una única escritura atómica (tareas, `timer/active` y el
-     * documento `users/{userId}`) y, solo si esa escritura se confirmó, da de baja la cuenta en
+     * Elimina los datos del usuario (tareas, `timer/active` y el documento `users/{userId}`, estos
+     * dos últimos en el lote final atómico) y, solo si todo se confirmó, da de baja la cuenta en
      * Firebase Authentication (F-21 CA-2). Requiere una reautenticación previa con [reauthenticate].
      *
      * No borra `timeSessions` ni otras subcolecciones (sin borrado en cascada).

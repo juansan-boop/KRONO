@@ -209,32 +209,36 @@ class FirestoreProfileDataSource(
 
     /**
      * Borra las tareas y el cronómetro activo del usuario y aplica [finalOperation] sobre su documento
-     * de perfil, todo en el mismo [WriteBatch] para que se encole completo o no se encole.
+     * de perfil. El lote final (cronómetro y perfil, más las últimas tareas) es un único [WriteBatch],
+     * de modo que esas dos escrituras se encolan juntas o no se encolan; ver [purgeInBatches] para el
+     * orden de los lotes y el límite de tiempo por paso.
      *
      * Los identificadores de tareas se leen del servidor ([Source.SERVER]), de modo que sin red falla
-     * de inmediato antes de emitir ninguna escritura y no depende de una caché incompleta. Si el
-     * usuario tiene más tareas de las que caben en un lote, las sobrantes se borran en lotes previos;
-     * el lote final, con el cronómetro y el perfil, siempre se confirma al último. Toda la operación
-     * está acotada por [REMOTE_OPERATION_TIMEOUT].
+     * de inmediato antes de emitir ninguna escritura y no depende de una caché incompleta.
      */
     private suspend fun purgeUserData(
         firestore: FirebaseFirestore,
         userId: String,
         finalOperation: (batch: WriteBatch, userRef: DocumentReference) -> Unit,
-    ) = withRemoteTimeout {
+    ) {
         val userRef = firestore.collection(COLLECTION_USERS).document(userId)
-        val taskRefs = userRef.collection(COLLECTION_TASKS).get(Source.SERVER).await().documents.map { it.reference }
-        val taskChunks = taskRefs.chunked(MAX_BATCH_OPERATIONS - FINAL_BATCH_RESERVED_OPERATIONS)
-
-        taskChunks.dropLast(1).forEach { chunk ->
-            firestore.batch().also { batch -> chunk.forEach(batch::delete) }.commit().await()
-        }
-        val finalBatch = firestore.batch()
-        taskChunks.lastOrNull().orEmpty().forEach(finalBatch::delete)
-        finalBatch.delete(userRef.collection(COLLECTION_TIMER).document(DOCUMENT_ACTIVE_TIMER))
-        finalOperation(finalBatch, userRef)
-        finalBatch.commit().await()
-        Unit
+        purgeInBatches(
+            readTaskRefs = {
+                userRef.collection(COLLECTION_TASKS).get(Source.SERVER).await().documents.map { it.reference }
+            },
+            commitTaskBatch = { taskRefs ->
+                val batch = firestore.batch()
+                taskRefs.forEach(batch::delete)
+                batch.commit().await()
+            },
+            commitFinalBatch = { taskRefs ->
+                val batch = firestore.batch()
+                taskRefs.forEach(batch::delete)
+                batch.delete(userRef.collection(COLLECTION_TIMER).document(DOCUMENT_ACTIVE_TIMER))
+                finalOperation(batch, userRef)
+                batch.commit().await()
+            },
+        )
     }
 
     /** Documento de perfil con todos los valores por defecto, conservando el correo de la sesión. */
@@ -427,11 +431,5 @@ class FirestoreProfileDataSource(
 
         const val DEFAULT_NAME = "Usuario"
         const val DEFAULT_ROLE = "Estudiante y trabajador"
-
-        /** Máximo de operaciones por lote de Firestore. */
-        const val MAX_BATCH_OPERATIONS = 500
-
-        /** Operaciones reservadas en el lote final: el cronómetro activo y el documento de perfil. */
-        const val FINAL_BATCH_RESERVED_OPERATIONS = 2
     }
 }

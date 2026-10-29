@@ -162,7 +162,7 @@ class SecurityZoneViewModelTest {
 
             val state = vm.uiState.value
             assertFalse(state.isResettingData)
-            assertEquals(SecurityZoneError.Unexpected("Error en Firestore al purgar"), state.error)
+            assertEquals(SecurityZoneError.Unexpected, state.error)
 
             expectNoEvents()
         }
@@ -225,6 +225,21 @@ class SecurityZoneViewModelTest {
     }
 
     @Test
+    fun errorInesperadoNoExponeAlEstadoElTextoTecnicoDeLaExcepcion() = runTest {
+        val technicalDetail = "io.grpc.StatusRuntimeException: PERMISSION_DENIED on users/abc123"
+        resetUserDataUseCase.failure = RuntimeException(technicalDetail)
+        val vm = createViewModel()
+
+        vm.onSelectAction(SecurityActionType.RESET_DATA)
+        vm.onContinueToConfirmation()
+        vm.onConfirmResetData()
+        advanceUntilIdle()
+
+        assertEquals(SecurityZoneError.Unexpected, vm.uiState.value.error)
+        assertFalse(vm.uiState.value.toString().contains(technicalDetail))
+    }
+
+    @Test
     fun fallaEnEliminarCuentaExponeMensajeDeError() = runTest {
         deleteAccountUseCase.failure = RuntimeException("Credenciales de reautenticación inválidas")
         val vm = createViewModel()
@@ -238,7 +253,7 @@ class SecurityZoneViewModelTest {
 
             val state = vm.uiState.value
             assertFalse(state.isDeletingAccount)
-            assertEquals(SecurityZoneError.Unexpected("Credenciales de reautenticación inválidas"), state.error)
+            assertEquals(SecurityZoneError.Unexpected, state.error)
 
             expectNoEvents()
         }
@@ -507,7 +522,7 @@ class SecurityZoneViewModelTest {
         assertEquals("Rol Modificado", store.userRole.value)
         assertFalse(vm.uiState.value.isResettingData)
         assertFalse(vm.uiState.value.isResetSuccessful)
-        assertEquals(SecurityZoneError.Unexpected("PERMISSION_DENIED"), vm.uiState.value.error)
+        assertEquals(SecurityZoneError.Unexpected, vm.uiState.value.error)
     }
 
     private fun realViewModel(

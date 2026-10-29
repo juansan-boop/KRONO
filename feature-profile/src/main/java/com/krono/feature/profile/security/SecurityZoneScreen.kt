@@ -200,30 +200,28 @@ fun SecurityZoneScreen(
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                run {
-                    Surface(
-                        shape = RoundedCornerShape(KronoSpacing.sm),
-                        color = SecondaryCyan.copy(alpha = 0.15f),
-                        border = BorderStroke(KronoGlass.borderWidth, SecondaryCyan.copy(alpha = 0.40f)),
-                        modifier = Modifier.fillMaxWidth(),
+                Surface(
+                    shape = RoundedCornerShape(KronoSpacing.sm),
+                    color = SecondaryCyan.copy(alpha = 0.15f),
+                    border = BorderStroke(KronoGlass.borderWidth, SecondaryCyan.copy(alpha = 0.40f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(KronoSpacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
                     ) {
-                        Row(
-                            modifier = Modifier.padding(KronoSpacing.md),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
-                        ) {
-                            Icon(
-                                painter = painterResource(KronoIcons.CheckCircle),
-                                contentDescription = null,
-                                tint = SecondaryCyan,
-                                modifier = Modifier.size(KronoSizes.iconMedium),
-                            )
-                            Text(
-                                text = stringResource(R.string.security_dialog_reset_success),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OnSurface,
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(KronoIcons.CheckCircle),
+                            contentDescription = null,
+                            tint = SecondaryCyan,
+                            modifier = Modifier.size(KronoSizes.iconMedium),
+                        )
+                        Text(
+                            text = stringResource(R.string.security_dialog_reset_success),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurface,
+                        )
                     }
                 }
             }
@@ -870,7 +868,7 @@ private fun securityErrorText(error: SecurityZoneError, action: SecurityActionTy
             if (isReset) R.string.security_error_network_reset else R.string.security_error_network_delete,
         )
         SecurityZoneError.Timeout -> stringResource(R.string.security_error_timeout)
-        is SecurityZoneError.Unexpected -> error.message ?: stringResource(
+        SecurityZoneError.Unexpected -> stringResource(
             if (isReset) R.string.security_error_generic_reset else R.string.security_error_generic_delete,
         )
     }

@@ -1,5 +1,6 @@
 package com.krono.feature.profile.security
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
@@ -253,6 +254,14 @@ class SecurityZoneViewModel @Inject constructor(
         is InvalidPasswordException -> SecurityZoneError.WrongPassword
         is NetworkUnavailableException -> SecurityZoneError.NetworkUnavailable
         is RemoteTimeoutException -> SecurityZoneError.Timeout
-        else -> SecurityZoneError.Unexpected(message)
+        else -> {
+            // Solo el tipo de la excepción: el mensaje de Firebase puede incluir rutas con el id del usuario.
+            Log.w(LOG_TAG, "Fallo inesperado en la Zona de Seguridad: ${javaClass.name}")
+            SecurityZoneError.Unexpected
+        }
+    }
+
+    private companion object {
+        const val LOG_TAG = "KronoSecurityZone"
     }
 }

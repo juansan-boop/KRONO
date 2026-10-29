@@ -10,7 +10,7 @@ import javax.inject.Inject
 /**
  * Caso de uso para eliminar definitivamente la cuenta y el perfil del usuario (F-21 CA-2).
  *
- * Reautentica con la contraseña provista y, solo entonces, borra de forma atómica las tareas
+ * Reautentica con la contraseña provista y, solo entonces, borra por lotes las tareas
  * (`users/{uid}/tasks`), el cronómetro activo (`users/{uid}/timer/active`) y el documento de
  * perfil `users/{uid}`, y da de baja la cuenta en Firebase Authentication.
  *
