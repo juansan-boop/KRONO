@@ -9,6 +9,7 @@ import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskPriority
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -80,6 +81,48 @@ class PriorityAssistantViewModelTest {
         advanceUntilIdle()
 
         assertEquals("informe", viewModel.uiState.value.plan?.recommended?.task?.id)
+        assertEquals(ExplanationState.Fallback, viewModel.uiState.value.explanation)
+    }
+
+    @Test
+    fun mientrasLaIaTarda_muestraLaRecomendacionYLaSecuenciaYLuegoReemplazaElMotivo() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        generator.gate = gate
+        repository.givenTasks(
+            task("informe", dueHour = 18, priority = TaskPriority.ALTA),
+            task("lectura", dueHour = 23, priority = TaskPriority.BAJA, dueDay = 25),
+        )
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        val waiting = viewModel.uiState.value
+        assertFalse(waiting.isLoading)
+        assertEquals("informe", waiting.plan?.recommended?.task?.id)
+        assertEquals(listOf("lectura"), waiting.plan?.sequence?.map { it.task.id })
+        assertEquals(ExplanationState.Loading, waiting.explanation)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        val answered = viewModel.uiState.value
+        assertEquals(waiting.plan, answered.plan)
+        assertEquals(ExplanationState.Generated("Empieza por el informe."), answered.explanation)
+    }
+
+    @Test
+    fun siLaIaFallaTrasLaEspera_conservaElPlanYPasaALaPlantilla() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        generator.gate = gate
+        generator.failure = AssistantError.Unavailable()
+        repository.givenTasks(task("informe", dueHour = 18))
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        val waiting = viewModel.uiState.value.plan
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(waiting, viewModel.uiState.value.plan)
         assertEquals(ExplanationState.Fallback, viewModel.uiState.value.explanation)
     }
 
