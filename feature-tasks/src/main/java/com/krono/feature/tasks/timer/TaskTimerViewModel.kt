@@ -108,8 +108,17 @@ class TaskTimerViewModel @Inject constructor(
 
     private fun observeTask(taskId: String) {
         viewModelScope.launch {
-            observeTaskById(taskId).collect { task ->
-                _uiState.update { it.copy(isLoading = false, task = task, isTaskNotFound = task == null) }
+            observeTaskById(taskId).collect { result ->
+                when (result) {
+                    is KronoResult.Success -> _uiState.update {
+                        it.copy(isLoading = false, task = result.data, isTaskNotFound = result.data == null)
+                    }
+                    is KronoResult.Error -> {
+                        _uiState.update { it.copy(isLoading = false) }
+                        showError(result.throwable)
+                    }
+                    KronoResult.Loading -> Unit
+                }
             }
         }
     }

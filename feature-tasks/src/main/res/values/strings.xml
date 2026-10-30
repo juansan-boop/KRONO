@@ -51,6 +51,10 @@
     <string name="empty_tasks_subtitle">Organiza tu día añadiendo una nueva tarea académica, laboral o personal.</string>
     <string name="empty_filter_title">No hay tareas en esta categoría</string>
     <string name="empty_filter_subtitle">Prueba seleccionando otra categoría o añade una nueva tarea.</string>
+    <string name="tasks_load_error_title">No pudimos cargar tus tareas</string>
+    <string name="task_load_error_title">No pudimos cargar esta tarea</string>
+    <string name="tasks_load_error_body">Hubo un problema al leer tus datos. Inténtalo de nuevo en un momento.</string>
+    <string name="action_retry">Reintentar</string>
 
     <!-- F-04: Formulario de Crear Tarea -->
     <string name="create_task_title">Nueva Tarea</string>

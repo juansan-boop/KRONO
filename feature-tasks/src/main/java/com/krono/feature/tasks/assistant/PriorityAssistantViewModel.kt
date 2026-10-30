@@ -14,7 +14,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -73,12 +72,16 @@ class PriorityAssistantViewModel @Inject constructor(
 
     private fun observeTasks() {
         viewModelScope.launch {
-            observeTasksUseCase()
-                .catch { _uiState.update { it.copy(isLoading = false, hasError = true) } }
-                .collect { tasks ->
-                    latestTasks = tasks
-                    updatePlan(tasks)
+            observeTasksUseCase().collect { result ->
+                when (result) {
+                    is KronoResult.Success -> {
+                        latestTasks = result.data
+                        updatePlan(result.data)
+                    }
+                    is KronoResult.Error -> _uiState.update { it.copy(isLoading = false, hasError = true) }
+                    KronoResult.Loading -> Unit
                 }
+            }
         }
     }
 

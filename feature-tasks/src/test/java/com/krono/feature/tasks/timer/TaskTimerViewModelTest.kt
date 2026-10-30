@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTaskByIdUseCase
 import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.timer.ActiveTimer
 import com.krono.core.domain.timer.FakeClock
 import com.krono.core.domain.timer.FakeTimerRepository
@@ -72,6 +73,18 @@ class TaskTimerViewModelTest {
         val state = viewModel.uiState.value
         assertEquals("informe", state.task?.id)
         assertEquals(TimerStatus.IDLE, state.status)
+    }
+
+    @Test
+    fun cuandoElListenerDeLaTareaFalla_muestraElErrorEnVezDeTareaNoEncontrada() = runTimerTest {
+        tasks.observeFailure = TaskError.StorageError("Permiso denegado")
+        val failing = createViewModel("informe")
+        runCurrent()
+
+        val state = failing.uiState.value
+        assertFalse(state.isLoading)
+        assertFalse(state.isTaskNotFound)
+        assertTrue(state.errorMessage != null)
     }
 
     @Test

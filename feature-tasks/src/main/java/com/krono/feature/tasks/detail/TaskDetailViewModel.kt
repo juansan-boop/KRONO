@@ -7,8 +7,11 @@ import com.krono.core.common.KronoResult
 import com.krono.core.domain.task.DeleteTaskUseCase
 import com.krono.core.domain.task.ObserveTaskByIdUseCase
 import com.krono.core.domain.task.Subtask
-import com.krono.core.domain.task.UpsertTaskUseCase
+import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.TaskField
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -32,12 +35,14 @@ import javax.inject.Inject
  * ViewModel que gobierna la visualización y gestión del detalle de tarea y sus subtareas (F-06, F-07).
  *
  * Cumple estrictamente con el aislamiento de arquitectura: sin imports de `androidx.compose.*`.
+ * Cada escritura toca solo el campo que cambia (subtareas o fecha límite), de modo que nunca
+ * pisa el tiempo real que suma el cronómetro (F-08).
  */
 @HiltViewModel
 class TaskDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val observeTaskByIdUseCase: ObserveTaskByIdUseCase,
-    private val upsertTaskUseCase: UpsertTaskUseCase,
+    private val updateTaskFieldsUseCase: UpdateTaskFieldsUseCase,
     private val deleteTaskUseCase: DeleteTaskUseCase,
 ) : ViewModel() {
 
@@ -47,10 +52,18 @@ class TaskDetailViewModel @Inject constructor(
     }
 
     private val _uiState = MutableStateFlow(TaskDetailUiState())
+    /** Estado observable de la pantalla. */
     val uiState: StateFlow<TaskDetailUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<TaskDetailEvent>()
+    /** Eventos de una sola vez (navegación y mensajes). */
     val events: SharedFlow<TaskDetailEvent> = _events.asSharedFlow()
+
+    private var observedTaskId: String? = null
+    private var observeJob: Job? = null
+
+    /** Borrado o posposición en curso; mientras siga activo se ignoran nuevos toques. */
+    private var dueDateOrDeleteJob: Job? = null
 
     init {
         val taskId = savedStateHandle.get<String>(TASK_ID_NAV_ARG)
@@ -63,34 +76,30 @@ class TaskDetailViewModel @Inject constructor(
 
     /**
      * Observa en tiempo real los cambios en la tarea y actualiza el estado y el tiempo restante (CA-1).
+     * Si ya había una observación (por ejemplo, una que falló), la reemplaza.
      */
     fun observeTask(taskId: String) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            observeTaskByIdUseCase(taskId).collect { task ->
-                if (task == null) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isTaskNotFound = true,
-                            task = null,
-                            remainingTime = null,
-                        )
+        observedTaskId = taskId
+        observeJob?.cancel()
+        observeJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, hasLoadError = false) }
+            observeTaskByIdUseCase(taskId).collect { result ->
+                when (result) {
+                    is KronoResult.Success -> showTask(result.data)
+                    is KronoResult.Error -> _uiState.update {
+                        it.copy(isLoading = false, hasLoadError = true, task = null, remainingTime = null)
                     }
-                } else {
-                    val remaining = calculateRemainingTime(task.dueDate, currentDateTimeProvider())
-                    _uiState.update {
-                        it.copy(
-                            task = task,
-                            remainingTime = remaining,
-                            isLoading = false,
-                            isTaskNotFound = false,
-                            errorMessage = null,
-                        )
-                    }
+                    KronoResult.Loading -> Unit
                 }
             }
         }
+    }
+
+    /**
+     * Vuelve a abrir la observación de la tarea después de un error de carga.
+     */
+    fun onRetryLoad() {
+        observedTaskId?.let(::observeTask)
     }
 
     /**
@@ -101,19 +110,8 @@ class TaskDetailViewModel @Inject constructor(
         val updatedSubtasks = currentTask.subtasks.map { subtask ->
             if (subtask.id == subtaskId) subtask.copy(isDone = !subtask.isDone) else subtask
         }
-        val updatedTask = currentTask.copy(subtasks = updatedSubtasks)
         viewModelScope.launch {
-            when (val result = upsertTaskUseCase(updatedTask)) {
-                is KronoResult.Success -> Unit
-                is KronoResult.Error -> {
-                    val msg = result.throwable.message
-                    _uiState.update { it.copy(errorMessage = msg) }
-                    if (msg != null) {
-                        _events.emit(TaskDetailEvent.ShowSnackbar(msg))
-                    }
-                }
-                is KronoResult.Loading -> Unit
-            }
+            writeSubtasks(currentTask.copy(subtasks = updatedSubtasks))
         }
     }
 
@@ -146,27 +144,10 @@ class TaskDetailViewModel @Inject constructor(
             isDone = false,
             position = currentTask.subtasks.size,
         )
-        val updatedTask = currentTask.copy(subtasks = currentTask.subtasks + newSubtask)
         viewModelScope.launch {
             _uiState.update { it.copy(isSavingSubtask = true, isAddingSubtask = false) }
-            when (val result = upsertTaskUseCase(updatedTask)) {
-                is KronoResult.Success -> {
-                    _uiState.update { it.copy(isSavingSubtask = false) }
-                }
-                is KronoResult.Error -> {
-                    val msg = result.throwable.message
-                    _uiState.update {
-                        it.copy(
-                            isSavingSubtask = false,
-                            errorMessage = msg,
-                        )
-                    }
-                    if (msg != null) {
-                        _events.emit(TaskDetailEvent.ShowSnackbar(msg))
-                    }
-                }
-                is KronoResult.Loading -> Unit
-            }
+            writeSubtasks(currentTask.copy(subtasks = currentTask.subtasks + newSubtask))
+            _uiState.update { it.copy(isSavingSubtask = false) }
         }
     }
 
@@ -206,23 +187,17 @@ class TaskDetailViewModel @Inject constructor(
 
     /**
      * Confirma la eliminación de la tarea actual y sus subtareas, navegando hacia atrás (F-07 CA-2).
+     * Un segundo toque mientras el borrado sigue en curso se ignora, para no navegar dos veces.
      */
     fun onConfirmDeleteTask() {
         val taskId = _uiState.value.task?.id ?: return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isConfirmingDelete = false) }
+        if (dueDateOrDeleteJob?.isActive == true) return
+        _uiState.update { it.copy(isConfirmingDelete = false) }
+        dueDateOrDeleteJob = viewModelScope.launch {
             when (val result = deleteTaskUseCase(taskId)) {
-                is KronoResult.Success -> {
-                    _events.emit(TaskDetailEvent.NavigateBack)
-                }
-                is KronoResult.Error -> {
-                    val msg = result.throwable.message
-                    _uiState.update { it.copy(errorMessage = msg) }
-                    if (msg != null) {
-                        _events.emit(TaskDetailEvent.ShowSnackbar(msg))
-                    }
-                }
-                is KronoResult.Loading -> Unit
+                is KronoResult.Success -> _events.emit(TaskDetailEvent.NavigateBack)
+                is KronoResult.Error -> showWriteError(result.throwable)
+                KronoResult.Loading -> Unit
             }
         }
     }
@@ -230,32 +205,16 @@ class TaskDetailViewModel @Inject constructor(
     /**
      * Pospone la tarea para el día de mañana sumando un día a la fecha límite sin eliminarla (F-07 CA-3).
      * Si la tarea no tiene fecha límite previa, calcula mañana deterministamente con [currentDateTimeProvider].
+     * Solo se escribe la fecha límite, y un segundo toque en curso se ignora para no sumar dos días.
      */
     fun onPostponeTaskToTomorrow() {
         val currentTask = _uiState.value.task ?: return
-        val currentDueDate = currentTask.dueDate
-        val newDueDate = if (currentDueDate != null) {
-            val nextDate = currentDueDate.date.plus(1, DateTimeUnit.DAY)
-            LocalDateTime(nextDate, currentDueDate.time)
-        } else {
-            val today = currentDateTimeProvider().date
-            val tomorrow = today.plus(1, DateTimeUnit.DAY)
-            LocalDateTime(tomorrow, DEFAULT_DUE_TIME)
-        }
-        val updatedTask = currentTask.copy(dueDate = newDueDate)
-        viewModelScope.launch {
-            _uiState.update { it.copy(isConfirmingDelete = false) }
-            when (val result = upsertTaskUseCase(updatedTask)) {
-                is KronoResult.Success -> Unit
-                is KronoResult.Error -> {
-                    val msg = result.throwable.message
-                    _uiState.update { it.copy(errorMessage = msg) }
-                    if (msg != null) {
-                        _events.emit(TaskDetailEvent.ShowSnackbar(msg))
-                    }
-                }
-                is KronoResult.Loading -> Unit
-            }
+        if (dueDateOrDeleteJob?.isActive == true) return
+        val postponed = currentTask.copy(dueDate = tomorrowDueDate(currentTask.dueDate))
+        _uiState.update { it.copy(isConfirmingDelete = false) }
+        dueDateOrDeleteJob = viewModelScope.launch {
+            val result = updateTaskFieldsUseCase(postponed, setOf(TaskField.DUE_DATE))
+            if (result is KronoResult.Error) showWriteError(result.throwable)
         }
     }
 
@@ -282,12 +241,54 @@ class TaskDetailViewModel @Inject constructor(
         }
     }
 
+    private fun showTask(task: Task?) {
+        if (task == null) {
+            _uiState.update {
+                it.copy(isLoading = false, isTaskNotFound = true, task = null, remainingTime = null)
+            }
+            return
+        }
+        val remaining = calculateRemainingTime(task.dueDate, currentDateTimeProvider())
+        _uiState.update {
+            it.copy(
+                task = task,
+                remainingTime = remaining,
+                isLoading = false,
+                isTaskNotFound = false,
+                errorMessage = null,
+            )
+        }
+    }
+
+    // La lista de subtareas se escribe completa porque vive embebida en el documento (D-3).
+    private suspend fun writeSubtasks(task: Task) {
+        val result = updateTaskFieldsUseCase(task, setOf(TaskField.SUBTASKS))
+        if (result is KronoResult.Error) showWriteError(result.throwable)
+    }
+
+    private suspend fun showWriteError(error: Throwable) {
+        val message = error.message
+        _uiState.update { it.copy(errorMessage = message) }
+        if (message != null) {
+            _events.emit(TaskDetailEvent.ShowSnackbar(message))
+        }
+    }
+
+    private fun tomorrowDueDate(currentDueDate: LocalDateTime?): LocalDateTime =
+        if (currentDueDate != null) {
+            LocalDateTime(currentDueDate.date.plus(1, DateTimeUnit.DAY), currentDueDate.time)
+        } else {
+            LocalDateTime(currentDateTimeProvider().date.plus(1, DateTimeUnit.DAY), DEFAULT_DUE_TIME)
+        }
+
     companion object {
         /** Argumento canónico de navegación para el identificador de la tarea. */
         const val TASK_ID_NAV_ARG = "taskId"
 
         private const val MINUTES_PER_HOUR = 60
         private const val HOURS_PER_DAY = 24
+
+        /** Hora límite que se asigna al posponer una tarea que no tenía fecha. */
         val DEFAULT_DUE_TIME = LocalTime(23, 59)
     }
 }

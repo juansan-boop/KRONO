@@ -8,6 +8,7 @@ import com.krono.core.domain.assistant.FakePriorityExplanationGenerator
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.task.TaskPriority
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -71,6 +72,23 @@ class PriorityAssistantViewModelTest {
         assertEquals("informe", state.plan?.recommended?.task?.id)
         assertEquals(listOf("lectura"), state.plan?.sequence?.map { it.task.id })
         assertEquals(ExplanationState.Generated("Empieza por el informe."), state.explanation)
+    }
+
+    @Test
+    fun cuandoElListenerFalla_muestraErrorYAlRefrescarReabreLaObservacion() = runTest {
+        repository.givenTasks(task("informe", dueHour = 18))
+        repository.observeFailure = TaskError.StorageError("Permiso denegado")
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.hasError)
+
+        repository.observeFailure = null
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasError)
+        assertEquals("informe", viewModel.uiState.value.plan?.recommended?.task?.id)
+        assertEquals(2, repository.observeTasksSubscriptions)
     }
 
     @Test
