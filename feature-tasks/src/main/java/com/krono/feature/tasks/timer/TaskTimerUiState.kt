@@ -24,6 +24,8 @@ enum class TimerStatus {
  * @property isConfirmingSwitch hay un cronómetro en otra tarea y se pide confirmar que se detenga (CA-4).
  * @property isBusy hay una acción en curso; los botones se deshabilitan para evitar dobles toques.
  * @property savedSession duración de la última sesión guardada, para confirmarla al usuario (CA-2).
+ * @property isSavedSessionWithoutTask la tarea ya no existía al finalizar: la sesión se guardó,
+ * pero su tiempo no se sumó a ninguna tarea y hay que avisarlo.
  * @property errorMessage mensaje de error de la última acción, si falló.
  */
 data class TaskTimerUiState(
@@ -35,6 +37,7 @@ data class TaskTimerUiState(
     val isConfirmingSwitch: Boolean = false,
     val isBusy: Boolean = false,
     val savedSession: Duration? = null,
+    val isSavedSessionWithoutTask: Boolean = false,
     val errorMessage: String? = null,
 ) {
     /** Fracción de la estimación ya trabajada, entre 0 y 1, o `null` si la tarea no tiene estimación. */

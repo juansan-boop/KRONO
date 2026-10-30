@@ -131,7 +131,38 @@ class TaskTimerViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(TimerStatus.IDLE, state.status)
         assertEquals(25.minutes, state.savedSession)
+        assertFalse(state.isSavedSessionWithoutTask)
         assertEquals(25.minutes, timers.actualDurationByTask["informe"])
+    }
+
+    @Test
+    fun alFinalizarSiLaTareaYaNoExiste_avisaQueLaSesionNoSeSumo() = runTimerTest {
+        runCurrent()
+        viewModel.onStart()
+        runCurrent()
+        clock.advanceBy(25.minutes)
+        timers.deletedTasks += "informe"
+
+        viewModel.onFinish()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertEquals(25.minutes, state.savedSession)
+        assertTrue(state.isSavedSessionWithoutTask)
+        assertEquals(1, timers.sessions.size)
+    }
+
+    @Test
+    fun conCronometroHuerfanoDeUnaTareaBorrada_iniciaSinPedirConfirmacion() = runTimerTest {
+        timers.givenActiveTimer(ActiveTimer("borrada", clock.now(), clock.now(), 0.minutes))
+        runCurrent()
+
+        viewModel.onStart()
+        runCurrent()
+
+        assertFalse(viewModel.uiState.value.isConfirmingSwitch)
+        assertEquals(TimerStatus.RUNNING, viewModel.uiState.value.status)
+        assertEquals("informe", timers.currentTimer?.taskId)
     }
 
     @Test
@@ -148,6 +179,7 @@ class TaskTimerViewModelTest {
 
     @Test
     fun conCronometroEnOtraTarea_pideConfirmarYAlAceptarCambia() = runTimerTest {
+        tasks.givenTasks(Task(id = "otra", title = "Otra"))
         timers.givenActiveTimer(ActiveTimer("otra", clock.now(), clock.now(), 0.minutes))
         runCurrent()
         clock.advanceBy(15.minutes)
@@ -192,12 +224,12 @@ class TaskTimerViewModelTest {
     }
 
     private fun createViewModel(taskId: String): TaskTimerViewModel {
-        val finish = FinishTimerUseCase(timers, clock) { "sesion" }
+        val finish = FinishTimerUseCase(timers, clock)
         return TaskTimerViewModel(
             savedStateHandle = SavedStateHandle(mapOf(TaskTimerViewModel.TASK_ID_NAV_ARG to taskId)),
             observeTaskById = ObserveTaskByIdUseCase(tasks),
             observeActiveTimer = ObserveActiveTimerUseCase(timers),
-            startTimer = StartTimerUseCase(timers, finish, clock),
+            startTimer = StartTimerUseCase(timers, tasks, finish, clock),
             pauseTimer = PauseTimerUseCase(timers, clock),
             resumeTimer = ResumeTimerUseCase(timers, clock),
             finishTimer = finish,

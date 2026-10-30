@@ -86,14 +86,21 @@ class TaskTimerViewModel @Inject constructor(
     /** Reanuda el cronómetro (CA-1). */
     fun onResume() = runAction { resumeTimer() }
 
-    /** Finaliza el cronómetro y guarda la sesión en la tarea (CA-1, CA-2). */
+    /**
+     * Finaliza el cronómetro y guarda la sesión en la tarea (CA-1, CA-2). Si la tarea ya no
+     * existía, la sesión se conserva sin sumarse y el estado lo indica para avisar al usuario.
+     */
     fun onFinish() {
         if (_uiState.value.status == TimerStatus.IDLE) return
         _uiState.update { it.copy(isBusy = true) }
         viewModelScope.launch {
             when (val result = finishTimer()) {
                 is KronoResult.Success -> _uiState.update {
-                    it.copy(isBusy = false, savedSession = result.data.duration)
+                    it.copy(
+                        isBusy = false,
+                        savedSession = result.data.session.duration,
+                        isSavedSessionWithoutTask = !result.data.addedToTask,
+                    )
                 }
                 is KronoResult.Error -> showError(result.throwable)
                 KronoResult.Loading -> Unit
@@ -145,6 +152,7 @@ class TaskTimerViewModel @Inject constructor(
                 elapsed = timer?.elapsedAt(clock.now()) ?: Duration.ZERO,
                 // Al empezar una sesión nueva, el resumen de la anterior ya no aplica.
                 savedSession = if (timer != null) null else it.savedSession,
+                isSavedSessionWithoutTask = timer == null && it.isSavedSessionWithoutTask,
             )
         }
         if (timer != null && timer.isRunning) tickJob = startTicking(timer)

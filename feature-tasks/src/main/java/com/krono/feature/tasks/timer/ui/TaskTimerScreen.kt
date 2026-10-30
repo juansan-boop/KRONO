@@ -135,7 +135,11 @@ fun TaskTimerScreen(
                 BackRow(onBack)
                 when {
                     state.isLoading -> CircularProgressIndicator(color = PrimaryFixedDim)
-                    state.task == null -> NotFoundMessage()
+                    state.task == null -> {
+                        NotFoundMessage()
+                        // La tarea pudo borrarse justo al finalizar: el aviso de la sesión sigue visible.
+                        state.savedSession?.let { SavedSessionMessage(it, state.isSavedSessionWithoutTask) }
+                    }
                     else -> TimerContent(state, state.task, onStart, onPause, onResume, onFinish)
                 }
             }
@@ -168,7 +172,7 @@ private fun TimerContent(
         onFinish = onFinish,
         modifier = Modifier.fillMaxWidth(),
     )
-    state.savedSession?.let { SavedSessionMessage(it) }
+    state.savedSession?.let { SavedSessionMessage(it, state.isSavedSessionWithoutTask) }
     Text(
         text = stringResource(R.string.timer_background_hint),
         style = MaterialTheme.typography.bodySmall,
@@ -262,10 +266,15 @@ private fun TaskCard(task: Task) {
     }
 }
 
+/**
+ * Confirma la sesión guardada (CA-2); si la tarea ya no existía ([withoutTask]), avisa que el
+ * tiempo se guardó sin sumarse a ninguna tarea.
+ */
 @Composable
-private fun SavedSessionMessage(duration: Duration) {
+private fun SavedSessionMessage(duration: Duration, withoutTask: Boolean) {
+    val messageRes = if (withoutTask) R.string.timer_saved_without_task else R.string.timer_saved
     Text(
-        text = stringResource(R.string.timer_saved, formatClock(duration)),
+        text = stringResource(messageRes, formatClock(duration)),
         style = MaterialTheme.typography.bodyLarge,
         color = SecondaryCyan,
         textAlign = TextAlign.Center,
