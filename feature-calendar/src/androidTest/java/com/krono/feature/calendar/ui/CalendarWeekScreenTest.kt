@@ -171,12 +171,37 @@ class CalendarWeekScreenTest : CalendarScreenTestBase() {
         assertEquals(monthSelectorTop, selectorTop(), SELECTOR_TOP_TOLERANCE_PX)
     }
 
+    private fun assertSelectorStaysInPlaceAcrossViews(fontScale: Float?) {
+        show(fontScale = fontScale, widthDp = NARROW_SCREEN_WIDTH)
+        val monthTop = selectorTop()
+
+        selectView(R.string.calendar_view_week)
+        val weekTop = selectorTop()
+        selectView(R.string.calendar_view_day)
+        val dayTop = selectorTop()
+
+        assertEquals("Semana con fuente $fontScale", monthTop, weekTop, SELECTOR_TOP_TOLERANCE_PX)
+        assertEquals("Día con fuente $fontScale", monthTop, dayTop, SELECTOR_TOP_TOLERANCE_PX)
+    }
+
+    @Test
+    fun elSelectorQuedaEnLaMismaPosicionEnLasTresVistas() = assertSelectorStaysInPlaceAcrossViews(null)
+
+    @Test
+    fun elSelectorQuedaEnLaMismaPosicionEnLasTresVistasAlCientoTreintaPorCiento() =
+        assertSelectorStaysInPlaceAcrossViews(LARGE_FONT_SCALE_130)
+
+    @Test
+    fun elSelectorQuedaEnLaMismaPosicionEnLasTresVistasAlDoscientosPorCiento() =
+        assertSelectorStaysInPlaceAcrossViews(MAX_FONT_SCALE)
+
     private fun selectorTop(): Float =
         composeRule.onNodeWithContentDescription(text(R.string.calendar_view_selector)).fetchSemanticsNode()
             .boundsInRoot.top
 
     private companion object {
         const val SELECTOR_TOP_TOLERANCE_PX = 1f
+        const val LARGE_FONT_SCALE_130 = 1.3f
         const val WEEK_DAYS = 7
         const val DELIVERY_TITLE = "Entrega del viernes"
     }

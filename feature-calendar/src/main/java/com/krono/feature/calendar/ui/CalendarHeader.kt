@@ -32,8 +32,8 @@ import com.krono.core.ui.theme.SecondaryCyan
 import com.krono.feature.calendar.R
 
 /**
- * Encabezado del calendario, igual en las tres vistas: navegación al período anterior y
- * siguiente con su título, botón "Hoy" y selector de vista.
+ * Encabezado del calendario, igual en las tres vistas: selector de vista y, debajo, navegación al
+ * período anterior y siguiente con su título y botón "Hoy".
  *
  * @param mode Vista activa; decide las descripciones de los botones de navegación.
  * @param title Título de la vista, con su línea superior opcional.
@@ -56,6 +56,9 @@ internal fun CalendarHeader(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
     ) {
+        // El selector va primero: así queda en el mismo lugar en las tres vistas aunque el título
+        // del período ocupe más líneas con fuente grande.
+        CalendarViewSelector(selectedMode = mode, onSelectMode = onSelectMode)
         Row(verticalAlignment = Alignment.CenterVertically) {
             PeriodStepButton(
                 icon = KronoIcons.ChevronLeft,
@@ -70,7 +73,6 @@ internal fun CalendarHeader(
             )
             TodayButton(onClick = onToday)
         }
-        CalendarViewSelector(selectedMode = mode, onSelectMode = onSelectMode)
     }
 }
 
