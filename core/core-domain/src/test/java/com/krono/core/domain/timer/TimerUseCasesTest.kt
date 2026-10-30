@@ -1,6 +1,8 @@
 package com.krono.core.domain.timer
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.task.FakeTaskRepository
+import com.krono.core.domain.task.Task
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
@@ -18,9 +20,11 @@ class TimerUseCasesTest {
     private val start = Instant.parse("2026-10-22T14:00:00Z")
     private val clock = FakeClock(start)
     private val repository = FakeTimerRepository()
-    private var sessionCounter = 0
-    private val finish = FinishTimerUseCase(repository, clock) { "sesion-${++sessionCounter}" }
-    private val startTimer = StartTimerUseCase(repository, finish, clock)
+    private val tasks = FakeTaskRepository().apply {
+        givenTasks(Task(id = "tarea-1", title = "Informe"), Task(id = "tarea-2", title = "Parcial"))
+    }
+    private val finish = FinishTimerUseCase(repository, clock)
+    private val startTimer = StartTimerUseCase(repository, tasks, finish, clock)
     private val pause = PauseTimerUseCase(repository, clock)
     private val resume = ResumeTimerUseCase(repository, clock)
 
@@ -64,7 +68,10 @@ class TimerUseCasesTest {
 
         val result = finish()
 
-        val session = (result as KronoResult.Success).data
+        val finished = (result as KronoResult.Success).data
+        val session = finished.session
+        assertTrue(finished.addedToTask)
+        assertEquals(1, repository.sessions.size)
         assertEquals(20.minutes, session.duration)
         assertEquals(start, session.startedAt)
         assertEquals(start + 30.minutes, session.endedAt)
@@ -126,5 +133,61 @@ class TimerUseCasesTest {
         val timer = repository.currentTimer!!
         assertFalse(timer.isRunning)
         assertEquals(30.seconds, timer.elapsedAt(clock.now()))
+    }
+
+    @Test
+    fun alReintentarTrasUnError_laSesionConservaElMismoIdYNoSeDuplica() = runTest {
+        startTimer("tarea-1")
+        clock.advanceBy(15.minutes)
+        repository.finishFailure = IllegalStateException("Permiso denegado")
+        val failed = finish()
+        repository.finishFailure = null
+        clock.advanceBy(1.minutes)
+
+        finish()
+
+        assertTrue(failed is KronoResult.Error)
+        assertEquals(2, repository.finishAttempts.size)
+        assertEquals(repository.finishAttempts[0].id, repository.finishAttempts[1].id)
+        assertEquals(1, repository.sessions.size)
+    }
+
+    @Test
+    fun siLaTareaYaNoExiste_conservaLaSesionYAvisaQueNoSeSumo() = runTest {
+        startTimer("tarea-1")
+        clock.advanceBy(10.minutes)
+        repository.deletedTasks += "tarea-1"
+
+        val result = finish()
+
+        val finished = (result as KronoResult.Success).data
+        assertFalse(finished.addedToTask)
+        assertEquals(10.minutes, finished.session.duration)
+        assertEquals(listOf(finished.session), repository.sessions)
+        assertNull(repository.actualDurationByTask["tarea-1"])
+        assertNull(repository.currentTimer)
+    }
+
+    @Test
+    fun conCronometroHuerfanoDeUnaTareaBorrada_iniciaSinPedirConfirmacionYLoDescarta() = runTest {
+        repository.givenActiveTimer(ActiveTimer("borrada", start, start, Duration.ZERO))
+        clock.advanceBy(20.minutes)
+
+        val result = startTimer("tarea-1")
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertEquals("tarea-1", repository.currentTimer!!.taskId)
+        assertEquals(clock.now(), repository.currentTimer!!.startedAt)
+        assertTrue(repository.sessions.isEmpty())
+    }
+
+    @Test
+    fun siNoSePuedeComprobarLaTareaDelCronometroActivo_pideConfirmacionComoSiempre() = runTest {
+        startTimer("tarea-1")
+        tasks.failure = IllegalStateException("Sin conexión")
+
+        val result = startTimer("tarea-2")
+
+        assertEquals(KronoResult.Error(TimerError.AnotherTimerActive("tarea-1")), result)
     }
 }

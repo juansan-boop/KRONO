@@ -1,6 +1,8 @@
 package com.krono.core.domain.timer
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.task.TaskError
+import com.krono.core.domain.task.TaskRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
 import kotlin.time.Duration
@@ -19,9 +21,15 @@ class ObserveActiveTimerUseCase(
  * Si ya corre en esa misma tarea no hace nada, y si estaba en pausa lo reanuda. Si hay uno
  * en otra tarea devuelve [TimerError.AnotherTimerActive] para que la UI pida confirmación;
  * con `stopCurrent = true` finaliza y guarda el anterior antes de iniciar el nuevo (CA-4).
+ *
+ * Si el cronómetro en curso mide una tarea que ya no existe (por ejemplo, borrada desde otro
+ * dispositivo), es un cronómetro huérfano: se descarta sin pedir confirmación ni guardar su
+ * sesión, porque el tiempo de una tarea borrada ya no cuenta (F-07 CA-4). Si no se puede
+ * comprobar la tarea, se asume que existe y se pide confirmación como siempre.
  */
 class StartTimerUseCase(
     private val repository: TimerRepository,
+    private val taskRepository: TaskRepository,
     private val finishTimer: FinishTimerUseCase,
     private val clock: Clock,
 ) {
@@ -37,10 +45,17 @@ class StartTimerUseCase(
         }
         return when {
             current?.taskId == taskId -> resumeIfPaused(current)
+            current != null && isOrphan(current) -> startNew(taskId)
             current != null && !stopCurrent -> KronoResult.Error(TimerError.AnotherTimerActive(current.taskId))
             current != null -> finishThenStart(taskId)
             else -> startNew(taskId)
         }
+    }
+
+    /** El cronómetro mide una tarea que ya no existe; cualquier otro error no lo hace huérfano. */
+    private suspend fun isOrphan(timer: ActiveTimer): Boolean {
+        val task = taskRepository.getTaskById(timer.taskId)
+        return task is KronoResult.Error && task.throwable == TaskError.TaskNotFound
     }
 
     private suspend fun resumeIfPaused(timer: ActiveTimer): KronoResult<Unit> =
@@ -53,6 +68,7 @@ class StartTimerUseCase(
             KronoResult.Loading -> KronoResult.Loading
         }
 
+    /** Guarda un cronómetro nuevo; reemplaza el documento anterior, así que también descarta un huérfano. */
     private suspend fun startNew(taskId: String): KronoResult<Unit> {
         val now = clock.now()
         return repository.saveActiveTimer(
@@ -86,14 +102,19 @@ class ResumeTimerUseCase(
 /**
  * Finaliza el cronómetro en curso (F-08 CA-1, CA-2): registra una [TimeSession] de tipo
  * [TimeSessionType.CRONOMETRO] con el tiempo trabajado y lo suma a la tarea.
+ *
+ * El id de la sesión es [ActiveTimer.sessionId]: si una escritura falla y el usuario reintenta,
+ * se guarda la misma sesión en vez de una segunda.
  */
 class FinishTimerUseCase(
     private val repository: TimerRepository,
     private val clock: Clock,
-    private val newSessionId: () -> String,
 ) {
-    /** Devuelve la sesión registrada, o [TimerError.NoActiveTimer] si no había cronómetro. */
-    suspend operator fun invoke(): KronoResult<TimeSession> {
+    /**
+     * Devuelve la sesión registrada e indica si se sumó a la tarea (no se suma si la tarea ya no
+     * existía), o [TimerError.NoActiveTimer] si no había cronómetro.
+     */
+    suspend operator fun invoke(): KronoResult<FinishedSession> {
         val timer = when (val result = repository.getActiveTimer()) {
             is KronoResult.Success -> result.data ?: return KronoResult.Error(TimerError.NoActiveTimer)
             is KronoResult.Error -> return result
@@ -101,18 +122,14 @@ class FinishTimerUseCase(
         }
         val now = clock.now()
         val session = TimeSession(
-            id = newSessionId(),
+            id = timer.sessionId,
             taskId = timer.taskId,
             startedAt = timer.startedAt,
             endedAt = now,
             duration = timer.elapsedAt(now),
             type = TimeSessionType.CRONOMETRO,
         )
-        return when (val saved = repository.finishActiveTimer(session)) {
-            is KronoResult.Success -> KronoResult.Success(session)
-            is KronoResult.Error -> saved
-            KronoResult.Loading -> KronoResult.Loading
-        }
+        return repository.finishActiveTimer(session)
     }
 }
 

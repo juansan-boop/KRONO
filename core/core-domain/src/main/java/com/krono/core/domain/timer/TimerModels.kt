@@ -23,12 +23,36 @@ data class ActiveTimer(
     /** El cronómetro está corriendo (no está en pausa). */
     val isRunning: Boolean get() = runningSince != null
 
+    /**
+     * Identificador de la [TimeSession] que produce este cronómetro al finalizar. Sale de la tarea
+     * y de la marca de inicio, así que es el mismo en cada reintento: guardar dos veces la misma
+     * sesión la reemplaza en vez de duplicarla (CA-2).
+     */
+    val sessionId: String get() = "$taskId$SESSION_ID_SEPARATOR${startedAt.toEpochMilliseconds()}"
+
     /** Tiempo trabajado hasta [now], sin contar las pausas. */
     fun elapsedAt(now: Instant): Duration {
         val currentStretch = runningSince?.let { (now - it).coerceAtLeast(Duration.ZERO) } ?: Duration.ZERO
         return accumulated + currentStretch
     }
+
+    private companion object {
+        /** Separa la tarea y la marca de inicio en [sessionId]; los ids de tarea (UUID) no lo contienen. */
+        const val SESSION_ID_SEPARATOR = "_"
+    }
 }
+
+/**
+ * Resultado de finalizar el cronómetro (F-08 CA-2).
+ *
+ * @property session sesión registrada.
+ * @property addedToTask `false` si la tarea ya no existía: la sesión se conservó, pero su tiempo
+ * no se sumó a ninguna tarea y la UI debe avisarlo.
+ */
+data class FinishedSession(
+    val session: TimeSession,
+    val addedToTask: Boolean,
+)
 
 /** Origen de una sesión de tiempo (Sección 6 del SPEC). */
 enum class TimeSessionType {
