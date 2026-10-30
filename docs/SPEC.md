@@ -298,7 +298,9 @@ botón "Asistente IA" de la lista de tareas.
 ### Fase 2 — Organización diaria
 
 #### F-13 — Dashboard de inicio
-- **Estado:** Pendiente · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-dashboard` · **Depende de:** F-02, F-08 · **PR:** —
+- **Estado:** En progreso · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-dashboard`, `core-domain`, `core-data`, `app` · **Depende de:** F-02, F-08 · **PR:** #45
+
+Hecho: saludo, resumen del día, tareas prioritarias y estados de carga, vacío y error (CA-1, CA-3, CA-4). CA-2 queda parcial: "Iniciar" navega por callback, y hasta que existan F-09 y F-10 (plantilla activa) abre el cronómetro de la tarea prioritaria de hoy o la lista de tareas.
 
 - **CA-1:** Dado el inicio, cuando carga, entonces muestra saludo con el nombre del usuario, porcentaje del día completado, conteo de completadas y pendientes y tiempo de enfoque del día.
 - **CA-2:** Dado el bloque "Sesión de Enfoque", cuando se toca "Iniciar", entonces arranca el modo enfoque con la plantilla activa.
@@ -442,6 +444,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-30 | v0.8 (continuación): Sección 4: reglas de Firestore en el repo (PR #36) y escrituras con espera máxima de 2 s. Sección 5: `feature-profile` accede a Firebase y Firestore directamente (`ProfileModule`, sin `core-data`). Sección 6: `CalendarEvent` se reemplaza por bloques derivados de las tareas y se aclaran `actualDuration`, `TimeSession` y la reconciliación. |
 | 2026-10-30 | v0.8 (continuación): F-22 a F-25 CA-4 reescrito con el cierre de sesión real de `feature-profile` (la pantalla provisional de `app` ya no se usa). F-21 CA-1 y CA-2 ajustados al código (borrado por lotes; el restablecimiento sobrescribe el perfil y la eliminación de cuenta lo borra). F-12 se ordena en la fase 1 con su dependencia. |
 | 2026-10-30 | v0.8 (continuación): Sección 11 reescrita con solo lo vigente. `CLAUDE.md`: dos excepciones puntuales (acceso directo de `feature-profile` a Firebase y `Color.Transparent`) |
+| 2026-10-30 | v0.8 (continuación): F-13 pasa a En progreso (PR #45): dashboard de inicio hecho salvo CA-2, que depende de F-09 y F-10. |
 
 ## 11. Deuda técnica conocida
 
