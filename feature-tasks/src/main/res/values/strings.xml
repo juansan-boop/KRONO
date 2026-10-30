@@ -229,4 +229,48 @@
     <string name="assistant_error">No pudimos cargar tus tareas.</string>
     <string name="assistant_retry">Reintentar</string>
     <string name="assistant_refresh">Recalcular</string>
+
+    <!-- Plantillas de bloques de enfoque (F-10) -->
+    <string name="focus_title">Plantillas de enfoque</string>
+    <string name="focus_intro">Tiempos base que la IA utiliza para estructurar tus sesiones y descansos.</string>
+    <plurals name="focus_count">
+        <item quantity="one">%d plantilla</item>
+        <item quantity="other">%d plantillas</item>
+    </plurals>
+    <string name="focus_active_badge">ACTIVO</string>
+    <string name="focus_minutes_focus">%dm foco</string>
+    <string name="focus_minutes_break">%dm descanso</string>
+    <string name="focus_percent_focus">Foco %d%%</string>
+    <string name="focus_percent_break">Descanso %d%%</string>
+    <string name="focus_create">Crear nuevo bloque</string>
+    <string name="focus_activate">Activar</string>
+    <string name="focus_cd_activate">Activar la plantilla %s</string>
+    <string name="focus_cd_edit">Editar la plantilla %s</string>
+    <string name="focus_cd_delete">Eliminar la plantilla %s</string>
+    <string name="focus_cd_loading">Cargando plantillas</string>
+    <string name="focus_load_error_title">No pudimos cargar tus plantillas</string>
+    <string name="focus_empty_title">Aún no tienes plantillas</string>
+    <string name="focus_empty_body">Crea una para definir cuánto trabajas y cuánto descansas en cada bloque.</string>
+
+    <string name="focus_editor_title_create">Nuevo bloque</string>
+    <string name="focus_editor_title_edit">Editar bloque</string>
+    <string name="focus_label_name">Nombre</string>
+    <string name="focus_placeholder_name">Ej. Estudio profundo</string>
+    <string name="focus_label_focus_minutes">Minutos de foco</string>
+    <string name="focus_label_break_minutes">Minutos de descanso</string>
+    <string name="focus_minutes_hint">Entre %1$d y %2$d minutos</string>
+    <string name="focus_action_save">Guardar</string>
+    <string name="focus_error_name_blank">El nombre es obligatorio</string>
+    <string name="focus_error_name_long">El nombre es demasiado largo</string>
+    <string name="focus_error_focus_minutes">Ingresa unos minutos de foco válidos</string>
+    <string name="focus_error_break_minutes">Ingresa unos minutos de descanso válidos</string>
+    <string name="focus_error_save">No pudimos guardar la plantilla. Inténtalo de nuevo.</string>
+    <string name="focus_error_activate">No pudimos activar la plantilla. Inténtalo de nuevo.</string>
+    <string name="focus_error_delete">No pudimos eliminar la plantilla. Inténtalo de nuevo.</string>
+
+    <string name="focus_delete_title">¿Eliminar esta plantilla?</string>
+    <string name="focus_delete_body">Se eliminará «%s». Esta acción no se puede deshacer.</string>
+    <string name="focus_delete_active_note">Es la plantilla activa: se activará otra en su lugar.</string>
+    <string name="focus_delete_confirm">Sí, eliminar</string>
+    <string name="focus_delete_keep">Conservar</string>
 </resources>
