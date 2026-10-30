@@ -25,6 +25,7 @@ import com.krono.core.ui.theme.DeepMidnight
 import com.krono.feature.auth.navigation.AUTH_GRAPH_ROUTE
 import com.krono.feature.auth.navigation.authGraph
 import com.krono.feature.calendar.month.ui.CalendarRoute
+import com.krono.feature.dashboard.ui.DashboardRoute
 import com.krono.feature.profile.navigation.SettingsRoute
 import com.krono.feature.profile.navigation.editProfileScreen
 import com.krono.feature.profile.navigation.navigateToEditProfile
@@ -74,6 +75,13 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
                 onLoggedOut = alCerrarSesion,
             )
         },
+        inicio = {
+            DashboardRoute(
+                onStartFocus = { taskId -> alIniciarEnfoqueDesdeInicio(navController, taskId) },
+                onSeeAll = { navController.navegarAPestana(KronoDestination.Tareas) },
+                onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) },
+            )
+        },
         calendario = {
             CalendarRoute(onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) })
         },
@@ -98,6 +106,7 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
  * @param destinoInicial ruta de arranque: [AUTH_GRAPH_ROUTE] o [RUTA_GRAFO_PRINCIPAL].
  * @param grafoAuth añade el grafo de auth; recibe el callback que se invoca al autenticarse.
  * @param ajustes contenido de la pestaña Ajustes; recibe el callback que se invoca al cerrar sesión.
+ * @param inicio contenido de la pestaña Inicio (F-13); por defecto una sección provisional para las pruebas.
  * @param tareas contenido de la pestaña Tareas (F-03).
  * @param calendario contenido de la pestaña Calendario (F-16). Tocar una tarea de su agenda abre el
  * detalle de tareas desde `app`, sin que `feature-calendar` importe `feature-tasks`.
@@ -108,6 +117,7 @@ fun KronoShell(
     destinoInicial: String,
     grafoAuth: NavGraphBuilder.(alAutenticarse: () -> Unit) -> Unit,
     ajustes: @Composable (alCerrarSesion: () -> Unit) -> Unit,
+    inicio: @Composable () -> Unit = { SeccionProvisional(R.string.seccion_inicio) },
     tareas: @Composable () -> Unit = { TasksRoute(onAddTask = {}) },
     calendario: @Composable () -> Unit = { CalendarRoute(onOpenTask = {}) },
 ) {
@@ -133,6 +143,7 @@ fun KronoShell(
             grafoAuth { navController.irAlFlujoPrincipal() }
             grafoPrincipal(
                 ajustes = { ajustes { navController.volverAAutenticacion() } },
+                inicio = inicio,
                 tareas = tareas,
                 calendario = calendario,
                 alVolverDeCrearTarea = { navController.popBackStack() },
@@ -156,6 +167,7 @@ fun KronoShell(
 /** Añade el flujo principal: una pantalla por pestaña de la barra inferior. */
 private fun NavGraphBuilder.grafoPrincipal(
     ajustes: @Composable () -> Unit,
+    inicio: @Composable () -> Unit,
     tareas: @Composable () -> Unit,
     calendario: @Composable () -> Unit,
     alVolverDeCrearTarea: () -> Unit = {},
@@ -173,8 +185,7 @@ private fun NavGraphBuilder.grafoPrincipal(
     alEliminarCuenta: () -> Unit = {},
 ) {
     navigation(startDestination = KronoDestination.Inicial.route, route = RUTA_GRAFO_PRINCIPAL) {
-        // Inicio sigue provisional hasta que feature-dashboard exponga su pantalla.
-        composable(KronoDestination.Inicio.route) { SeccionProvisional(R.string.seccion_inicio) }
+        composable(KronoDestination.Inicio.route) { inicio() }
         composable(KronoDestination.Tareas.route) { tareas() }
         createTaskScreen(onBack = alVolverDeCrearTarea)
         taskDetailScreen(
@@ -231,5 +242,20 @@ fun NavController.irAlFlujoPrincipal() {
 fun NavController.volverAAutenticacion() {
     navigate(AUTH_GRAPH_ROUTE) {
         popUpTo(RUTA_GRAFO_PRINCIPAL) { inclusive = true }
+    }
+}
+
+/**
+ * Arranca el modo enfoque desde el botón "Iniciar" del inicio (F-13 CA-2).
+ *
+ * Limitación: el modo enfoque con plantilla (F-09 y F-10) aún no existe. Mientras tanto, si hay una
+ * tarea prioritaria hoy se abre su cronómetro (F-08); si no, se lleva al usuario a la lista de
+ * tareas para que elija una. Cuando F-09 exista, este es el único punto que hay que cambiar.
+ */
+private fun alIniciarEnfoqueDesdeInicio(navController: NavController, taskId: String?) {
+    if (taskId != null) {
+        navController.navigateToTaskTimer(taskId)
+    } else {
+        navController.navegarAPestana(KronoDestination.Tareas)
     }
 }
