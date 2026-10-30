@@ -3,6 +3,7 @@ package com.krono.app.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -141,7 +142,9 @@ fun KronoShell(
         NavHost(
             navController = navController,
             startDestination = destinoInicial,
-            modifier = Modifier.padding(padding),
+            // Se consume el margen una sola vez: sin esto el Scaffold propio de cada pantalla lo
+            // vuelve a sumar y deja un hueco vacío bajo la barra de estado.
+            modifier = Modifier.padding(padding).consumeWindowInsets(padding),
         ) {
             grafoAuth { navController.irAlFlujoPrincipal() }
             grafoPrincipal(
