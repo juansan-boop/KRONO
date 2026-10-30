@@ -71,9 +71,11 @@ internal fun clockTime(dateTime: LocalDateTime): String =
  * Textos del encabezado de la vista activa.
  *
  * @property eyebrow Línea pequeña en mayúsculas sobre el título ("SEMANA 43"), o `null` en la vista mensual.
- * @property title Título principal ("Octubre 2024", "21 - 27 de octubre", "24 de octubre").
+ * @property title Título principal ("Octubre 2024", "21 - 27 de octubre", "26 oct - 1 nov", "24 de octubre").
+ * @property description Texto completo para los lectores de pantalla cuando [title] va abreviado
+ * ("26 de octubre - 1 de noviembre"), o `null` si [title] ya se lee bien.
  */
-internal data class CalendarTitle(val eyebrow: String?, val title: String)
+internal data class CalendarTitle(val eyebrow: String?, val title: String, val description: String? = null)
 
 /** Título del encabezado según la vista: mes y año, rango de la semana o fecha del día. */
 @Composable
@@ -82,6 +84,7 @@ internal fun calendarTitle(state: CalendarUiState): CalendarTitle = when (state.
     CalendarViewMode.WEEK -> CalendarTitle(
         eyebrow = stringResource(R.string.calendar_week_eyebrow, state.weekNumber).uppercase(CalendarLocale),
         title = weekRangeTitle(state.weeks.single().map { it.date }),
+        description = weekRangeDescription(state.weeks.single().map { it.date }),
     )
     CalendarViewMode.DAY -> CalendarTitle(
         eyebrow = stringResource(
@@ -93,7 +96,11 @@ internal fun calendarTitle(state: CalendarUiState): CalendarTitle = when (state.
     )
 }
 
-/** Rango de una semana de lunes a domingo, por ejemplo "21 - 27 de octubre" o "30 de diciembre - 5 de enero". */
+/**
+ * Rango de una semana de lunes a domingo, por ejemplo "21 - 27 de octubre". Si cruza de mes se
+ * abrevia ("26 oct - 1 nov") para que quepa en una sola línea y el encabezado mida lo mismo que
+ * el de las otras vistas.
+ */
 @Composable
 private fun weekRangeTitle(days: List<LocalDate>): String {
     val first = days.first()
@@ -104,12 +111,29 @@ private fun weekRangeTitle(days: List<LocalDate>): String {
         stringResource(
             R.string.calendar_week_range_two_months,
             first.dayOfMonth,
-            first.monthName(),
+            first.shortMonthName(),
             last.dayOfMonth,
-            last.monthName(),
+            last.shortMonthName(),
         )
     }
 }
+
+/** Lectura completa del rango cuando el título va abreviado; `null` si no se abrevió. */
+@Composable
+private fun weekRangeDescription(days: List<LocalDate>): String? {
+    val first = days.first()
+    val last = days.last()
+    if (first.month == last.month) return null
+    return stringResource(
+        R.string.calendar_week_range_two_months_description,
+        first.dayOfMonth,
+        first.monthName(),
+        last.dayOfMonth,
+        last.monthName(),
+    )
+}
+
+private fun LocalDate.shortMonthName(): String = month.getDisplayName(TextStyle.SHORT_STANDALONE, CalendarLocale)
 
 private fun LocalDate.monthName(): String = month.getDisplayName(TextStyle.FULL_STANDALONE, CalendarLocale)
 

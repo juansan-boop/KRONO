@@ -69,7 +69,7 @@ class CalendarWeekScreenTest : CalendarScreenTestBase() {
         clickButton(R.string.calendar_next_week)
         composeRule.onNodeWithText("SEMANA 44").assertIsDisplayed()
         // La semana del 28 de octubre al 3 de noviembre cruza de mes.
-        composeRule.onNodeWithText("28 de octubre - 3 de noviembre").assertIsDisplayed()
+        composeRule.onNodeWithText("28 oct - 3 nov").assertIsDisplayed()
         dayCell("jueves, 31 de octubre de 2024").assertIsSelected()
         dayCell("martes, 29 de octubre de 2024").performClick()
         scrollTo(REPORT_TITLE)
@@ -120,7 +120,7 @@ class CalendarWeekScreenTest : CalendarScreenTestBase() {
 
         clickButton(R.string.calendar_next_week)
 
-        listOf("SEMANA 44", "28 de octubre - 3 de noviembre", "Jueves 31").forEach(::assertTextFits)
+        listOf("SEMANA 44", "28 oct - 3 nov", "Jueves 31").forEach(::assertTextFits)
     }
 
     @Test
@@ -157,7 +157,26 @@ class CalendarWeekScreenTest : CalendarScreenTestBase() {
         composeRule.onNodeWithContentDescription(text(R.string.calendar_week_strip)).assertExists()
     }
 
+    @Test
+    fun unaSemanaQueCruzaDeMes_tituloAbreviadoEnUnaLineaYSelectorALaAlturaDeMes() {
+        show(widthDp = NARROW_SCREEN_WIDTH)
+        val monthSelectorTop = selectorTop()
+
+        selectView(R.string.calendar_view_week)
+        clickButton(R.string.calendar_next_week)
+
+        composeRule.onNodeWithText("28 oct - 3 nov").assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("28 de octubre - 3 de noviembre").assertExists()
+        assertTextFits("28 oct - 3 nov")
+        assertEquals(monthSelectorTop, selectorTop(), SELECTOR_TOP_TOLERANCE_PX)
+    }
+
+    private fun selectorTop(): Float =
+        composeRule.onNodeWithContentDescription(text(R.string.calendar_view_selector)).fetchSemanticsNode()
+            .boundsInRoot.top
+
     private companion object {
+        const val SELECTOR_TOP_TOLERANCE_PX = 1f
         const val WEEK_DAYS = 7
         const val DELIVERY_TITLE = "Entrega del viernes"
     }
