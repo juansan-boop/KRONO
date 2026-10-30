@@ -14,7 +14,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -111,7 +113,7 @@ class PriorityAssistantViewModelTest {
             task("lectura", dueHour = 23, priority = TaskPriority.BAJA, dueDay = 25),
         )
         val viewModel = createViewModel()
-        advanceUntilIdle()
+        runCurrent()
 
         val waiting = viewModel.uiState.value
         assertFalse(waiting.isLoading)
@@ -128,13 +130,28 @@ class PriorityAssistantViewModelTest {
     }
 
     @Test
+    fun siLaIaNuncaResponde_trasElTopeDeEsperaPasaALaPlantilla() = runTest {
+        generator.gate = CompletableDeferred()
+        repository.givenTasks(task("informe", dueHour = 18))
+        val viewModel = createViewModel()
+        runCurrent()
+        assertEquals(ExplanationState.Loading, viewModel.uiState.value.explanation)
+
+        advanceTimeBy(PriorityAssistantViewModel.EXPLANATION_TIMEOUT_MILLIS + 1)
+        runCurrent()
+
+        assertEquals(ExplanationState.Fallback, viewModel.uiState.value.explanation)
+        assertEquals("informe", viewModel.uiState.value.plan?.recommended?.task?.id)
+    }
+
+    @Test
     fun siLaIaFallaTrasLaEspera_conservaElPlanYPasaALaPlantilla() = runTest {
         val gate = CompletableDeferred<Unit>()
         generator.gate = gate
         generator.failure = AssistantError.Unavailable()
         repository.givenTasks(task("informe", dueHour = 18))
         val viewModel = createViewModel()
-        advanceUntilIdle()
+        runCurrent()
         val waiting = viewModel.uiState.value.plan
 
         gate.complete(Unit)

@@ -6,6 +6,7 @@ import com.krono.core.domain.task.TaskPriority
 import com.krono.core.domain.time.plus
 import kotlinx.datetime.LocalDateTime
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -67,6 +68,48 @@ class BuildPriorityPlanUseCaseTest {
         val plan = buildPlan(listOf(tight), now)!!
 
         assertTrue(PriorityFactor.TIGHT_SCHEDULE in plan.recommended.factors)
+    }
+
+    @Test
+    fun unaTareaQueYaNoCabeAntesDeSuLimite_noSeRecomiendaAhoraYSeAdvierte() {
+        val noCabe = task("turno", dueIn = 3.hours, estimate = 240.minutes, priority = TaskPriority.ALTA)
+        val cabe = task("recibo", dueIn = 5.hours, estimate = 15.minutes, priority = TaskPriority.BAJA)
+
+        val plan = buildPlan(listOf(noCabe, cabe), now)!!
+
+        assertEquals("recibo", plan.recommended.task.id)
+        assertEquals(listOf("turno"), plan.sequence.map { it.task.id })
+        assertTrue(PriorityFactor.CANNOT_FINISH_BY_DUE in plan.sequence.single().factors)
+        assertFalse(PriorityFactor.CANNOT_FINISH_BY_DUE in plan.recommended.factors)
+    }
+
+    @Test
+    fun siNingunaTareaCabe_laMejorSeRecomiendaConLaAdvertencia() {
+        val noCabe = task("turno", dueIn = 3.hours, estimate = 240.minutes)
+
+        val plan = buildPlan(listOf(noCabe), now)!!
+
+        assertEquals("turno", plan.recommended.task.id)
+        assertTrue(PriorityFactor.CANNOT_FINISH_BY_DUE in plan.recommended.factors)
+        assertFalse(PriorityFactor.TIGHT_SCHEDULE in plan.recommended.factors)
+    }
+
+    @Test
+    fun siLaEstimacionCabeJustoEnElMargen_noSeAdvierte() {
+        val justa = task("justa", dueIn = 4.hours, estimate = 240.minutes)
+
+        val plan = buildPlan(listOf(justa), now)!!
+
+        assertFalse(PriorityFactor.CANNOT_FINISH_BY_DUE in plan.recommended.factors)
+    }
+
+    @Test
+    fun unaTareaVencida_noSeMarcaComoQueNoCabe() {
+        val overdue = task("vencida", dueIn = (-1).hours, estimate = 240.minutes)
+
+        val plan = buildPlan(listOf(overdue), now)!!
+
+        assertFalse(PriorityFactor.CANNOT_FINISH_BY_DUE in plan.recommended.factors)
     }
 
     @Test
