@@ -258,7 +258,9 @@ la tarea.
 - **CA-3:** Dado que el bloque llega a cero, cuando termina, entonces se avisa al usuario y se ofrece el descanso de la plantilla.
 
 #### F-10 — Plantillas de bloques de enfoque
-- **Estado:** Pendiente · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks` · **Depende de:** F-02 · **PR:** —
+- **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-02 · **PR:** pendiente de abrir
+
+Implementación: plantillas en `users/{uid}/focusTemplates/{id}` (`FocusTemplate`), sembradas al observarlas con ids fijos (idempotente) si no hay ninguna; crear, editar, eliminar y activar son un lote atómico (`FocusTemplateChanges`), así siempre hay exactamente una activa: eliminar la activa activa otra y la única plantilla no se puede eliminar. Pantalla en `feature-tasks` (ruta `ajustes/plantillas-enfoque`, cableada en `KronoNavHost`). **Pendiente:** el acceso desde Ajustes (F-20 CA-1) es de `feature-profile` y no está cableado, así que la pantalla aún no es alcanzable desde la UI; por eso F-10 queda En progreso.
 
 - **CA-1:** Dada una instalación nueva, cuando se abren las plantillas, entonces existen tres por defecto: Estudio Profundo (45m/10m, activa), Sprint Rápido (25m/5m) y Lectura Nocturna (60m/15m).
 - **CA-2:** Dadas las plantillas, cuando se crea, edita o elimina una, entonces el cambio persiste; siempre hay exactamente una activa.
@@ -443,6 +445,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-30 | v0.8 (continuación): F-22 a F-25 CA-4 reescrito con el cierre de sesión real de `feature-profile` (la pantalla provisional de `app` ya no se usa). F-21 CA-1 y CA-2 ajustados al código (borrado por lotes; el restablecimiento sobrescribe el perfil y la eliminación de cuenta lo borra). F-12 se ordena en la fase 1 con su dependencia. |
 | 2026-10-30 | v0.8 (continuación): Sección 11 reescrita con solo lo vigente. `CLAUDE.md`: dos excepciones puntuales (acceso directo de `feature-profile` a Firebase y `Color.Transparent`) |
 | 2026-10-30 | F-16 (Semana y Día) pasa a Hecha: vistas Semana y Día del calendario con franja LUN-DOM, agenda del día elegido y marca "Ahora" en la vista diaria, según `calendarweekscreen_vista_semanal_krono` y `calendardayscreen_vista_diaria_krono` |
+| 2026-10-30 | F-10 pasa a En progreso: plantillas de enfoque en Firestore (`users/{uid}/focusTemplates`, siembra idempotente, una sola activa por lote atómico) y pantalla de gestión en `feature-tasks` con ruta cableada en `app`; falta el acceso desde Ajustes (F-20 CA-1, `feature-profile`). |
 
 ## 11. Deuda técnica conocida
 
@@ -457,7 +460,8 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 - F-06 CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve: ningún formulario de creación o edición permite capturarla.
 - F-06 CA-3: "Iniciar Enfoque" no abre nada hasta que exista F-09 (la navegación en `KronoNavHost` está vacía).
 - F-15 CA-1 y CA-3: falta el recordatorio del sistema a los 30 minutos y el permiso `POST_NOTIFICATIONS`, que hoy no está declarado en el manifest de `app`.
-- F-20 CA-1: falta el acceso a las plantillas de enfoque (F-10).
+- F-20 CA-1: falta el acceso a las plantillas de enfoque (F-10): la pantalla existe en la ruta `ajustes/plantillas-enfoque`, pero `SettingsRoute` de `feature-profile` no tiene el callback ni la fila que la abra.
+- F-10: si un dispositivo inicia por primera vez sin red y sin caché, siembra las plantillas por defecto aunque la cuenta ya las tuviera editadas en otro dispositivo; al reconectar, los ids fijos las sobrescriben.
 
 **Cronómetro y datos (F-08)**
 - No hay notificación persistente mientras el cronómetro corre; el tiempo no se pierde (se calcula con marcas de tiempo), pero el usuario no lo ve fuera de la app.
