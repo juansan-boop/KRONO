@@ -6,6 +6,12 @@ import com.krono.feature.profile.domain.NotificationPrefs
 /**
  * Contrato para la sincronización remota del perfil, preferencias y seguridad
  * con Cloud Firestore y Firebase Authentication (F-15, F-19, F-20, F-21).
+ *
+ * Las tres operaciones de guardado ([saveUserProfile], [saveNotificationPrefs], [saveSettingsToggles])
+ * esperan la confirmación del servidor solo durante un tiempo acotado: Firestore ya aplicó la
+ * escritura en su caché local y la tiene encolada, así que si el servidor no responde a tiempo (sin
+ * conexión) devuelven [KronoResult.Success]. Los errores reales (permiso denegado, datos inválidos)
+ * llegan como [KronoResult.Error].
  */
 interface ProfileRemoteDataSource {
 

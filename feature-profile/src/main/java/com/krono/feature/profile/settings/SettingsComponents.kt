@@ -1,5 +1,6 @@
 package com.krono.feature.profile.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -621,9 +622,9 @@ internal fun LogoutConfirmationDialog(
                     }
                 }
 
-                if (state.logoutErrorMessage != null) {
+                state.logoutError?.let { logoutError ->
                     Text(
-                        text = state.logoutErrorMessage,
+                        text = stringResource(logoutError.messageRes()),
                         style = MaterialTheme.typography.bodySmall,
                         color = ErrorColor,
                         textAlign = TextAlign.Center,
@@ -863,4 +864,12 @@ private fun FocusTemplateItemCard(
             }
         }
     }
+}
+
+/** Recurso de copy para cada causa de fallo al cerrar la sesión. */
+@StringRes
+private fun LogoutError.messageRes(): Int = when (this) {
+    LogoutError.NO_CONNECTION -> R.string.logout_dialog_error_no_connection
+    LogoutError.TOO_MANY_REQUESTS -> R.string.logout_dialog_error_too_many_requests
+    LogoutError.UNEXPECTED -> R.string.logout_dialog_error_fallback
 }

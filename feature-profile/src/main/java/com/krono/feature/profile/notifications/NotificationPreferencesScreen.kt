@@ -6,6 +6,7 @@ import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -87,6 +88,7 @@ import com.krono.core.ui.theme.SurfaceContainerHighest
 import com.krono.core.ui.theme.SurfaceContainerLow
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.profile.R
+import com.krono.feature.profile.ui.ProfileSaveError
 
 /**
  * Punto de entrada con estado (Stateful) de la pantalla de Notificaciones y Alarmas (F-15 CA-1, CA-2, CA-3).
@@ -515,7 +517,7 @@ fun NotificationPreferencesScreen(
             }
 
             // Mensaje de error si la persistencia falla
-            if (state.errorMessage != null) {
+            state.saveError?.let { saveError ->
                 Surface(
                     shape = RoundedCornerShape(KronoSpacing.sm),
                     color = ErrorContainer.copy(alpha = 0.25f),
@@ -523,7 +525,7 @@ fun NotificationPreferencesScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = state.errorMessage,
+                        text = stringResource(saveError.messageRes()),
                         style = MaterialTheme.typography.bodySmall,
                         color = ErrorColor,
                         modifier = Modifier.padding(KronoSpacing.md),
@@ -923,4 +925,11 @@ private fun NotificationPreferencesScreenPermissionPendingPreview() {
             onSaveClick = {},
         )
     }
+}
+
+/** Recurso de copy para cada causa de fallo al guardar o restablecer las preferencias. */
+@StringRes
+private fun ProfileSaveError.messageRes(): Int = when (this) {
+    ProfileSaveError.INVALID_DATA -> R.string.notification_prefs_error_invalid
+    ProfileSaveError.UNEXPECTED -> R.string.notification_prefs_error_generic
 }

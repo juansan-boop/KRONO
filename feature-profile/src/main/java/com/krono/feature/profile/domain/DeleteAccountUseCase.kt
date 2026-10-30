@@ -38,11 +38,11 @@ open class DeleteAccountUseCase @Inject constructor(
      *
      * @param password Contraseña actual del usuario requerida para reautenticación sensible.
      * @return [KronoResult.Success] si la cuenta y los datos fueron eliminados, o [KronoResult.Error]
-     * si la contraseña está en blanco, no hay conexión o falla cualquier paso.
+     * si la contraseña está en blanco ([BlankPasswordException]), no hay conexión o falla cualquier paso.
      */
     open suspend operator fun invoke(password: String): KronoResult<Unit> {
         if (password.isBlank()) {
-            return KronoResult.Error(IllegalArgumentException("La contraseña de reautenticación no puede estar vacía"))
+            return KronoResult.Error(BlankPasswordException())
         }
         if (!connectivityChecker.isOnline()) return KronoResult.Error(NetworkUnavailableException())
 

@@ -74,7 +74,7 @@ class DeleteAccountUseCaseTest {
     fun contrasenaEnBlancoDevuelveErrorSinTocarNada() = runTest {
         val result = useCase()("  ")
 
-        assertTrue(result is KronoResult.Error)
+        assertTrue((result as KronoResult.Error).throwable is BlankPasswordException)
         assertTrue(log.isEmpty())
     }
 

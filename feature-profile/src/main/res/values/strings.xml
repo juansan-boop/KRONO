@@ -58,6 +58,8 @@
     <string name="logout_dialog_in_progress">Cerrando sesión…</string>
     <string name="logout_dialog_cd_icon">Aviso de cierre de sesión</string>
     <string name="logout_dialog_error_fallback">No fue posible cerrar la sesión. Intenta de nuevo.</string>
+    <string name="logout_dialog_error_no_connection">No hay conexión con el servidor.</string>
+    <string name="logout_dialog_error_too_many_requests">Demasiados intentos. Espera unos momentos.</string>
 
     <!-- Edición de Perfil (F-19 CA-2) -->
     <string name="edit_profile_title">Editar Perfil</string>
@@ -76,6 +78,7 @@
     <string name="edit_profile_action_cancel">Cancelar</string>
     <string name="edit_profile_success_toast">Perfil actualizado exitosamente</string>
     <string name="edit_profile_error_generic">Ocurrió un error al guardar los cambios</string>
+    <string name="edit_profile_error_invalid">Revisa que el nombre y el rol no estén vacíos</string>
     <string name="edit_profile_role_student_worker">Estudiante y trabajador</string>
     <string name="edit_profile_role_student">Estudiante</string>
     <string name="edit_profile_role_full_time_worker">Trabajador tiempo completo</string>
@@ -92,22 +95,22 @@
     <string name="security_zone_cd_warning_icon">Aviso de advertencia de zona de seguridad</string>
     <string name="security_zone_reset_opt_title">Restablecer configuración y datos</string>
     <string name="security_zone_reset_opt_badge">SEGURO</string>
-    <string name="security_zone_reset_opt_desc">Borra todas las tareas, sesiones, plantillas y avisos en Cloud Firestore, restaurando valores por defecto y conservando tu cuenta.</string>
+    <string name="security_zone_reset_opt_desc">Borra tus tareas y el cronómetro activo, y devuelve los datos de tu perfil y tus preferencias a sus valores por defecto. Conservas tu cuenta.</string>
     <string name="security_zone_cd_select_reset">Seleccionar opción restablecer configuración y datos</string>
     <string name="security_zone_delete_opt_title">Eliminar cuenta y perfil completo</string>
     <string name="security_zone_delete_opt_badge">PERMANENTE</string>
-    <string name="security_zone_delete_opt_desc">Borra definitivamente tus datos en Cloud Firestore y tu cuenta en Firebase Authentication. Esta acción es irreversible.</string>
+    <string name="security_zone_delete_opt_desc">Borra definitivamente tus tareas, el cronómetro activo, los datos de tu perfil y tu cuenta de acceso. Esta acción es irreversible.</string>
     <string name="security_zone_cd_select_delete">Seleccionar opción eliminar cuenta y perfil completo</string>
     <string name="security_zone_info_note">Se requerirá confirmación de seguridad final en el siguiente paso.</string>
     <string name="security_zone_action_continue">Continuar a Confirmación</string>
     <string name="security_zone_action_cancel">Cancelar y volver a Ajustes</string>
     <string name="security_dialog_reset_title">¿Restablecer configuración y datos?</string>
-    <string name="security_dialog_reset_message">Se borrarán todas tus tareas, sesiones de concentración, plantillas y avisos en Cloud Firestore. Se restaurarán los valores por defecto del sistema, pero conservarás tu cuenta activa.</string>
+    <string name="security_dialog_reset_message">Se borrarán todas tus tareas y el cronómetro activo, y los datos de tu perfil y tus preferencias volverán a sus valores por defecto. Conservarás tu cuenta activa.</string>
     <string name="security_dialog_reset_confirm">Restablecer Datos</string>
     <string name="security_dialog_reset_in_progress">Restableciendo…</string>
     <string name="security_dialog_reset_success">Configuración y datos restablecidos correctamente</string>
     <string name="security_dialog_delete_title">¿Eliminar cuenta definitivamente?</string>
-    <string name="security_dialog_delete_message">Esta acción no se puede deshacer. Todos tus datos en Cloud Firestore y tu cuenta de acceso en Firebase Authentication serán eliminados permanentemente.</string>
+    <string name="security_dialog_delete_message">Esta acción no se puede deshacer. Tus tareas, el cronómetro activo, los datos de tu perfil y tu cuenta de acceso serán eliminados permanentemente.</string>
     <string name="security_dialog_delete_reauth_label">Contraseña actual</string>
     <string name="security_dialog_delete_reauth_placeholder">Ingresa tu contraseña para confirmar</string>
     <string name="security_dialog_delete_reauth_error_empty">Ingresa tu contraseña actual para confirmar</string>
@@ -151,6 +154,7 @@
     <string name="notification_prefs_success_saved">Preferencias guardadas correctamente</string>
     <string name="notification_prefs_defaults_restored">Valores predeterminados restablecidos</string>
     <string name="notification_prefs_error_generic">Ocurrió un error al guardar las preferencias</string>
+    <string name="notification_prefs_error_invalid">Elige un tiempo de anticipación válido</string>
     <string name="notification_prefs_cd_deadline_icon">Ícono de avisos de entrega</string>
     <string name="notification_prefs_cd_sound_icon">Ícono de alarma sonora</string>
     <string name="notification_prefs_cd_permission_icon">Ícono de permiso de notificaciones</string>

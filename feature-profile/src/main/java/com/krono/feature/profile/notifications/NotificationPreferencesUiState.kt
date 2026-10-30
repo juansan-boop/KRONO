@@ -1,6 +1,7 @@
 package com.krono.feature.profile.notifications
 
 import com.krono.feature.profile.domain.NotificationPrefs
+import com.krono.feature.profile.ui.ProfileSaveError
 
 /**
  * Estado inmutable de la pantalla de Preferencias de Notificaciones y Alarmas (F-15 CA-1, CA-2, CA-3).
@@ -12,7 +13,7 @@ import com.krono.feature.profile.domain.NotificationPrefs
  * @property isPermissionGranted Estado del permiso del sistema POST_NOTIFICATIONS (CA-3).
  * @property isSaving Indicador de operación de guardado en curso (bloquea envíos concurrentes).
  * @property isSuccess Indicador de operación completada con éxito.
- * @property errorMessage Mensaje de error descriptivo en caso de fallo.
+ * @property saveError Causa tipada del fallo al guardar o restablecer (la UI la traduce a copy), o `null` si no hay.
  */
 data class NotificationPreferencesUiState(
     val deadlineReminderMinutes: Int = DEFAULT_REMINDER_MINUTES,
@@ -22,7 +23,7 @@ data class NotificationPreferencesUiState(
     val isPermissionGranted: Boolean = true,
     val isSaving: Boolean = false,
     val isSuccess: Boolean = false,
-    val errorMessage: String? = null,
+    val saveError: ProfileSaveError? = null,
 ) {
     companion object {
         /** Anticipación por defecto en minutos (F-15 CA-1, CA-2). */

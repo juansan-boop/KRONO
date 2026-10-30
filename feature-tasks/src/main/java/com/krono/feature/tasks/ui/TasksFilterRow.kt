@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -31,6 +30,7 @@ import com.krono.core.ui.theme.KronoSpacing
 import com.krono.core.ui.theme.OnSurface
 import com.krono.core.ui.theme.OnSurfaceVariant
 import com.krono.core.ui.theme.OutlineVariant
+import com.krono.core.ui.theme.OnPrimaryMagenta
 import com.krono.core.ui.theme.PrimaryMagenta
 import com.krono.core.ui.theme.SurfaceContainer
 import com.krono.feature.tasks.R
@@ -78,7 +78,7 @@ private fun CategoryFilterChip(
 ) {
     val chipShape = RoundedCornerShape(KronoSizes.minTouchTarget)
     val backgroundColor = if (isSelected) PrimaryMagenta else SurfaceContainer
-    val contentColor = if (isSelected) Color.White else OnSurfaceVariant
+    val contentColor = if (isSelected) OnPrimaryMagenta else OnSurfaceVariant
     val borderColor = if (isSelected) PrimaryMagenta else OutlineVariant
 
     Row(

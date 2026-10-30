@@ -108,10 +108,12 @@ class FirestoreProfileDataSource(
                     FIELD_AVATAR_URI to avatarUri,
                     FIELD_UPDATED_AT to serverTimestampProvider(),
                 )
-                firestore.collection(COLLECTION_USERS)
-                    .document(targetUid)
-                    .set(data, SetOptions.merge())
-                    .await()
+                awaitWriteOrQueued {
+                    firestore.collection(COLLECTION_USERS)
+                        .document(targetUid)
+                        .set(data, SetOptions.merge())
+                        .await()
+                }
             }
         }
 
@@ -122,7 +124,8 @@ class FirestoreProfileDataSource(
             val updateRequest = UserProfileChangeRequest.Builder()
                 .setDisplayName(trimmedName)
                 .build()
-            user.updateProfile(updateRequest).await()
+            // El nombre ya quedó en el documento de perfil; Auth no encola sin red, así que un fallo de red no es un error.
+            ignoringNetworkFailure { awaitWriteOrQueued { user.updateProfile(updateRequest).await() } }
         }
     }
 
@@ -141,10 +144,12 @@ class FirestoreProfileDataSource(
                     FIELD_DEADLINE_ENABLED to prefs.deadlineRemindersEnabled,
                     FIELD_UPDATED_AT to serverTimestampProvider(),
                 )
-                firestore.collection(COLLECTION_USERS)
-                    .document(targetUid)
-                    .set(data, SetOptions.merge())
-                    .await()
+                awaitWriteOrQueued {
+                    firestore.collection(COLLECTION_USERS)
+                        .document(targetUid)
+                        .set(data, SetOptions.merge())
+                        .await()
+                }
             }
         }
     }
@@ -165,10 +170,12 @@ class FirestoreProfileDataSource(
                     FIELD_PRIORITY_ALERTS to priorityAlerts,
                     FIELD_UPDATED_AT to serverTimestampProvider(),
                 )
-                firestore.collection(COLLECTION_USERS)
-                    .document(targetUid)
-                    .set(data, SetOptions.merge())
-                    .await()
+                awaitWriteOrQueued {
+                    firestore.collection(COLLECTION_USERS)
+                        .document(targetUid)
+                        .set(data, SetOptions.merge())
+                        .await()
+                }
             }
         }
     }
@@ -323,10 +330,12 @@ class FirestoreProfileDataSource(
                 FIELD_PRIORITY_ALERTS to (if (exists && snapshot.contains(FIELD_PRIORITY_ALERTS)) snapshot.getBoolean(FIELD_PRIORITY_ALERTS) else true),
                 FIELD_UPDATED_AT to serverTimestampProvider(),
             )
-            firestore.collection(COLLECTION_USERS)
-                .document(targetUid)
-                .set(initialData, SetOptions.merge())
-                .await()
+            awaitWriteOrQueued {
+                firestore.collection(COLLECTION_USERS)
+                    .document(targetUid)
+                    .set(initialData, SetOptions.merge())
+                    .await()
+            }
         }
 
         if (exists) {
@@ -351,16 +360,18 @@ class FirestoreProfileDataSource(
 
             // Si en Firestore aún no estaba guardado el campo email, hacemos merge para completarlo
             if (remoteEmail.isNullOrBlank() && currentUserEmail.isNotBlank()) {
-                firestore.collection(COLLECTION_USERS)
-                    .document(targetUid)
-                    .set(
-                        mapOf(
-                            FIELD_EMAIL to currentUserEmail,
-                            FIELD_UPDATED_AT to serverTimestampProvider(),
-                        ),
-                        SetOptions.merge(),
-                    )
-                    .await()
+                awaitWriteOrQueued {
+                    firestore.collection(COLLECTION_USERS)
+                        .document(targetUid)
+                        .set(
+                            mapOf(
+                                FIELD_EMAIL to currentUserEmail,
+                                FIELD_UPDATED_AT to serverTimestampProvider(),
+                            ),
+                            SetOptions.merge(),
+                        )
+                        .await()
+                }
             }
 
             val dynamicBreaks = snapshot.getBoolean(FIELD_DYNAMIC_BREAKS)
@@ -404,6 +415,8 @@ class FirestoreProfileDataSource(
         return try {
             block()
             KronoResult.Success(Unit)
+        } catch (cancellation: CancellationException) {
+            throw cancellation
         } catch (t: Throwable) {
             KronoResult.Error(t)
         }

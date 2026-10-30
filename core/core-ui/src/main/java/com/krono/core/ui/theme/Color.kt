@@ -40,6 +40,8 @@ val PrimaryMagenta = Color(0xFFBD00FF)
 val PrimaryFixedDim = Color(0xFFECB2FF)
 /** Contenido sobre el color primario. */
 val OnPrimary = Color(0xFF520071)
+/** Contenido (ícono o texto) sobre el magenta saturado [PrimaryMagenta]: blanco puro, como en las casillas y chips seleccionados. */
+val OnPrimaryMagenta = Color(0xFFFFFFFF)
 
 // Secundario — cyan
 /** Color secundario (cyan). */

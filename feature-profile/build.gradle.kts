@@ -39,7 +39,7 @@ dependencies {
     implementation(libs.kotlinx.coroutines.play.services)
 
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:${libs.versions.lifecycle.get()}")
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
