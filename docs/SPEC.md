@@ -442,6 +442,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-30 | v0.8 (continuación): Sección 4: reglas de Firestore en el repo (PR #36) y escrituras con espera máxima de 2 s. Sección 5: `feature-profile` accede a Firebase y Firestore directamente (`ProfileModule`, sin `core-data`). Sección 6: `CalendarEvent` se reemplaza por bloques derivados de las tareas y se aclaran `actualDuration`, `TimeSession` y la reconciliación. |
 | 2026-10-30 | v0.8 (continuación): F-22 a F-25 CA-4 reescrito con el cierre de sesión real de `feature-profile` (la pantalla provisional de `app` ya no se usa). F-21 CA-1 y CA-2 ajustados al código (borrado por lotes; el restablecimiento sobrescribe el perfil y la eliminación de cuenta lo borra). F-12 se ordena en la fase 1 con su dependencia. |
 | 2026-10-30 | v0.8 (continuación): Sección 11 reescrita con solo lo vigente. `CLAUDE.md`: dos excepciones puntuales (acceso directo de `feature-profile` a Firebase y `Color.Transparent`) |
+| 2026-10-30 | F-16 (Semana y Día) pasa a Hecha: vistas Semana y Día del calendario con franja LUN-DOM, agenda del día elegido y marca "Ahora" en la vista diaria, según `calendarweekscreen_vista_semanal_krono` y `calendardayscreen_vista_diaria_krono` |
 
 ## 11. Deuda técnica conocida
 
