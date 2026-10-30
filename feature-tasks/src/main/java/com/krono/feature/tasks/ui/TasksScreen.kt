@@ -83,6 +83,7 @@ fun TasksRoute(
         onDismissDeleteDialog = viewModel::onDismissDeleteDialog,
         onConfirmDeleteTask = viewModel::onConfirmDeleteTask,
         onPostponeTask = viewModel::onPostponeTaskToTomorrow,
+        onRetryLoad = viewModel::onRetryLoad,
         onAddTask = onAddTask,
         modifier = modifier,
         onTaskClick = onTaskClick,
@@ -94,6 +95,8 @@ fun TasksRoute(
 /**
  * Pantalla principal de la lista de tareas (F-03 CA-1 a CA-4, F-07 CA-1 a CA-3).
  * Diseñada bajo el sistema visual Lumina Glass con fondo Deep Midnight y acentos Magenta/Cyan.
+ *
+ * @param onRetryLoad reabre la lectura de tareas cuando falló.
  */
 @Composable
 fun TasksScreen(
@@ -109,6 +112,7 @@ fun TasksScreen(
     onPostponeTask: ((Task) -> Unit)? = null,
     onTaskClick: ((String) -> Unit)? = null,
     onOpenAssistant: (() -> Unit)? = null,
+    onRetryLoad: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val addTaskLabel = stringResource(R.string.action_add_task)
@@ -166,6 +170,16 @@ fun TasksScreen(
                         TasksHeader(onOpenAssistant = onOpenAssistant)
                     }
 
+                    if (state.hasLoadError) {
+                        item {
+                            TasksLoadErrorCard(
+                                title = stringResource(R.string.tasks_load_error_title),
+                                onRetry = onRetryLoad,
+                            )
+                        }
+                        return@LazyColumn
+                    }
+
                     item {
                         TasksFilterRow(
                             selectedCategory = state.selectedCategory,
@@ -181,7 +195,7 @@ fun TasksScreen(
                         )
                     }
 
-                    if (state.isEmpty) {
+                    if (state.showEmptyState) {
                         item {
                             TasksEmptyState(
                                 onAddTask = onAddTask,

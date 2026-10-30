@@ -43,6 +43,15 @@ interface TaskRemoteDataSource {
     suspend fun saveTask(userId: String, taskDto: TaskDto)
 
     /**
+     * Escribe solo los campos indicados sobre una tarea existente, sin tocar el resto del documento.
+     *
+     * @param userId Identificador del usuario.
+     * @param taskId Identificador de la tarea.
+     * @param fields Campos del documento y sus nuevos valores.
+     */
+    suspend fun updateTaskFields(userId: String, taskId: String, fields: Map<String, Any?>)
+
+    /**
      * Elimina el documento de la tarea de Firestore.
      *
      * @param userId Identificador del usuario.

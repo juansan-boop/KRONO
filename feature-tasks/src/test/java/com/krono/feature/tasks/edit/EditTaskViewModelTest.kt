@@ -8,7 +8,10 @@ import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
-import com.krono.core.domain.task.UpsertTaskUseCase
+import com.krono.core.domain.task.TaskField
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
+import com.krono.feature.tasks.testing.OfflineTaskRemoteDataSource
+import com.krono.feature.tasks.testing.offlineTaskRepository
 import com.krono.feature.tasks.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -46,7 +49,7 @@ class EditTaskViewModelTest {
 
     private lateinit var fakeRepository: FakeTaskRepository
     private lateinit var getTaskByIdUseCase: GetTaskByIdUseCase
-    private lateinit var upsertTaskUseCase: UpsertTaskUseCase
+    private lateinit var updateTaskFieldsUseCase: UpdateTaskFieldsUseCase
 
     private val sampleTask = Task(
         id = "task-123",
@@ -69,7 +72,7 @@ class EditTaskViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeRepository = FakeTaskRepository()
         getTaskByIdUseCase = GetTaskByIdUseCase(fakeRepository)
-        upsertTaskUseCase = UpsertTaskUseCase(fakeRepository)
+        updateTaskFieldsUseCase = UpdateTaskFieldsUseCase(fakeRepository)
     }
 
     @After
@@ -86,7 +89,7 @@ class EditTaskViewModelTest {
         return EditTaskViewModel(
             savedStateHandle = savedStateHandle,
             getTaskByIdUseCase = getTaskByIdUseCase,
-            upsertTaskUseCase = upsertTaskUseCase,
+            updateTaskFieldsUseCase = updateTaskFieldsUseCase,
         ).apply {
             currentDateTimeProvider = { fixedNow }
         }
@@ -177,7 +180,7 @@ class EditTaskViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.error_title_required, state.titleErrorRes)
         assertTrue(state.isTitleError)
-        assertEquals(0, fakeRepository.upsertCalls)
+        assertEquals(0, fakeRepository.updateFieldsCalls)
     }
 
     @Test
@@ -196,7 +199,7 @@ class EditTaskViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.error_date_required, state.dateErrorRes)
         assertTrue(state.isDateError)
-        assertEquals(0, fakeRepository.upsertCalls)
+        assertEquals(0, fakeRepository.updateFieldsCalls)
     }
 
     @Test
@@ -215,7 +218,7 @@ class EditTaskViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.error_due_date_in_past, state.dateTimeErrorRes)
         assertTrue(state.isTimeError)
-        assertEquals(0, fakeRepository.upsertCalls)
+        assertEquals(0, fakeRepository.updateFieldsCalls)
     }
 
     @Test
@@ -243,5 +246,72 @@ class EditTaskViewModelTest {
         viewModel.onTitleChanged("Título Corregido")
         assertFalse(viewModel.uiState.value.isTitleError)
         assertNull(viewModel.uiState.value.titleErrorRes)
+    }
+
+    @Test
+    fun alGuardarTrasCambiosExternos_noPisaTiempoRealSubtareasNiCompletitud() = runTest {
+        // CA-2: el formulario se cargó antes de que el cronómetro (u otro dispositivo) cambiara la tarea
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-123")
+        advanceUntilIdle()
+        val extraSubtask = Subtask(id = "sub-3", taskId = "task-123", title = "Paso 3", position = 2)
+        fakeRepository.givenTasks(
+            sampleTask.copy(
+                actualDuration = 55.minutes,
+                isCompleted = false,
+                subtasks = sampleTask.subtasks + extraSubtask,
+            ),
+        )
+
+        viewModel.onTitleChanged("Informe editado")
+        viewModel.saveChanges()
+        advanceUntilIdle()
+
+        val stored = fakeRepository.storedTask("task-123")
+        assertEquals("Informe editado", stored?.title)
+        assertEquals(55.minutes, stored?.actualDuration)
+        assertFalse(stored?.isCompleted == true)
+        assertEquals(3, stored?.subtasks?.size)
+        assertEquals(TaskField.EDIT_FORM, fakeRepository.lastUpdatedFields)
+    }
+
+    @Test
+    fun alGuardarDosVecesSeguidas_soloEscribeUnaVezYNavegaUnaVez() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-123")
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.saveChanges()
+            viewModel.saveChanges()
+            advanceUntilIdle()
+
+            assertTrue(awaitItem() is EditTaskEvent.NavigateBack)
+            expectNoEvents()
+        }
+        assertEquals(1, fakeRepository.updateFieldsCalls)
+    }
+
+    @Test
+    fun sinConfirmacionDelServidor_noQuedaGuardandoYEmiteNavegarAtras() = runTest {
+        // F-02 CA-1: sin red la edición queda en la caché local de Firestore y la UI no se bloquea
+        val offline = OfflineTaskRemoteDataSource().apply { givenTask(sampleTask) }
+        val repository = offlineTaskRepository(offline)
+        val viewModel = EditTaskViewModel(
+            savedStateHandle = SavedStateHandle(mapOf(EditTaskViewModel.TASK_ID_NAV_ARG to "task-123")),
+            getTaskByIdUseCase = GetTaskByIdUseCase(repository),
+            updateTaskFieldsUseCase = UpdateTaskFieldsUseCase(repository),
+        ).apply { currentDateTimeProvider = { fixedNow } }
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.onTitleChanged("Editada sin red")
+            viewModel.saveChanges()
+            advanceUntilIdle()
+
+            assertTrue(awaitItem() is EditTaskEvent.NavigateBack)
+        }
+        assertFalse(viewModel.uiState.value.isSaving)
+        assertEquals("Editada sin red", offline.cachedTask("task-123")?.title)
     }
 }

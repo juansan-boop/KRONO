@@ -8,7 +8,8 @@ import com.krono.core.domain.task.GetTaskByIdUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
-import com.krono.core.domain.task.UpsertTaskUseCase
+import com.krono.core.domain.task.TaskField
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import com.krono.feature.tasks.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,10 +38,10 @@ import kotlin.time.Duration
 class EditTaskViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val getTaskByIdUseCase: GetTaskByIdUseCase,
-    private val upsertTaskUseCase: UpsertTaskUseCase,
+    private val updateTaskFieldsUseCase: UpdateTaskFieldsUseCase,
 ) : ViewModel() {
 
-    /** Instancia original de la tarea recuperada; se mantiene inmutable para preservar metadatos (CA-2). */
+    /** Tarea leída al abrir el formulario; solo aporta el identificador y los valores de partida. */
     internal var originalTask: Task? = null
         private set
 
@@ -50,9 +51,11 @@ class EditTaskViewModel @Inject constructor(
     }
 
     private val _uiState = MutableStateFlow(EditTaskUiState())
+    /** Estado observable de la pantalla. */
     val uiState: StateFlow<EditTaskUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<EditTaskEvent>()
+    /** Eventos de una sola vez (navegación y mensajes). */
     val events: SharedFlow<EditTaskEvent> = _events.asSharedFlow()
 
     init {
@@ -173,11 +176,16 @@ class EditTaskViewModel @Inject constructor(
     }
 
     /**
-     * Valida el formulario y persiste los cambios actualizando los campos editables y preservando
-     * intactos los campos no editables (id, isCompleted, actualDuration, subtasks, note) (CA-2, CA-3).
+     * Valida el formulario y escribe solo los campos editables ([TaskField.EDIT_FORM]) (CA-2, CA-3).
+     *
+     * [originalTask] se leyó al abrir el formulario y puede estar desactualizada (el cronómetro
+     * suma tiempo en el servidor, otro dispositivo marca subtareas): por eso no se reescribe la
+     * tarea completa, y `actualDuration`, `isCompleted`, las subtareas y la nota conservan su
+     * valor guardado. Mientras hay un guardado en curso las llamadas se ignoran.
      */
     fun saveChanges() {
         val currentState = _uiState.value
+        if (currentState.isSaving) return
         val original = originalTask
         if (original == null) {
             _uiState.update { it.copy(isTaskNotFound = true) }
@@ -226,8 +234,6 @@ class EditTaskViewModel @Inject constructor(
             LocalDateTime(date, time)
         }
 
-        // Preservación estricta de metadatos (CA-2):
-        // id, actualDuration, isCompleted, subtasks, note permanecen inalterados.
         val updatedTask = original.copy(
             title = currentState.title.trim(),
             category = currentState.category,
@@ -236,9 +242,10 @@ class EditTaskViewModel @Inject constructor(
             estimatedDuration = currentState.estimatedDuration,
         )
 
+        // Se marca antes de lanzar la corrutina para que un segundo toque ya lo vea.
+        _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true) }
-            when (val result = upsertTaskUseCase(updatedTask)) {
+            when (val result = updateTaskFieldsUseCase(updatedTask, TaskField.EDIT_FORM)) {
                 is KronoResult.Success -> {
                     originalTask = updatedTask
                     _uiState.update { it.copy(isSaving = false) }

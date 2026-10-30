@@ -9,7 +9,9 @@ import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
-import com.krono.core.domain.task.UpsertTaskUseCase
+import com.krono.core.domain.task.TaskError
+import com.krono.core.domain.task.TaskField
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -36,7 +38,7 @@ import kotlin.time.Duration.Companion.minutes
  * - F-06 CA-3: Acción "Iniciar Enfoque" y emisión de evento hacia F-09.
  * - F-07 CA-1: Confirmación de eliminación con conteo de subtareas.
  * - F-07 CA-2: Eliminación persistente con DeleteTaskUseCase y conservación con descarte.
- * - F-07 CA-3: Posponer para mañana sumando 1 día deterministamente con UpsertTaskUseCase.
+ * - F-07 CA-3: Posponer para mañana sumando 1 día deterministamente con UpdateTaskFieldsUseCase.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class TaskDetailViewModelTest {
@@ -46,7 +48,7 @@ class TaskDetailViewModelTest {
 
     private lateinit var fakeRepository: FakeTaskRepository
     private lateinit var observeTaskByIdUseCase: ObserveTaskByIdUseCase
-    private lateinit var upsertTaskUseCase: UpsertTaskUseCase
+    private lateinit var updateTaskFieldsUseCase: UpdateTaskFieldsUseCase
     private lateinit var deleteTaskUseCase: DeleteTaskUseCase
 
     private val sampleTask = Task(
@@ -72,7 +74,7 @@ class TaskDetailViewModelTest {
         Dispatchers.setMain(testDispatcher)
         fakeRepository = FakeTaskRepository()
         observeTaskByIdUseCase = ObserveTaskByIdUseCase(fakeRepository)
-        upsertTaskUseCase = UpsertTaskUseCase(fakeRepository)
+        updateTaskFieldsUseCase = UpdateTaskFieldsUseCase(fakeRepository)
         deleteTaskUseCase = DeleteTaskUseCase(fakeRepository)
     }
 
@@ -90,7 +92,7 @@ class TaskDetailViewModelTest {
         return TaskDetailViewModel(
             savedStateHandle = savedStateHandle,
             observeTaskByIdUseCase = observeTaskByIdUseCase,
-            upsertTaskUseCase = upsertTaskUseCase,
+            updateTaskFieldsUseCase = updateTaskFieldsUseCase,
             deleteTaskUseCase = deleteTaskUseCase,
         ).apply {
             currentDateTimeProvider = { fixedNow }
@@ -353,5 +355,93 @@ class TaskDetailViewModelTest {
         val updatedTask = (taskResult as com.krono.core.common.KronoResult.Success).data
         // fixedNow = 2026-10-24 15:00 -> mañana es 2026-10-25 23:59
         assertEquals(LocalDateTime(2026, 10, 25, 23, 59), updatedTask.dueDate)
+    }
+
+    @Test
+    fun alConmutarSubtarea_soloEscribeLasSubtareas() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        viewModel.onToggleSubtask("sub-3")
+        advanceUntilIdle()
+
+        assertEquals(setOf(TaskField.SUBTASKS), fakeRepository.lastUpdatedFields)
+    }
+
+    @Test
+    fun alPosponer_soloEscribeLaFechaLimite() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        viewModel.onPostponeTaskToTomorrow()
+        advanceUntilIdle()
+
+        assertEquals(setOf(TaskField.DUE_DATE), fakeRepository.lastUpdatedFields)
+    }
+
+    @Test
+    fun alPosponerDosVecesSeguidas_soloEscribeUnaVez() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        viewModel.onDeleteTaskClicked()
+        viewModel.onPostponeTaskToTomorrow()
+        viewModel.onPostponeTaskToTomorrow()
+        advanceUntilIdle()
+
+        assertEquals(1, fakeRepository.updateFieldsCalls)
+        assertEquals(LocalDateTime(2026, 10, 25, 18, 0), fakeRepository.storedTask("task-100")?.dueDate)
+    }
+
+    @Test
+    fun alConfirmarEliminarDosVeces_eliminaUnaVezYNavegaUnaVez() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        viewModel.events.test {
+            viewModel.onDeleteTaskClicked()
+            viewModel.onConfirmDeleteTask()
+            viewModel.onConfirmDeleteTask()
+            advanceUntilIdle()
+
+            assertTrue(awaitItem() is TaskDetailEvent.NavigateBack)
+            expectNoEvents()
+        }
+        assertEquals(1, fakeRepository.deleteCalls)
+    }
+
+    @Test
+    fun cuandoElListenerFalla_muestraErrorDeCargaEnVezDeTareaNoEncontrada() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        fakeRepository.observeFailure = TaskError.StorageError("Permiso denegado")
+
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.isLoading)
+        assertTrue(state.hasLoadError)
+        assertFalse(state.isTaskNotFound)
+    }
+
+    @Test
+    fun alReintentarTrasUnFallo_reabreLaObservacionYMuestraLaTarea() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        fakeRepository.observeFailure = TaskError.StorageError("Permiso denegado")
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        fakeRepository.observeFailure = null
+        viewModel.onRetryLoad()
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertFalse(state.hasLoadError)
+        assertEquals(sampleTask, state.task)
+        assertEquals(2, fakeRepository.observeTaskByIdSubscriptions)
     }
 }

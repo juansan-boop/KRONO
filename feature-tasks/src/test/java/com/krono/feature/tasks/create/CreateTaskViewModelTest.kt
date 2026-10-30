@@ -9,9 +9,10 @@ import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
 import com.krono.core.domain.task.UpsertTaskUseCase
 import com.krono.feature.tasks.R
+import com.krono.feature.tasks.testing.OfflineTaskRemoteDataSource
+import com.krono.feature.tasks.testing.offlineTaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -76,7 +77,7 @@ class CreateTaskViewModelTest {
             val event = awaitItem()
             assertTrue(event is CreateTaskEvent.NavigateBack)
 
-            val tasks = fakeRepository.observeTasks().first()
+            val tasks = fakeRepository.storedTasks()
             assertEquals(1, tasks.size)
             val task = tasks.first()
             assertEquals("Ensayo de macroeconomía", task.title)
@@ -101,7 +102,7 @@ class CreateTaskViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.error_title_required, state.titleErrorRes)
         assertTrue(state.isTitleError)
-        assertTrue(fakeRepository.observeTasks().first().isEmpty())
+        assertTrue(fakeRepository.storedTasks().isEmpty())
     }
 
     @Test
@@ -115,7 +116,7 @@ class CreateTaskViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.error_date_required, state.dateErrorRes)
         assertTrue(state.isDateError)
-        assertTrue(fakeRepository.observeTasks().first().isEmpty())
+        assertTrue(fakeRepository.storedTasks().isEmpty())
     }
 
     @Test
@@ -131,7 +132,7 @@ class CreateTaskViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(R.string.error_due_date_in_past, state.dateTimeErrorRes)
         assertTrue(state.isTimeError)
-        assertTrue(fakeRepository.observeTasks().first().isEmpty())
+        assertTrue(fakeRepository.storedTasks().isEmpty())
     }
 
     @Test
@@ -147,7 +148,7 @@ class CreateTaskViewModelTest {
             val event = awaitItem()
             assertTrue(event is CreateTaskEvent.NavigateBack)
 
-            val tasks = fakeRepository.observeTasks().first()
+            val tasks = fakeRepository.storedTasks()
             assertEquals(1, tasks.size)
             assertNull(tasks.first().estimatedDuration)
 
@@ -197,6 +198,48 @@ class CreateTaskViewModelTest {
         viewModel.onCategorySelected(TaskCategory.TRABAJO)
 
         assertNull(viewModel.uiState.value.durationSuggestion)
+    }
+
+    @Test
+    fun alGuardarDosVecesSeguidas_creaUnaSolaTareaYNavegaUnaVez() = runTest {
+        fillValidForm(viewModel)
+
+        viewModel.events.test {
+            viewModel.saveTask()
+            viewModel.saveTask()
+            advanceUntilIdle()
+
+            assertTrue(awaitItem() is CreateTaskEvent.NavigateBack)
+            expectNoEvents()
+        }
+        assertEquals(1, fakeRepository.upsertCalls)
+        assertEquals(1, fakeRepository.storedTasks().size)
+    }
+
+    @Test
+    fun sinConfirmacionDelServidor_noQuedaGuardandoYEmiteNavegarAtras() = runTest {
+        // F-02 CA-1: sin red la tarea queda en la caché local de Firestore y la UI no se bloquea
+        val offline = OfflineTaskRemoteDataSource()
+        val offlineViewModel = CreateTaskViewModel(
+            upsertTaskUseCase = UpsertTaskUseCase(offlineTaskRepository(offline)),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
+        ).apply { currentDateTimeProvider = { fixedNow } }
+        fillValidForm(offlineViewModel)
+
+        offlineViewModel.events.test {
+            offlineViewModel.saveTask()
+            advanceUntilIdle()
+
+            assertTrue(awaitItem() is CreateTaskEvent.NavigateBack)
+        }
+        assertFalse(offlineViewModel.uiState.value.isSaving)
+    }
+
+    private fun fillValidForm(target: CreateTaskViewModel) {
+        target.onTitleChanged("Taller de estadística")
+        target.onDateSelected(LocalDate(2026, 10, 15))
+        target.onTimeSelected(LocalTime(18, 0))
     }
 
     private fun givenCompletedStudyTasks(count: Int, actual: Duration) {

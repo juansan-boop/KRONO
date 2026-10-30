@@ -15,6 +15,8 @@ import com.krono.core.domain.task.Task
  * @property isSavingSubtask Indica si se está persistiendo una actualización de subtareas.
  * @property isConfirmingDelete Indica si se muestra el diálogo de confirmación de eliminación (F-07).
  * @property errorMessage Mensaje de error general si falla una operación.
+ * @property hasLoadError Indica que no se pudo leer la tarea (por ejemplo, permiso denegado), lo
+ * que es distinto de que la tarea no exista; la pantalla ofrece reintentar.
  */
 data class TaskDetailUiState(
     val task: Task? = null,
@@ -25,6 +27,7 @@ data class TaskDetailUiState(
     val isSavingSubtask: Boolean = false,
     val isConfirmingDelete: Boolean = false,
     val errorMessage: String? = null,
+    val hasLoadError: Boolean = false,
 ) {
     /** Cantidad total de subtareas embebidas. */
     val totalSubtasksCount: Int get() = task?.subtasks?.size ?: 0

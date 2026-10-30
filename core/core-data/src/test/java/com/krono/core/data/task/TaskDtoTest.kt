@@ -3,6 +3,7 @@ package com.krono.core.data.task
 import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
+import com.krono.core.domain.task.TaskField
 import com.krono.core.domain.task.TaskPriority
 import kotlinx.datetime.LocalDateTime
 import org.junit.Assert.assertEquals
@@ -118,5 +119,43 @@ class TaskDtoTest {
         val domain = dto.toDomain()
         assertEquals("s1", domain.subtasks[0].id)
         assertEquals("s2", domain.subtasks[1].id)
+    }
+
+    @Test
+    fun toPartialMap_conCamposDelFormulario_soloIncluyeEsosCampos() {
+        val dto = TaskDto(
+            id = "t1",
+            title = "Editada",
+            category = TaskCategory.TRABAJO.name,
+            priority = TaskPriority.ALTA.name,
+            dueDateIso = "2026-10-15T14:30",
+            estimatedDurationMillis = 45.minutes.inWholeMilliseconds,
+            actualDurationMillis = 0L,
+            isCompleted = false,
+        )
+
+        val partial = dto.toPartialMap(TaskField.EDIT_FORM)
+
+        assertEquals(
+            setOf(
+                TaskDto.FIELD_TITLE,
+                TaskDto.FIELD_CATEGORY,
+                TaskDto.FIELD_PRIORITY,
+                TaskDto.FIELD_DUE_DATE,
+                TaskDto.FIELD_ESTIMATED_DURATION_MILLIS,
+            ),
+            partial.keys,
+        )
+        assertEquals("Editada", partial[TaskDto.FIELD_TITLE])
+        assertEquals("2026-10-15T14:30", partial[TaskDto.FIELD_DUE_DATE])
+    }
+
+    @Test
+    fun toPartialMap_cubreCadaCampoParcialSinIncluirElTiempoReal() {
+        val partial = TaskDto(id = "t1").toPartialMap(TaskField.entries.toSet())
+
+        assertEquals(TaskField.entries.size, partial.size)
+        assertFalse(partial.containsKey(TaskDto.FIELD_ACTUAL_DURATION_MILLIS))
+        assertFalse(partial.containsKey(TaskDto.FIELD_ID))
     }
 }

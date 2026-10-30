@@ -7,7 +7,8 @@ import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
-import com.krono.core.domain.task.UpsertTaskUseCase
+import com.krono.core.domain.task.TaskError
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,6 +26,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -45,7 +47,7 @@ class TasksViewModelTest {
         fakeRepository = FakeTaskRepository()
         viewModel = TasksViewModel(
             observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
-            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            updateTaskFieldsUseCase = UpdateTaskFieldsUseCase(fakeRepository),
             deleteTaskUseCase = DeleteTaskUseCase(fakeRepository),
         ).apply {
             currentDateProvider = { fixedToday }
@@ -262,7 +264,8 @@ class TasksViewModelTest {
             viewModel.onConfirmDeleteTask()
             advanceUntilIdle()
 
-            val stateAfterDelete = awaitItem()
+            // La lista y el diálogo llegan por flujos distintos: se valida el estado final.
+            val stateAfterDelete = expectMostRecentItem()
             assertNull(stateAfterDelete.taskPendingDelete)
             assertTrue(stateAfterDelete.isEmpty)
 
@@ -332,5 +335,80 @@ class TasksViewModelTest {
 
             cancelAndIgnoreRemainingEvents()
         }
+    }
+
+    @Test
+    fun cuandoElListenerFalla_muestraErrorDeCargaEnVezDeEstadoVacio() = runTest {
+        fakeRepository.observeFailure = TaskError.StorageError("Permiso denegado")
+
+        viewModel.uiState.test {
+            awaitItem() // Loading
+            val state = awaitItem()
+            assertFalse(state.isLoading)
+            assertTrue(state.hasLoadError)
+            assertFalse(state.showEmptyState)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun alReintentarTrasUnFallo_reabreLaObservacionYMuestraLasTareas() = runTest {
+        fakeRepository.observeFailure = TaskError.StorageError("Permiso denegado")
+        val task = Task(id = "t1", title = "Recuperada", dueDate = LocalDateTime(2026, 10, 15, 18, 0))
+        fakeRepository.givenTasks(task)
+
+        viewModel.uiState.test {
+            awaitItem() // Loading
+            assertTrue(awaitItem().hasLoadError)
+
+            fakeRepository.observeFailure = null
+            viewModel.onRetryLoad()
+            advanceUntilIdle()
+
+            val recovered = expectMostRecentItem()
+            assertFalse(recovered.hasLoadError)
+            assertEquals(listOf(task), recovered.todayTasks)
+            assertEquals(2, fakeRepository.observeTasksSubscriptions)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun alConmutarCompletitudConSnapshotViejo_noPisaElTiempoRealRegistrado() = runTest {
+        val stale = Task(id = "t1", title = "Con cronómetro", actualDuration = Duration.ZERO)
+        fakeRepository.givenTasks(stale.copy(actualDuration = 30.minutes))
+
+        viewModel.onToggleTaskCompletion(stale)
+        advanceUntilIdle()
+
+        val stored = fakeRepository.storedTask("t1")
+        assertTrue(stored?.isCompleted == true)
+        assertEquals(30.minutes, stored?.actualDuration)
+    }
+
+    @Test
+    fun alPosponerConSnapshotViejo_noPisaElTiempoRealRegistrado() = runTest {
+        val stale = Task(id = "t1", title = "Posponer", dueDate = LocalDateTime(2026, 10, 15, 18, 0))
+        fakeRepository.givenTasks(stale.copy(actualDuration = 30.minutes))
+
+        viewModel.onPostponeTaskToTomorrow(stale)
+        advanceUntilIdle()
+
+        val stored = fakeRepository.storedTask("t1")
+        assertEquals(LocalDateTime(2026, 10, 16, 18, 0), stored?.dueDate)
+        assertEquals(30.minutes, stored?.actualDuration)
+    }
+
+    @Test
+    fun alConfirmarEliminacionDosVeces_soloEliminaUnaVez() = runTest {
+        val task = Task(id = "t1", title = "Doble toque")
+        fakeRepository.givenTasks(task)
+        viewModel.onRequestDeleteTask(task)
+
+        viewModel.onConfirmDeleteTask()
+        viewModel.onConfirmDeleteTask()
+        advanceUntilIdle()
+
+        assertEquals(1, fakeRepository.deleteCalls)
     }
 }

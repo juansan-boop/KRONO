@@ -19,6 +19,9 @@ import kotlinx.datetime.todayIn
  * @property thisWeekTasks Lista de tareas clasificadas para la sección "Esta Semana".
  * @property taskPendingDelete Tarea seleccionada pendiente de confirmación de eliminación o posposición (F-07).
  * @property errorMessage Mensaje de error a desplegar si alguna operación falla.
+ * @property hasLoadError Indica que no se pudieron leer las tareas (por ejemplo, permiso denegado);
+ * la pantalla ofrece reintentar en vez de mostrar un estado vacío falso. Sin conexión no es un
+ * error: la caché de Firestore sigue sirviendo las tareas.
  */
 data class TasksUiState(
     val isLoading: Boolean = true,
@@ -31,7 +34,11 @@ data class TasksUiState(
     val thisWeekTasks: List<Task> = emptyList(),
     val taskPendingDelete: Task? = null,
     val errorMessage: String? = null,
+    val hasLoadError: Boolean = false,
 ) {
     /** Indica si no hay ninguna tarea para mostrar en la vista actual (CA-4). */
     val isEmpty: Boolean get() = todayTasks.isEmpty() && thisWeekTasks.isEmpty()
+
+    /** Indica si corresponde el estado vacío: no hay tareas y la carga no falló (CA-4). */
+    val showEmptyState: Boolean get() = !hasLoadError && isEmpty
 }
