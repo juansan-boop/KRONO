@@ -194,9 +194,13 @@ La persistencia usa Cloud Firestore (D-1) con el modelo de la sección 6 (D-3): 
 #### F-03 — Lista de tareas
 - **Estado:** Hecho · **Prioridad:** Alta · **Responsable:** Janer García (Janer-Garcia) · **Módulos:** `feature-tasks` · **Depende de:** F-02 · **PR:** #23, #24, #37
 
-- **CA-1:** Dado que hay tareas, cuando se abre la lista, entonces se agrupan en "Para Hoy" y "Esta Semana" con su conteo, y cada tarjeta muestra prioridad, título, fecha/hora y estimación si existe.
+Agrupación (corrección de la prueba con la cuenta de demostración): cada tarea cae en un solo grupo. **"Para Hoy"** son las que vencen hoy (hechas o no) y, primero, las vencidas que siguen pendientes, porque piden atención hoy. **"Esta Semana"** son las de días posteriores a hoy y las sin fecha (incluye todo lo futuro, no solo siete días). **"Completadas"** son las completadas con fecha límite anterior a hoy: son historial y no inflan "Para Hoy" ni el avance del día. Los conteos de los chips de categoría siguen contando todas las tareas.
+
+"Enfoque Diario" no calcula por su cuenta: reutiliza `DashboardSummary` de `core-domain`, el mismo caso de uso de Inicio (F-13), así que el porcentaje y los pendientes coinciden. Es del día completo: cuenta solo las tareas con fecha límite hoy, de todas las categorías, y no cambia con el filtro de categoría; la etiqueta lo dice ("N pendientes para hoy, de todas las categorías").
+
+- **CA-1:** Dado que hay tareas, cuando se abre la lista, entonces se agrupan en "Para Hoy" y "Esta Semana" con su conteo (y las completadas de días anteriores en "Completadas"), y cada tarjeta muestra prioridad, título, fecha/hora y estimación si existe.
 - **CA-2:** Dados los filtros Todas, Estudio, Trabajo y Personal, cuando se selecciona uno, entonces solo se muestran las tareas de esa categoría.
-- **CA-3:** Dada una tarea, cuando se marca como completada, entonces cambia su estado y el porcentaje de "Enfoque Diario" se recalcula.
+- **CA-3:** Dada una tarea, cuando se marca como completada, entonces cambia su estado y el porcentaje de "Enfoque Diario" (el mismo de Inicio) se recalcula.
 - **CA-4:** Dado que no hay tareas, cuando se abre la lista, entonces se muestra un estado vacío con acceso a "Añadir Nueva Tarea".
 
 #### F-04 — Crear tarea
@@ -245,6 +249,8 @@ hay aviso; sección 11). Las
 pausas no cuentan como tiempo trabajado. Se abre con el botón "Cronómetro" del detalle de
 la tarea.
 
+**Decisión de producto pendiente de confirmar (corrección de la prueba con la cuenta de demostración):** una sesión de menos de 1 minuto (`FinishTimerUseCase.MIN_SESSION_DURATION`) no se guarda ni se suma a `actualDuration`: "Finalizar" cierra el cronómetro con `TimerRepository.discardActiveTimer` y la pantalla avisa "Sesión demasiado corta, no se guardó." Antes se guardaba una sesión de 13 s. Una sesión de exactamente 1 minuto sí se guarda.
+
 - **CA-1:** Dada una tarea, cuando se inicia el cronómetro, entonces cuenta el tiempo transcurrido y se puede pausar, reanudar y finalizar.
 - **CA-2:** Dado un cronómetro finalizado, cuando se guarda, entonces se registra una `TimeSession` y `actualDuration` de la tarea aumenta en esa duración.
 - **CA-3:** Dado un cronómetro en curso, cuando la app pasa a segundo plano o se cierra la pantalla, entonces el tiempo no se pierde al volver (se calcula desde la marca de inicio, no por ticks en memoria).
@@ -253,7 +259,7 @@ la tarea.
 #### F-09 — Modo enfoque
 - **Estado:** En revisión · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-08, F-10 · **PR:** #47
 
-Implementación: un enfoque es el mismo documento `users/{uid}/timer/active` del cronómetro con un bloque opcional (`FocusBlock`: duración del bloque, descanso de la plantilla, tiempo trabajado con el que termina el bloque y descanso en curso), así solo hay un cronómetro o enfoque activo (F-08 CA-4) y se reutiliza la finalización y el id idempotente de sesión (F-08). Iniciar un enfoque sobre un cronómetro de la misma tarea (o al revés) pide confirmar, como cualquier otra sesión activa. La cuenta regresiva y los descansos salen de marcas de tiempo, no de ticks, así que sobreviven a segundo plano y a cerrar la app. Al llegar a cero el tiempo trabajado deja de sumar (no pasa del bloque). "+5m Descanso" detiene el trabajo durante 5 minutos (el descanso no cuenta como tiempo trabajado y reanudar lo corta); al llegar a cero se ofrece el descanso de la plantilla, tras el cual se puede encadenar otro bloque. Al finalizar se registra una `TimeSession` `ENFOQUE` con solo el tiempo trabajado y se suma a `actualDuration`; si la tarea se elimina durante el enfoque, la sesión se guarda igualmente y se avisa (como F-08). Sin plantillas, se usa la activa sembrada.
+Implementación: un enfoque es el mismo documento `users/{uid}/timer/active` del cronómetro con un bloque opcional (`FocusBlock`: duración del bloque, descanso de la plantilla, tiempo trabajado con el que termina el bloque y descanso en curso), así solo hay un cronómetro o enfoque activo (F-08 CA-4) y se reutiliza la finalización y el id idempotente de sesión (F-08). Iniciar un enfoque sobre un cronómetro de la misma tarea (o al revés) pide confirmar, como cualquier otra sesión activa. La cuenta regresiva y los descansos salen de marcas de tiempo, no de ticks, así que sobreviven a segundo plano y a cerrar la app. Al llegar a cero el tiempo trabajado deja de sumar (no pasa del bloque). "+5m Descanso" detiene el trabajo durante 5 minutos (el descanso no cuenta como tiempo trabajado y reanudar lo corta); al llegar a cero se ofrece el descanso de la plantilla, tras el cual se puede encadenar otro bloque. Al finalizar se registra una `TimeSession` `ENFOQUE` con solo el tiempo trabajado y se suma a `actualDuration`; si la tarea se elimina durante el enfoque, la sesión se guarda igualmente y se avisa (como F-08). Sin plantillas, se usa la activa sembrada. Aplica la misma regla de F-08: un enfoque de menos de 1 minuto trabajado no se guarda (decisión pendiente de confirmar, ver F-08) y, ya finalizado, la tarjeta no muestra "0 min de bloque".
 
 **Limitación:** el aviso al llegar a cero es dentro de la app más una vibración corta; no hay notificación del sistema ni sonido porque `POST_NOTIFICATIONS` no está declarado (sección 11).
 
@@ -293,7 +299,12 @@ las tareas pendientes por urgencia de la entrega, prioridad y margen de tiempo, 
 primera y encadena las demás en bloques desde la hora actual. La confianza mostrada sale de
 la diferencia de puntuación con la segunda tarea y de la calidad de los datos (estimación y
 fecha). Gemini, vía Firebase AI Logic (`core-data`), solo redacta el motivo en español a
-partir de esos datos; sin conexión o si falla, la UI arma el motivo con plantillas. El
+partir de esos datos; sin conexión o si falla, la UI arma el motivo con plantillas. Una tarea
+cuya entrega aún no vence pero cuya estimación es mayor que el tiempo que queda ya no cabe
+(`CANNOT_FINISH_BY_DUE`): se ordena después de todas las que sí caben, solo se recomienda
+"ahora" si no hay otra, y siempre con la advertencia en el motivo (plantilla e instrucción a
+Gemini). Una tarea vencida no se marca así: sigue siendo `OVERDUE`. Si la IA no responde en
+10 s la pantalla deja de mostrar "Redactando la explicación…" y usa la plantilla. El
 balance por categoría reemplaza la "Telemetría Cognitiva" del diseño. Se accede desde el
 botón "Asistente IA" de la lista de tareas.
 
@@ -329,7 +340,7 @@ Hecho: saludo, resumen del día, tareas prioritarias y estados de carga, vacío 
 #### F-16 — Calendario día, semana y mes
 - **Estado:** Hecho · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-calendar`, `core-domain`, `core-data` · **Depende de:** F-02 · **PR:** #42, #43, #44
 
-El dominio está hecho (bloques, períodos, agenda y estado "En curso" en `core-domain`, PR #42). La vista mensual con la agenda del día seleccionado está hecha (PR #43). Las vistas Semana y Día están hechas (PR #44): comparten ViewModel, franja de siete días y agenda con la vista mensual, el selector Mes / Semana / Día está habilitado y la vista diaria marca la tarea "En curso" y muestra el separador "Ahora · HH:mm". No falta nada de los criterios de F-16; quedan fuera, por no estar en ellos, el aviso "En X h Y min" de la próxima tarea del diseño y los conflictos (F-17).
+El dominio está hecho (bloques, períodos, agenda y estado "En curso" en `core-domain`, PR #42). La vista mensual con la agenda del día seleccionado está hecha (PR #43). Las vistas Semana y Día están hechas (PR #44): comparten ViewModel, franja de siete días y agenda con la vista mensual, el selector Mes / Semana / Día está habilitado y la vista diaria marca la tarea "En curso" y muestra el separador "Ahora · HH:mm". El separador sigue el orden cronológico: va después de toda tarea que ya empezó (terminada o en curso) y antes de la primera que empieza más tarde; si todas ya empezaron, al final. Si la semana cruza de mes, el título va abreviado en una sola línea ("26 oct - 1 nov", con el rango completo para los lectores de pantalla) para que el selector Mes / Semana / Día quede a la misma altura que en las otras vistas. No falta nada de los criterios de F-16; quedan fuera, por no estar en ellos, el aviso "En X h Y min" de la próxima tarea del diseño y los conflictos (F-17).
 
 Decisión de producto (D-14): el calendario muestra SOLO TAREAS con fecha; no hay eventos propios ni creación de eventos. Intervalo de una tarea: termina en su fecha límite y empieza `estimación` antes; sin estimación ocupa 30 minutos por defecto (constante con nombre); sin fecha límite no aparece.
 
@@ -454,6 +465,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-30 | F-16 (Semana y Día) pasa a Hecha: vistas Semana y Día del calendario con franja LUN-DOM, agenda del día elegido y marca "Ahora" en la vista diaria, según `calendarweekscreen_vista_semanal_krono` y `calendardayscreen_vista_diaria_krono` |
 | 2026-10-30 | F-10 pasa a En progreso: plantillas de enfoque en Firestore (`users/{uid}/focusTemplates`, siembra idempotente, una sola activa por lote atómico) y pantalla de gestión en `feature-tasks` con ruta cableada en `app`; falta el acceso desde Ajustes (F-20 CA-1, `feature-profile`). |
 | 2026-10-30 | F-09 pasa a En revisión (PR #47): modo enfoque sobre el cronómetro activo (`FocusBlock`), con descansos, aviso al llegar a cero y sesión `ENFOQUE`; F-13 pasa a Hecho (CA-2 resuelto) y F-06 CA-3 queda resuelto al cablear `app` (Inicio y detalle de tarea abren el enfoque). Se retira de la sección 11 la deuda de F-06 CA-3. |
+| 2026-10-30 | Correcciones de la prueba con la cuenta de demostración (rama `fix/demo-defectos-lista-resumen-calendario`): F-03 (agrupación con "Completadas" y vencidas pendientes en "Para Hoy"; Enfoque Diario reutiliza `DashboardSummary` y es del día completo), F-12 (tarea que ya no cabe antes de su límite deja de recomendarse "ahora" y se advierte; tope de 10 s a la explicación de la IA), F-08 y F-09 (**decisión pendiente de confirmar:** sesiones de menos de 1 minuto no se guardan) y F-16 (marca "Ahora" cronológica; título abreviado de la semana que cruza de mes). |
 
 ## 11. Deuda técnica conocida
 
@@ -471,6 +483,8 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 - F-10: si un dispositivo inicia por primera vez sin red y sin caché, siembra las plantillas por defecto aunque la cuenta ya las tuviera editadas en otro dispositivo; al reconectar, los ids fijos las sobrescriben.
 
 **Cronómetro y datos (F-08) y modo enfoque (F-09)**
+- Pendiente de confirmar por el equipo: sesiones de menos de 1 minuto no se guardan (F-08, F-09); el umbral es `FinishTimerUseCase.MIN_SESSION_DURATION`.
+- F-03: "Esta Semana" agrupa todo lo posterior a hoy, no solo los próximos siete días; el título no coincide con el criterio.
 - F-09: el aviso al llegar a cero no sale de la app (sin notificación del sistema ni sonido): falta `POST_NOTIFICATIONS` y leer desde `feature-tasks` el tono de inicio de enfoque, que vive en `feature-profile`. Con la app cerrada el bloque queda detenido en cero y el aviso aparece al volver.
 - No hay notificación persistente mientras el cronómetro corre; el tiempo no se pierde (se calcula con marcas de tiempo), pero el usuario no lo ve fuera de la app.
 - Si la tarea ya no existe al finalizar, el aviso "Sesión guardada… la tarea ya no existe" solo aparece con conexión; sin red la finalización se da por confirmada (escritura encolada) y el mensaje es el habitual, sin aviso.
