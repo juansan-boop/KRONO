@@ -35,9 +35,11 @@ import com.krono.feature.profile.navigation.notificationPreferencesScreen
 import com.krono.feature.profile.navigation.securityZoneScreen
 import com.krono.feature.tasks.navigation.createTaskScreen
 import com.krono.feature.tasks.navigation.editTaskScreen
+import com.krono.feature.tasks.navigation.focusModeScreen
 import com.krono.feature.tasks.navigation.focusTemplatesScreen
 import com.krono.feature.tasks.navigation.navigateToCreateTask
 import com.krono.feature.tasks.navigation.navigateToEditTask
+import com.krono.feature.tasks.navigation.navigateToFocusMode
 import com.krono.feature.tasks.navigation.navigateToPriorityAssistant
 import com.krono.feature.tasks.navigation.navigateToTaskDetail
 import com.krono.feature.tasks.navigation.navigateToTaskTimer
@@ -151,7 +153,8 @@ fun KronoShell(
                 alVolverDeEditarTarea = { navController.popBackStack() },
                 alVolverDeDetalleTarea = { navController.popBackStack() },
                 alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
-                alIniciarEnfoqueDesdeDetalle = { /* Navegación a F-09 */ },
+                alIniciarEnfoqueDesdeDetalle = { taskId -> navController.navigateToFocusMode(taskId) },
+                alVolverDeEnfoque = { navController.popBackStack() },
                 alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
                 alVolverDeCronometro = { navController.popBackStack() },
                 alVolverDeAsistente = { navController.popBackStack() },
@@ -177,6 +180,7 @@ private fun NavGraphBuilder.grafoPrincipal(
     alVolverDeDetalleTarea: () -> Unit = {},
     alEditarDesdeDetalle: (String) -> Unit = {},
     alIniciarEnfoqueDesdeDetalle: (String) -> Unit = {},
+    alVolverDeEnfoque: () -> Unit = {},
     alAbrirCronometro: (String) -> Unit = {},
     alVolverDeCronometro: () -> Unit = {},
     alVolverDeAsistente: () -> Unit = {},
@@ -198,6 +202,7 @@ private fun NavGraphBuilder.grafoPrincipal(
             onStartTimer = alAbrirCronometro,
         )
         taskTimerScreen(onBack = alVolverDeCronometro)
+        focusModeScreen(onBack = alVolverDeEnfoque)
         editTaskScreen(onBack = alVolverDeEditarTarea)
         priorityAssistantScreen(
             onBack = alVolverDeAsistente,
@@ -250,15 +255,13 @@ fun NavController.volverAAutenticacion() {
 }
 
 /**
- * Arranca el modo enfoque desde el botón "Iniciar" del inicio (F-13 CA-2).
- *
- * Limitación: el modo enfoque con plantilla (F-09 y F-10) aún no existe. Mientras tanto, si hay una
- * tarea prioritaria hoy se abre su cronómetro (F-08); si no, se lleva al usuario a la lista de
- * tareas para que elija una. Cuando F-09 exista, este es el único punto que hay que cambiar.
+ * Arranca el modo enfoque desde el botón "Iniciar" del inicio (F-13 CA-2) sobre la tarea prioritaria
+ * de hoy, con la plantilla activa (F-10). Sin tareas pendientes lleva a la lista de tareas para que
+ * el usuario cree o elija una.
  */
 private fun alIniciarEnfoqueDesdeInicio(navController: NavController, taskId: String?) {
     if (taskId != null) {
-        navController.navigateToTaskTimer(taskId)
+        navController.navigateToFocusMode(taskId)
     } else {
         navController.navegarAPestana(KronoDestination.Tareas)
     }
