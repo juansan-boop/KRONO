@@ -34,6 +34,7 @@ import com.krono.feature.profile.navigation.notificationPreferencesScreen
 import com.krono.feature.profile.navigation.securityZoneScreen
 import com.krono.feature.tasks.navigation.createTaskScreen
 import com.krono.feature.tasks.navigation.editTaskScreen
+import com.krono.feature.tasks.navigation.focusTemplatesScreen
 import com.krono.feature.tasks.navigation.navigateToCreateTask
 import com.krono.feature.tasks.navigation.navigateToEditTask
 import com.krono.feature.tasks.navigation.navigateToPriorityAssistant
@@ -147,6 +148,7 @@ fun KronoShell(
                 alVolverDeEditarPerfil = { navController.popBackStack() },
                 alVolverDeZonaSeguridad = { navController.popBackStack() },
                 alVolverDeNotificaciones = { navController.popBackStack() },
+                alVolverDePlantillasEnfoque = { navController.popBackStack() },
                 alEliminarCuenta = { navController.volverAAutenticacion() },
             )
         }
@@ -170,6 +172,7 @@ private fun NavGraphBuilder.grafoPrincipal(
     alVolverDeEditarPerfil: () -> Unit = {},
     alVolverDeZonaSeguridad: () -> Unit = {},
     alVolverDeNotificaciones: () -> Unit = {},
+    alVolverDePlantillasEnfoque: () -> Unit = {},
     alEliminarCuenta: () -> Unit = {},
 ) {
     navigation(startDestination = KronoDestination.Inicial.route, route = RUTA_GRAFO_PRINCIPAL) {
@@ -199,6 +202,7 @@ private fun NavGraphBuilder.grafoPrincipal(
             onBackClick = alVolverDeZonaSeguridad,
             onAccountDeleted = alEliminarCuenta,
         )
+        focusTemplatesScreen(onBack = alVolverDePlantillasEnfoque)
         notificationPreferencesScreen(
             onBackClick = alVolverDeNotificaciones,
         )
