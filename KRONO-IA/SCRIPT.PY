@@ -155,7 +155,7 @@ def generar_escenarios(rng, n_escenarios=60):
     tareas, bloques = [], []
 
     # ventanas candidatas por día: (hora inicio, minutos mínimo, minutos máximo)
-    ventanas = [(6.0, 30, 90), (12.0, 30, 60), (18.5, 45, 120), (20.5, 60, 150)]
+    ventanas = [(6.5, 45, 90), (12.5, 30, 60), (18.5, 60, 120), (20.5, 60, 150)]
 
     for e in range(1, n_escenarios + 1):
         esc = f"E{e:03d}"
@@ -165,7 +165,7 @@ def generar_escenarios(rng, n_escenarios=60):
         b_id = 0
         for dia in range(3):
             for (h, dmin, dmax) in ventanas:
-                if rng.random() < 0.75:  # no todos los días hay todas las ventanas
+                if rng.random() < 0.82:  # no todos los días hay todas las ventanas
                     b_id += 1
                     dur = int(round(rng.integers(dmin, dmax + 1) / 5) * 5)
                     inicio = int(dia * 1440 + h * 60 + rng.integers(-15, 16))
@@ -187,13 +187,19 @@ def generar_escenarios(rng, n_escenarios=60):
             })
 
         # --- Tareas pendientes ---
-        n_t = int(rng.integers(4, 9))
+        n_t = int(rng.integers(5, 8))
         for t in range(1, n_t + 1):
             categoria = rng.choice(cats)
             hora = int(rng.choice([7, 12, 19, 21]))
             fila = simular_tarea(rng, u, categoria, hora, 0, int(rng.integers(1, 4)))
-            # fecha límite absoluta: entre 0.5 y 3 días desde el inicio del escenario
-            limite = int(rng.integers(12 * 60, 3 * 1440 + 1))
+            # distribución realista de fechas límite (fin de día 0, día 1, o días 2-3)
+            tipo_lim = rng.random()
+            if tipo_lim < 0.28:
+                limite = int(rng.integers(19 * 60, 27 * 60))
+            elif tipo_lim < 0.65:
+                limite = int(rng.integers(29 * 60, 44 * 60))
+            else:
+                limite = int(rng.integers(48 * 60, 72 * 60))
             tareas.append({
                 "escenario_id": esc,
                 "tarea_id": f"{esc}-T{t:02d}",
