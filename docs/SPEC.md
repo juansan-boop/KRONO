@@ -113,7 +113,7 @@ Notas sobre tareas, sesiones y calendario:
 
 - Intervalo de una tarea en el calendario (D-14): termina en su fecha límite y empieza `estimación` antes; sin estimación ocupa 30 minutos por defecto (constante con nombre); sin fecha límite no aparece.
 - `Task.actualDuration` es la suma de las sesiones de las tareas que EXISTEN. Las `TimeSession` de tareas borradas se conservan sin sumarse a ninguna tarea y nadie las lee. No hay borrado en cascada de `timeSessions`: es una decisión de producto, también al restablecer datos o eliminar la cuenta (F-21).
-- Al finalizar el cronómetro la sesión se guarda aunque la tarea ya no exista (se avisa al usuario). El `id` de la sesión es idempotente, así que reintentar la finalización no duplica la sesión.
+- Al finalizar el cronómetro la sesión se guarda aunque la tarea ya no exista (con conexión se avisa al usuario; sin red el mensaje es el optimista habitual y no hay aviso, sección 11). El `id` de la sesión es idempotente, así que reintentar la finalización no duplica la sesión.
 - Sin red y sin caché se asume que no hay cronómetro activo.
 - Un desajuste de `actualDuration` se corrige recalculándolo desde `timeSessions`. Esta reconciliación está documentada pero no implementada (sección 11).
 
@@ -217,7 +217,7 @@ La persistencia usa Cloud Firestore (D-1) con el modelo de la sección 6 (D-3): 
 #### F-06 — Detalle de tarea y subtareas
 - **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Janer García (Janer-Garcia) · **Módulos:** `feature-tasks` · **Depende de:** F-02 · **PR:** #28
 
-**Pendiente (CA-1 sin cumplir):** el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve. Mientras no se corrijan, F-06 sigue En progreso.
+**Pendiente (CA-1 y CA-3 sin cumplir):** CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve porque ningún formulario permite capturarla ni editarla (el detalle solo la muestra si `Task.note` tiene valor). CA-3: "Iniciar Enfoque" no abre nada, porque `KronoNavHost` deja vacía la navegación a F-09 (modo enfoque) hasta que exista. Mientras no se corrijan, F-06 sigue En progreso.
 
 - **CA-1:** Dada una tarea, cuando se abre su detalle, entonces muestra categoría, prioridad, límite de entrega con tiempo restante ("En 3 horas"), estimación, subtareas con progreso (x/n) y nota rápida.
 - **CA-2:** Dado el detalle, cuando se agrega, marca o desmarca una subtarea, entonces el progreso se actualiza y persiste.
@@ -240,7 +240,8 @@ haber uno (CA-4) y sobrevive a cerrar la app (CA-3). Al finalizar, un lote crea 
 en `users/{uid}/timeSessions/{id}` (id idempotente `{taskId}_{startedAtMillis}`) y borra el
 cronómetro, y una segunda escritura suma su duración a `tasks/{id}.actualDurationMillis` con
 `FieldValue.increment`; son dos escrituras, no una sola atómica (sección 11). Si la tarea
-ya no existe, la sesión se guarda igual y se avisa al usuario. Las
+ya no existe, la sesión se guarda igual y, con conexión, se avisa al usuario (sin red no
+hay aviso; sección 11). Las
 pausas no cuentan como tiempo trabajado. Se abre con el botón "Cronómetro" del detalle de
 la tarea.
 
@@ -277,6 +278,22 @@ aproxima con la fecha de entrega más reciente.
 - **CA-1:** Dadas al menos 3 tareas completadas de una categoría, cuando se crea una tarea de esa categoría, entonces se muestra "Sugerencia IA: ~X min · Basado en historial" y se puede aplicar con un toque.
 - **CA-2:** Dado que hay menos de 3 tareas completadas en la categoría, cuando se crea una tarea, entonces no se muestra sugerencia.
 - **CA-3:** El cálculo vive en un caso de uso de `core-domain` con pruebas unitarias que cubren historial vacío, insuficiente y suficiente.
+
+#### F-12 — Asistente de prioridades
+- **Estado:** Hecho · **Prioridad:** Media · **Responsable:** Kevin Vuskovit García González · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-02, F-11 (`BuildPriorityPlanUseCase` usa `EstimateTaskDurationUseCase` para estimar las tareas sin estimación manual) · **PR:** #33, #34 (ajuste del tiempo límite de Gemini a 20 s en #35)
+
+Enfoque híbrido (D-5): `BuildPriorityPlanUseCase` (heurística local en `core-domain`) puntúa
+las tareas pendientes por urgencia de la entrega, prioridad y margen de tiempo, sugiere la
+primera y encadena las demás en bloques desde la hora actual. La confianza mostrada sale de
+la diferencia de puntuación con la segunda tarea y de la calidad de los datos (estimación y
+fecha). Gemini, vía Firebase AI Logic (`core-data`), solo redacta el motivo en español a
+partir de esos datos; sin conexión o si falla, la UI arma el motivo con plantillas. El
+balance por categoría reemplaza la "Telemetría Cognitiva" del diseño. Se accede desde el
+botón "Asistente IA" de la lista de tareas.
+
+- **CA-1:** Dadas tareas pendientes, cuando se abre el asistente, entonces sugiere la tarea a hacer ahora con su motivo y una secuencia ordenada para el resto del día.
+- **CA-2:** Dado que el servicio de IA no responde, cuando se abre el asistente, entonces la recomendación y la secuencia se muestran igual y el motivo usa el texto de plantilla.
+- **CA-3:** La heurística vive en casos de uso de `core-domain` con pruebas unitarias; el modelo de lenguaje nunca decide el orden.
 
 ### Fase 2 — Organización diaria
 
@@ -334,8 +351,8 @@ Decisión de producto (D-14): el calendario muestra SOLO TAREAS con fecha; no ha
 
 Decisión de producto: no hay borrado en cascada de subcolecciones. Ni el restablecimiento ni la eliminación de la cuenta borran las sesiones de tiempo (`timeSessions`); quedan sin leer (sección 6). No es deuda técnica.
 
-- **CA-1 (Restablecer configuración y datos):** Dada la zona de seguridad, cuando se elige "Restablecer configuración y datos" y se confirma en un segundo paso, entonces, con conexión, se borran en una sola operación las tareas, el cronómetro activo y el documento del perfil del usuario en Cloud Firestore, se restauran los valores por defecto del perfil y de las preferencias, y se conserva la cuenta. No se borran las sesiones de tiempo (`timeSessions`). Sin red se muestra "Necesitas conexión..." y no se modifica nada. (Con más tareas de las que caben en un lote de Firestore, 498, la operación se divide en lotes y un fallo intermedio se resuelve reintentando.)
-- **CA-2 (Eliminar cuenta y perfil completo):** Dado "Eliminar cuenta y perfil completo", cuando se confirma en un segundo paso con la contraseña, entonces primero se reautentica (con contraseña incorrecta o vacía se muestra el error dentro del diálogo y no se borra nada), luego se borran las tareas, el cronómetro activo y el perfil como en CA-1 y, por último, se elimina la cuenta de Firebase Authentication. No se borran las `timeSessions`. Sin conexión no se modifica nada.
+- **CA-1 (Restablecer configuración y datos):** Dada la zona de seguridad, cuando se elige "Restablecer configuración y datos" y se confirma en un segundo paso, entonces, con conexión, se borran por lotes las tareas del usuario en Cloud Firestore (hasta 498 por lote) y, en el último lote, que es atómico, el cronómetro activo; ese mismo lote sobrescribe el documento del perfil con sus valores por defecto (no se borra el documento) y las preferencias vuelven a los suyos. Se conserva la cuenta y no se borran las sesiones de tiempo (`timeSessions`). Sin red se muestra "Necesitas conexión..." y no se modifica nada. Con más de 498 tareas, un fallo intermedio puede dejar tareas ya borradas con el cronómetro y el perfil intactos; la operación es idempotente y reintentar converge.
+- **CA-2 (Eliminar cuenta y perfil completo):** Dado "Eliminar cuenta y perfil completo", cuando se confirma en un segundo paso con la contraseña, entonces primero se reautentica (con contraseña incorrecta o vacía se muestra el error dentro del diálogo y no se borra nada), luego se borran por lotes las tareas (con el mismo límite de 498 por lote que en CA-1) y, en el último lote, el cronómetro activo y el documento del perfil `users/{uid}` (aquí sí se borra, no se restablece) y, por último, se elimina la cuenta de Firebase Authentication. Si el borrado de datos falla, la cuenta sigue viva y se puede reintentar. No se borran las `timeSessions`. Sin conexión no se modifica nada.
 - **CA-3 (errores):** Dado cualquier fallo en CA-1 o CA-2, cuando ocurre, entonces el error se muestra dentro del diálogo, en español y sin textos técnicos de Firebase.
 
 ### Fase 3 — Cuenta, sincronización e IA avanzada
@@ -348,7 +365,7 @@ La autenticación usa Firebase Authentication con correo y contraseña (D-1); `A
 - **CA-1 (registro):** El formulario tiene los campos correo, contraseña y confirmación, sin campo de nombre (el nombre se pide en el onboarding, F-26). La contraseña exige mínimo 8 caracteres, al menos un número y un carácter especial, con indicadores que se marcan en vivo; si la confirmación no coincide se muestra "Las contraseñas no coinciden". La contraseña la gestiona Firebase (la app no la almacena ni le aplica hash propio).
 - **CA-2 (login):** Con campos vacíos se muestra "Por favor, completa todos los campos obligatorios"; durante el envío el botón muestra progreso y no permite doble envío.
 - **CA-3 (recuperar):** El envío es real por correo mediante Firebase (`sendPasswordResetEmail`) y se muestra la pantalla de éxito. La pantalla de éxito conserva el título "¡Enlace Enviado!" del diseño y muestra el texto neutro "Si el correo está registrado, te enviamos un enlace", para no exponer qué correos tienen cuenta (D-10; sigue activa la protección contra enumeración de correos de Firebase). La pantalla de error se usa para un correo con formato inválido o sin conexión, no para "correo no registrado".
-- **CA-4 (cerrar sesión):** El caso de uso `LogoutUseCase` cierra la sesión de Firebase. Hasta que `feature-profile` (F-19/F-20) lo reemplace, la pestaña Ajustes provisional de `app` tiene un botón temporal "Cerrar sesión" que pide confirmación con un diálogo ("¿Cerrar sesión?", con las opciones Cancelar y Cerrar sesión); al confirmar invoca `LogoutUseCase` y vuelve al login limpiando el back stack, y si falla muestra un mensaje de error. El diálogo definitivo ("Permanecer en KRONO" y "Cerrar Sesión") vivirá en `feature-profile`. Decisión del 2026-10-08, implementada en el PR #16.
+- **CA-4 (cerrar sesión):** El caso de uso `LogoutUseCase` (`core-domain`) cierra la sesión de Firebase. En la pestaña Ajustes (`SettingsRoute` de `feature-profile`, F-20), la acción "Cerrar sesión activa" abre el diálogo "¿Cerrar sesión de KRONO?" con las opciones "Permanecer en KRONO" y "Cerrar Sesión". Al confirmar se invoca `LogoutUseCase` y mientras dura se bloquean los botones ("Cerrando sesión…"); si tiene éxito, `app` vuelve al login sacando el flujo principal de la pila ("atrás" no regresa a la app). Si falla, el diálogo permanece abierto con un mensaje en español: "No hay conexión con el servidor.", "Demasiados intentos. Espera unos momentos." o "No fue posible cerrar la sesión. Intenta de nuevo." La pantalla provisional de `app` (decisión del 2026-10-08, PR #16) quedó reemplazada por la de `feature-profile` (F-25 CA-4 en la tabla de responsables).
 - **CA-5 (entrada al flujo principal):** Ya no existe la pantalla provisional "Próximo hito". Tras autenticarse (o al abrir la app con sesión activa) se entra al flujo principal con la barra inferior de F-01; "atrás" no vuelve al login. Decisión del 2026-10-08, implementada en el PR #16.
 - **CA-6 (sesión persistente):** Dada una sesión activa de Firebase, cuando se reabre la app, entonces se entra directamente sin pasar por el login.
 - **CA-7 (errores):** Dadas credenciales inválidas, un correo ya en uso o la falta de conexión, cuando se intenta iniciar sesión o crear la cuenta, entonces se muestra un mensaje en español sin que la app falle. Los errores cruzan los módulos como `KronoResult.Error`.
@@ -357,26 +374,11 @@ La autenticación usa Firebase Authentication con correo y contraseña (D-1); `A
 - **Estado:** Pendiente · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-onboarding` · **Depende de:** F-23 (autenticación, D-1 resuelta) · **PR:** —
 - **CA-1:** Tras crear cuenta, se muestra la bienvenida y luego "Completa tu Perfil" (donde se pide el nombre); con campos obligatorios vacíos no avanza.
 
-#### F-12 — Asistente de prioridades
-- **Estado:** Hecho · **Prioridad:** Media · **Responsable:** Kevin Vuskovit García González · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **PR:** #33, #34 (ajuste del tiempo límite de Gemini a 20 s en #35)
-
-Enfoque híbrido (D-5): `BuildPriorityPlanUseCase` (heurística local en `core-domain`) puntúa
-las tareas pendientes por urgencia de la entrega, prioridad y margen de tiempo, sugiere la
-primera y encadena las demás en bloques desde la hora actual. La confianza mostrada sale de
-la diferencia de puntuación con la segunda tarea y de la calidad de los datos (estimación y
-fecha). Gemini, vía Firebase AI Logic (`core-data`), solo redacta el motivo en español a
-partir de esos datos; sin conexión o si falla, la UI arma el motivo con plantillas. El
-balance por categoría reemplaza la "Telemetría Cognitiva" del diseño. Se accede desde el
-botón "Asistente IA" de la lista de tareas.
-
-- **CA-1:** Dadas tareas pendientes, cuando se abre el asistente, entonces sugiere la tarea a hacer ahora con su motivo y una secuencia ordenada para el resto del día.
-- **CA-2:** Dado que el servicio de IA no responde, cuando se abre el asistente, entonces la recomendación y la secuencia se muestran igual y el motivo usa el texto de plantilla.
-- **CA-3:** La heurística vive en casos de uso de `core-domain` con pruebas unitarias; el modelo de lenguaje nunca decide el orden.
-
 #### F-18 — Sincronización con calendarios externos
 - **Estado:** Fuera de alcance (D-6) · **Prioridad:** Baja · **Módulos:** `feature-calendar`, `core-data` · **PR:** —
 
 No se implementa en este proyecto académico (D-6, resuelta el 2026-10-30). Se conserva el texto original como referencia histórica.
+
 - **CA-1:** Sin conexión, el calendario muestra "Modo sin conexión activo", conserva los cambios locales y ofrece "Reintentar sincronización".
 
 ## 9. Decisiones abiertas
@@ -432,7 +434,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-13 | D-8 actualizada: se asigna formalmente a Janer García (Janer-Garcia) la responsabilidad de F-02 (persistencia de tareas en Cloud Firestore — core-domain / core-data) y del módulo feature-tasks completo (F-03, F-04, F-05, F-06 y F-07) |
 | 2026-10-22 | F-11 y F-12 pasan a En progreso con Kevin Vuskovit García González como responsable; D-5 resuelta (asistente híbrido: heurística local + Gemini vía Firebase AI Logic para redactar el motivo); D-4 con la propuesta implementada, pendiente de aprobación; F-12 suma CA-2 (respaldo sin IA) y CA-3 (heurística probada en `core-domain`) |
 | 2026-10-23 | F-08 pasa a En progreso con Kevin Vuskovit García González como responsable: cronómetro persistido en `users/{uid}/timer/active` y sesiones en `users/{uid}/timeSessions` |
-| 2026-10-30 | v0.8: decisiones de Juan Fernando Sánchez Otero y estado real del código. Estados: F-02 a F-05, F-07, F-08, F-11, F-12, F-19 y F-21 pasan a Hecho (PRs #22 a #39, ver cada F-XX); F-06 sigue En progreso (CA-1: texto "Sin fecha límite" en la estimación y nota rápida sin mostrar); F-15 y F-20 En progreso (F-15 CA-1 y CA-3 pendientes, `POST_NOTIFICATIONS` sin declarar; F-20 CA-1 espera F-10). F-09, F-10, F-13, F-14, F-16, F-17 y F-26 con responsable Juan Fernando Sánchez Otero. F-21 reescrito (restablecer sin borrar `timeSessions`, eliminar cuenta con contraseña, errores en el diálogo; sin borrado en cascada por decisión de producto). F-18 pasa a Fuera de alcance (D-6 resuelta); D-4 resuelta (algoritmo de F-11 aprobado). Nuevas D-14 (el calendario muestra solo tareas con fecha, intervalo de una tarea, 30 minutos por defecto) y D-15 (F-17 CA-2 aprobada); F-16 y F-17 sin eventos propios y se quita la nota de "(propuesta)". D-8 actualizada (responsables y correcciones de los PRs #35 a #40). Sección 4: reglas de Firestore en el repo (PR #36) y escrituras con espera máxima de 2 s. Sección 5: `feature-profile` accede a Firebase y Firestore directamente (`ProfileModule`, sin `core-data`). Sección 6: `CalendarEvent` se reemplaza por bloques derivados de las tareas y se aclaran `actualDuration`, `TimeSession` y la reconciliación. Sección 11 reescrita con solo lo vigente. `CLAUDE.md`: dos excepciones puntuales (acceso directo de `feature-profile` a Firebase y `Color.Transparent`) |
+| 2026-10-30 | v0.8: decisiones de Juan Fernando Sánchez Otero y estado real del código. Estados: F-02 a F-05, F-07, F-08, F-11, F-12, F-19 y F-21 pasan a Hecho (PRs #22 a #39, ver cada F-XX); F-06 sigue En progreso (CA-1: texto "Sin fecha límite" en la estimación y nota rápida sin forma de capturarla; CA-3: "Iniciar Enfoque" sin destino hasta F-09); F-15 y F-20 En progreso (F-15 CA-1 y CA-3 pendientes, `POST_NOTIFICATIONS` sin declarar; F-20 CA-1 espera F-10). F-09, F-10, F-13, F-14, F-16, F-17 y F-26 con responsable Juan Fernando Sánchez Otero. F-21 reescrito (restablecer sin borrar `timeSessions`, eliminar cuenta con contraseña, errores en el diálogo; sin borrado en cascada por decisión de producto). F-18 pasa a Fuera de alcance (D-6 resuelta); D-4 resuelta (algoritmo de F-11 aprobado). Nuevas D-14 (el calendario muestra solo tareas con fecha, intervalo de una tarea, 30 minutos por defecto) y D-15 (F-17 CA-2 aprobada); F-16 y F-17 sin eventos propios y se quita la nota de "(propuesta)". D-8 actualizada (responsables y correcciones de los PRs #35 a #40). Sección 4: reglas de Firestore en el repo (PR #36) y escrituras con espera máxima de 2 s. Sección 5: `feature-profile` accede a Firebase y Firestore directamente (`ProfileModule`, sin `core-data`). Sección 6: `CalendarEvent` se reemplaza por bloques derivados de las tareas y se aclaran `actualDuration`, `TimeSession` y la reconciliación. F-22 a F-25 CA-4 reescrito con el cierre de sesión real de `feature-profile` (la pantalla provisional de `app` ya no se usa). F-21 CA-1 y CA-2 ajustados al código (borrado por lotes; el restablecimiento sobrescribe el perfil y la eliminación de cuenta lo borra). F-12 se ordena en la fase 1 con su dependencia. Sección 11 reescrita con solo lo vigente. `CLAUDE.md`: dos excepciones puntuales (acceso directo de `feature-profile` a Firebase y `Color.Transparent`) |
 
 ## 11. Deuda técnica conocida
 
@@ -444,13 +446,15 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 - `./gradlew connectedDebugAndroidTest` global falla en módulos sin pruebas instrumentadas; se ejecuta por módulo.
 
 **Funcionalidades incompletas**
-- F-06 CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve.
+- F-06 CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve: ningún formulario de creación o edición permite capturarla.
+- F-06 CA-3: "Iniciar Enfoque" no abre nada hasta que exista F-09 (la navegación en `KronoNavHost` está vacía).
 - F-15 CA-1 y CA-3: falta el recordatorio del sistema a los 30 minutos y el permiso `POST_NOTIFICATIONS`, que hoy no está declarado en el manifest de `app`.
 - F-20 CA-1: falta el acceso a las plantillas de enfoque (F-10).
 
 **Cronómetro y datos (F-08)**
 - No hay notificación persistente mientras el cronómetro corre; el tiempo no se pierde (se calcula con marcas de tiempo), pero el usuario no lo ve fuera de la app.
-- W-13: el contador de 1 s sigue corriendo en segundo plano. El catálogo ya incluye `androidx-lifecycle-runtime-compose` para recolectar el estado según el ciclo de vida.
+- Si la tarea ya no existe al finalizar, el aviso "Sesión guardada… la tarea ya no existe" solo aparece con conexión; sin red la finalización se da por confirmada (escritura encolada) y el mensaje es el habitual, sin aviso.
+- El contador de 1 s sigue corriendo en segundo plano. El catálogo ya incluye `androidx-lifecycle-runtime-compose` para recolectar el estado según el ciclo de vida.
 - La reconciliación de `Task.actualDuration` (recalcularlo desde `timeSessions`) está documentada pero no implementada.
 - La finalización del cronómetro pasó a dos escrituras (lote de sesión y cronómetro, e incremento de `actualDuration`, PR #38): si la segunda falla, `actualDuration` puede quedar desajustado hasta reconciliar.
 - Una escritura ya mostrada como guardada puede ser rechazada tarde por el servidor sin aviso (por ejemplo, el aviso optimista "Perfil actualizado" sin red).
@@ -459,6 +463,7 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 - `WriteConfirmation` está duplicado entre `feature-profile` y `core-data` (consecuencia de la excepción de arquitectura aprobada; ver `CLAUDE.md`).
 - `avatarUri` se guarda como URI `content://`, que no es portable entre dispositivos ni reinstalaciones. Propuestas: copiar la imagen a almacenamiento interno o usar Firebase Storage.
 - Ajustes muestra textos fijos ("100% al día", "Cyber Dark", "Build 2.4.12") y el perfil usa valores por defecto de muestra.
+- `app` conserva `PantallaAjustes` y `CierreSesionTemporal`, la pantalla provisional de Ajustes ya sin uso en producción (solo la usan sus pruebas); conviene eliminarlas junto con esas pruebas.
 - Las pantallas de `feature-profile` son muy largas y `syncFromRemote` tiene código duplicado.
 
 **Sistema de diseño**
@@ -473,5 +478,5 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 **Firebase e IA (F-11, F-12)**
 - Firebase BoM queda en 34.12.0, limitado por Kotlin 2.1.0.
 - Falta Firebase App Check para que solo la app oficial pueda llamar a Gemini; también conviene mover el nombre del modelo (`gemini-3.5-flash`) a Remote Config.
-- El plan gratuito de la Gemini Developer API permite unas 20 peticiones al día; al agotarse, el asistente cae al texto de plantilla.
+- El plan gratuito de la API de Gemini tiene un límite diario de peticiones (se agotó durante las pruebas); al agotarse, el asistente cae a la plantilla.
 - El prompt envía a Gemini el título, la categoría, la prioridad y la fecha de las tareas del plan; falta mencionarlo en la política de privacidad.
