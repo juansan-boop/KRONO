@@ -10,6 +10,7 @@ import com.krono.core.domain.calendar.CurrentDateTimeProvider
 import com.krono.core.domain.calendar.ObserveCalendarUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -17,19 +18,24 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.datetime.LocalDate
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * ViewModel de la vista mensual del calendario (F-16 CA-1 y CA-2): mes mostrado, día
  * seleccionado y agenda de ese día.
  *
  * Solo vuelve a observar las tareas cuando cambia el mes o se reintenta; seleccionar un día del
- * mismo mes reutiliza la agenda ya cargada. Nunca importa `androidx.compose.*`.
+ * mismo mes reutiliza la agenda ya cargada. Mientras la pantalla está visible recalcula el estado
+ * cada [CLOCK_REFRESH_INTERVAL] para que "En curso" y "hoy" sigan al reloj. Nunca importa
+ * `androidx.compose.*`.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -51,8 +57,23 @@ class CalendarMonthViewModel @Inject constructor(
                     .map { result -> LoadedMonth(period, result) }
             }
 
+    /**
+     * Pulso que obliga a recalcular el estado con la hora actual. Vive solo mientras alguien
+     * observa [uiState] (pantalla visible), así que no consume batería en segundo plano; al
+     * volver a primer plano emite de inmediato.
+     */
+    private val clockTicks: Flow<Unit> = flow {
+        while (true) {
+            emit(Unit)
+            delay(CLOCK_REFRESH_INTERVAL)
+        }
+    }.onEach { followTodayIfDayChanged() }
+
+    /** Último "hoy" visto por el pulso, para detectar el cambio de día. */
+    private var lastSeenToday = dateTimeProvider.today()
+
     /** Estado observable por la pantalla. */
-    val uiState: StateFlow<CalendarMonthUiState> = combine(loadedMonth, selection) { loaded, current ->
+    val uiState: StateFlow<CalendarMonthUiState> = combine(loadedMonth, selection, clockTicks) { loaded, current, _ ->
         buildState(current, loaded.resultFor(current.period))
     }.stateIn(
         scope = viewModelScope,
@@ -85,6 +106,18 @@ class CalendarMonthViewModel @Inject constructor(
     /** Vuelve a abrir la observación de tareas después de un error de carga. */
     fun onRetry() {
         loadAttempts.update { it + 1 }
+    }
+
+    /**
+     * Al cambiar el día (pasada la medianoche) lleva la selección a la nueva fecha de hoy, pero
+     * solo si el usuario seguía en "hoy"; si miraba otro día, se respeta su elección.
+     */
+    private fun followTodayIfDayChanged() {
+        val today = dateTimeProvider.today()
+        if (today == lastSeenToday) return
+        val previousToday = lastSeenToday
+        lastSeenToday = today
+        if (selection.value.selectedDate == previousToday) selection.value = selectionOfToday()
     }
 
     private fun showMonth(period: CalendarPeriod) {
@@ -124,3 +157,9 @@ class CalendarMonthViewModel @Inject constructor(
         fun monthOf(date: LocalDate) = CalendarPeriod(CalendarViewMode.MONTH, LocalDate(date.year, date.month, 1))
     }
 }
+
+/**
+ * Cada cuánto se recalcula el estado mientras la pantalla está visible, para que "En curso" y
+ * "hoy" no se queden obsoletos con la pantalla quieta.
+ */
+internal val CLOCK_REFRESH_INTERVAL = 30.seconds

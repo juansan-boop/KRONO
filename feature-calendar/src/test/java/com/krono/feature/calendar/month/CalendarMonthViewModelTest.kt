@@ -12,7 +12,8 @@ import com.krono.feature.calendar.MainDispatcherRule
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -26,6 +27,7 @@ import org.junit.Test
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /** Pruebas de [CalendarMonthViewModel]: vista mensual y agenda del día (F-16 CA-1, CA-2 y CA-3). */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -45,11 +47,14 @@ class CalendarMonthViewModelTest {
     /** Mantiene suscrito el estado (WhileSubscribed) y deja correr las corrutinas pendientes. */
     private fun TestScope.started(vm: CalendarMonthViewModel): CalendarMonthViewModel {
         backgroundScope.launch { vm.uiState.collect {} }
-        advanceUntilIdle()
+        runCurrent()
         return vm
     }
 
     private val CalendarMonthViewModel.state get() = uiState.value
+
+    private fun CalendarMonthViewModel.agendaStatus(taskId: String): AgendaItemStatus =
+        (state.agenda as DayAgendaState.Loaded).items.first { it.taskId == taskId }.status
 
     private val CalendarMonthUiState.agendaIds: List<String>
         get() = (agenda as DayAgendaState.Loaded).items.map { it.taskId }
@@ -119,7 +124,7 @@ class CalendarMonthViewModelTest {
         val vm = started(viewModel())
 
         vm.onSelectDate(LocalDate(2024, 10, 29))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(LocalDate(2024, 10, 29), vm.state.selectedDate)
         assertEquals(listOf("martes"), vm.state.agendaIds)
@@ -133,7 +138,7 @@ class CalendarMonthViewModelTest {
         val vm = started(viewModel())
 
         vm.onSelectDate(LocalDate(2024, 10, 26))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(DayAgendaState.Loaded(emptyList()), vm.state.agenda)
         assertEquals(0, vm.state.day(LocalDate(2024, 10, 26)).taskCount)
@@ -165,7 +170,7 @@ class CalendarMonthViewModelTest {
         val vm = started(viewModel())
 
         vm.onNextMonth()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(11, vm.state.displayedMonth.monthNumber)
         assertEquals(LocalDate(2024, 11, 1), vm.state.selectedDate)
@@ -178,7 +183,7 @@ class CalendarMonthViewModelTest {
         val vm = started(viewModel())
 
         vm.onPreviousMonth()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(9, vm.state.displayedMonth.monthNumber)
         assertEquals(LocalDate(2024, 9, 1), vm.state.selectedDate)
@@ -190,7 +195,7 @@ class CalendarMonthViewModelTest {
 
         vm.onNextMonth()
         vm.onPreviousMonth()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(TODAY, vm.state.selectedDate)
     }
@@ -202,10 +207,10 @@ class CalendarMonthViewModelTest {
         vm.onNextMonth()
         vm.onNextMonth()
         vm.onSelectDate(LocalDate(2024, 12, 10))
-        advanceUntilIdle()
+        runCurrent()
 
         vm.onToday()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(10, vm.state.displayedMonth.monthNumber)
         assertEquals(TODAY, vm.state.selectedDate)
@@ -218,7 +223,7 @@ class CalendarMonthViewModelTest {
         clock.current = LocalDateTime(2024, 11, 5, 8, 0)
 
         vm.onToday()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(LocalDate(2024, 11, 5), vm.state.selectedDate)
         assertEquals(LocalDate(2024, 11, 5), vm.state.today)
@@ -231,7 +236,7 @@ class CalendarMonthViewModelTest {
         val vm = started(viewModel())
 
         vm.onSelectDate(LocalDate(2024, 9, 30))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(9, vm.state.displayedMonth.monthNumber)
         assertEquals(LocalDate(2024, 9, 30), vm.state.selectedDate)
@@ -256,7 +261,7 @@ class CalendarMonthViewModelTest {
 
         repository.observeFailure = null
         vm.onRetry()
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("hoy"), vm.state.agendaIds)
         assertEquals(2, repository.observeTasksSubscriptions)
@@ -268,7 +273,7 @@ class CalendarMonthViewModelTest {
 
         vm.onSelectDate(LocalDate(2024, 10, 2))
         vm.onSelectDate(LocalDate(2024, 10, 3))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(1, repository.observeTasksSubscriptions)
     }
@@ -278,13 +283,97 @@ class CalendarMonthViewModelTest {
         val controlled = ControlledTaskRepository()
         val vm = started(viewModel(controlled))
         controlled.emit(KronoResult.Success(emptyList()))
-        advanceUntilIdle()
+        runCurrent()
         assertEquals(DayAgendaState.Loaded(emptyList()), vm.state.agenda)
 
         controlled.emit(KronoResult.Success(listOf(task("nueva", LocalDateTime(2024, 10, 24, 20, 0)))))
-        advanceUntilIdle()
+        runCurrent()
 
         assertEquals(listOf("nueva"), vm.state.agendaIds)
+    }
+
+    @Test
+    fun conLaPantallaQuieta_enCursoDesapareceAlPasarElFinDelBloque() = runTest {
+        repository.givenTasks(task("en-curso", LocalDateTime(2024, 10, 24, 15, 0), 2.hours))
+        val vm = started(viewModel())
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("en-curso"))
+
+        clock.current = LocalDateTime(2024, 10, 24, 15, 1)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(AgendaItemStatus.SCHEDULED, vm.agendaStatus("en-curso"))
+    }
+
+    @Test
+    fun conLaPantallaQuieta_unaTareaPasaAEnCursoAlEmpezarSuBloque() = runTest {
+        repository.givenTasks(task("proxima", LocalDateTime(2024, 10, 24, 16, 0), 1.hours))
+        val vm = started(viewModel())
+        assertEquals(AgendaItemStatus.SCHEDULED, vm.agendaStatus("proxima"))
+
+        clock.current = LocalDateTime(2024, 10, 24, 15, 10)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("proxima"))
+    }
+
+    @Test
+    fun alCruzarLaMedianoche_hoyYElDiaSeleccionadoAvanzanAlDiaSiguiente() = runTest {
+        val vm = started(viewModel())
+
+        clock.current = LocalDateTime(2024, 10, 25, 0, 1)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(LocalDate(2024, 10, 25), vm.state.today)
+        assertEquals(LocalDate(2024, 10, 25), vm.state.selectedDate)
+        assertTrue(vm.state.day(LocalDate(2024, 10, 25)).isToday)
+        assertFalse(vm.state.day(TODAY).isToday)
+    }
+
+    @Test
+    fun alCruzarLaMedianocheDeFinDeMes_seMuestraElMesNuevo() = runTest {
+        clock.current = LocalDateTime(2024, 10, 31, 23, 59)
+        val vm = started(viewModel())
+
+        clock.current = LocalDateTime(2024, 11, 1, 0, 0)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(11, vm.state.displayedMonth.monthNumber)
+        assertEquals(LocalDate(2024, 11, 1), vm.state.selectedDate)
+    }
+
+    @Test
+    fun alCruzarLaMedianoche_siElUsuarioMiraOtroDiaSoloSeMueveHoy() = runTest {
+        val vm = started(viewModel())
+        val chosen = LocalDate(2024, 10, 29)
+        vm.onSelectDate(chosen)
+        runCurrent()
+
+        clock.current = LocalDateTime(2024, 10, 25, 0, 1)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(chosen, vm.state.selectedDate)
+        assertEquals(LocalDate(2024, 10, 25), vm.state.today)
+    }
+
+    @Test
+    fun sinSuscriptores_noSeRefrescaElRelojEnSegundoPlano() = runTest {
+        repository.givenTasks(task("en-curso", LocalDateTime(2024, 10, 24, 15, 0), 2.hours))
+        val vm = viewModel()
+        val collector = backgroundScope.launch { vm.uiState.collect {} }
+        runCurrent()
+        collector.cancel()
+        advanceTimeBy(UNSUBSCRIBED_GRACE)
+
+        clock.current = LocalDateTime(2024, 10, 24, 15, 1)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL * 3)
+        runCurrent()
+
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("en-curso"))
     }
 
     private fun task(
@@ -299,5 +388,8 @@ class CalendarMonthViewModelTest {
         /** Jueves 24 de octubre de 2024 a las 14:00, el día del diseño de referencia. */
         val NOW = LocalDateTime(2024, 10, 24, 14, 0)
         val TODAY: LocalDate = NOW.date
+
+        /** Margen tras el que el estado deja de recalcularse sin suscriptores (5 s + holgura). */
+        val UNSUBSCRIBED_GRACE = 6.seconds
     }
 }
