@@ -28,9 +28,10 @@ fun CalendarRoute(
     CalendarScreen(
         state = state,
         actions = CalendarActions(
-            onPreviousMonth = viewModel::onPrevious,
-            onNextMonth = viewModel::onNext,
+            onPrevious = viewModel::onPrevious,
+            onNext = viewModel::onNext,
             onToday = viewModel::onToday,
+            onSelectMode = viewModel::onSelectMode,
             onSelectDate = viewModel::onSelectDate,
             onRetry = viewModel::onRetry,
             onOpenTask = onOpenTask,

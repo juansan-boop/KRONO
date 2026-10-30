@@ -1,39 +1,20 @@
 package com.krono.feature.calendar.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import com.krono.core.domain.task.TaskCategory
-import com.krono.core.ui.theme.KronoGlass
-import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
-import com.krono.core.ui.theme.OnSurface
 import com.krono.core.ui.theme.OnSurfaceVariant
-import com.krono.core.ui.theme.PrimaryFixedDim
 import com.krono.core.ui.theme.glassSurface
-import com.krono.feature.calendar.R
 import com.krono.feature.calendar.CalendarDayUi
 import kotlinx.datetime.LocalDate
 
@@ -85,74 +66,3 @@ private fun WeekdayHeader(firstWeek: List<CalendarDayUi>) {
         }
     }
 }
-
-@Composable
-private fun RowScope.DayCell(day: CalendarDayUi, onClick: () -> Unit) {
-    val description = dayCellDescription(day)
-    val todayState = stringResource(R.string.calendar_day_today_state)
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .heightIn(min = KronoSizes.minTouchTarget)
-            .selectable(selected = day.isSelected, onClick = onClick)
-            .semantics {
-                contentDescription = description
-                if (day.isToday) stateDescription = todayState
-            },
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        DayNumber(day)
-        DayIndicators(categories = day.categories, dimmed = !day.isInDisplayedPeriod)
-    }
-}
-
-@Composable
-private fun DayNumber(day: CalendarDayUi) {
-    val textColor = when {
-        day.isSelected -> PrimaryFixedDim
-        day.isInDisplayedPeriod -> OnSurface
-        else -> OnSurfaceVariant.copy(alpha = NEIGHBOR_MONTH_ALPHA)
-    }
-    val background = if (day.isSelected) PrimaryFixedDim.copy(alpha = SELECTED_DAY_ALPHA) else Color.Transparent
-    val ring = if (day.isToday) PrimaryFixedDim else Color.Transparent
-    Box(
-        modifier = Modifier
-            .defaultMinSize(minWidth = KronoSizes.calendarDayBadge, minHeight = KronoSizes.calendarDayBadge)
-            .background(background, CircleShape)
-            .border(KronoGlass.borderWidth, ring, CircleShape)
-            .padding(KronoSpacing.xs),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = day.date.dayOfMonth.toString(),
-            style = MaterialTheme.typography.labelLarge,
-            color = textColor,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun DayIndicators(categories: List<TaskCategory>, dimmed: Boolean) {
-    // Fila de alto fijo aunque no haya tareas, para que las celdas de la semana queden alineadas.
-    Row(
-        modifier = Modifier
-            .padding(top = KronoSpacing.xs / 2)
-            .heightIn(min = KronoSizes.calendarDayDot),
-        horizontalArrangement = Arrangement.spacedBy(KronoSpacing.xs / 2),
-    ) {
-        categories.forEach { category ->
-            val alpha = if (dimmed) NEIGHBOR_MONTH_ALPHA else FULL_ALPHA
-            Box(
-                modifier = Modifier
-                    .size(KronoSizes.calendarDayDot)
-                    .background(category.accentColor.copy(alpha = alpha), CircleShape),
-            )
-        }
-    }
-}
-
-private const val NEIGHBOR_MONTH_ALPHA = 0.5f
-private const val SELECTED_DAY_ALPHA = 0.2f
-private const val FULL_ALPHA = 1f
