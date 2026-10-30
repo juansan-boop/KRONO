@@ -19,7 +19,7 @@ Juan Esteban Sora Ariza, Janer García Avendaño García, Juan Fernando Sánchez
 - Tipografía: Hanken Grotesk (texto) + JetBrains Mono (datos/números), grid de 8dp.
 - Iconografía: Material Symbols Outlined.
 - Ya implementado en `core/core-ui/src/main/java/com/krono/core/ui/theme/`: `Color.kt`, `Type.kt`, `Shape.kt`, `Theme.kt`, `Glass.kt`.
-- **Regla dura: cero colores o espaciados hardcodeados.** Todo sale de `core-ui`. Usa `Modifier.glassSurface()` (en `Glass.kt`) para cualquier superficie con efecto vidrio, en vez de recrearlo a mano.
+- **Regla dura: cero colores o espaciados hardcodeados.** Todo sale de `core-ui`. Excepción de diseño: `Color.Transparent` está permitido como ausencia de color (no es un color de la paleta); cualquier otro color sale de `core-ui`. Usa `Modifier.glassSurface()` (en `Glass.kt`) para cualquier superficie con efecto vidrio, en vez de recrearlo a mano.
 - Las fuentes reales (Hanken Grotesk, JetBrains Mono) todavía no están agregadas como recursos — `Type.kt` usa placeholders (`FontFamily.Default` / `FontFamily.Monospace`). Al agregar los `.ttf`/`.otf` a `res/font/`, actualizar `HankenGrotesk` y `JetBrainsMono` en `Type.kt`.
 
 ## Arquitectura (cerrada, no renegociable)
@@ -37,6 +37,7 @@ Reglas duras:
 - Sin colores/espaciados hardcodeados — todo desde `core-ui`.
 - Inyección de dependencias con Hilt (ya configurado en `app` y en cada `feature-*`).
 - Persistencia con Cloud Firestore (fuente única de datos, con su caché offline) y autenticación con Firebase Authentication, ambas en `core-data`; Room se elimina (D-1).
+- Excepción de arquitectura: `feature-profile` accede a Firebase y Firestore directamente (sin `core-data`), con su propio módulo de Hilt (`ProfileModule`), por decisión de Juan Fernando Sánchez Otero del 2026-10-29. El equipo debe revisar este cambio.
 
 ## Diseño de referencia
 
