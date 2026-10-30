@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -68,15 +67,13 @@ internal fun RowScope.DayCell(day: CalendarDayUi, onClick: () -> Unit, label: St
 
 @Composable
 private fun DayLabel(text: String, isSelected: Boolean) {
-    // Sin límite de ancho: con la fuente al 200 % las tres letras superan los 48 dp de la celda y
-    // preferimos que se centren y sobresalgan un poco antes que se recorten.
     Text(
         text = text,
-        modifier = Modifier.wrapContentWidth(unbounded = true),
         style = MaterialTheme.typography.labelMedium,
         color = if (isSelected) PrimaryFixedDim else OnSurfaceVariant,
         textAlign = TextAlign.Center,
         softWrap = false,
+        maxLines = 1,
     )
 }
 
