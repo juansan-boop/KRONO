@@ -6,9 +6,9 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.unit.dp
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
+import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.dashboard.DashboardUiState
 import com.krono.feature.dashboard.PriorityTaskUi
@@ -146,12 +146,8 @@ class DashboardScreenTest {
     fun losControlesTactilesMidenAlMenos48dp() {
         show(content())
 
-        composeRule.onNodeWithText("Iniciar").assertHeightIsAtLeast(MIN_TOUCH_TARGET)
-        composeRule.onNodeWithText("Ver todas").assertHeightIsAtLeast(MIN_TOUCH_TARGET)
-        composeRule.onNodeWithText("Revisión de diseño").assertHeightIsAtLeast(MIN_TOUCH_TARGET)
-    }
-
-    private companion object {
-        val MIN_TOUCH_TARGET = 48.dp
+        composeRule.onNodeWithText("Iniciar").assertHeightIsAtLeast(KronoSizes.minTouchTarget)
+        composeRule.onNodeWithText("Ver todas").assertHeightIsAtLeast(KronoSizes.minTouchTarget)
+        composeRule.onNodeWithText("Revisión de diseño").assertHeightIsAtLeast(KronoSizes.minTouchTarget)
     }
 }
