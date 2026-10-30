@@ -1,6 +1,6 @@
 package com.krono.core.domain.calendar
 
-import com.krono.core.domain.assistant.durationUntil
+import com.krono.core.domain.time.durationUntil
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
@@ -62,6 +62,11 @@ data class CalendarBlock(
         return start < nextDayStart && end > dayStart
     }
 
-    /** Indica si el bloque está "En curso" en [now]: `start <= now < end` (F-16 CA-3). */
+    /**
+     * Indica si el intervalo del bloque incluye [now]: `start <= now < end` (F-16 CA-3).
+     *
+     * Solo mira el intervalo: no excluye las tareas completadas. La UI muestra "En curso" solo
+     * si además `!isCompleted`.
+     */
     fun isInProgress(now: LocalDateTime): Boolean = now >= start && now < end
 }

@@ -27,13 +27,14 @@ data class CalendarSchedule(
     /** Bloques del día [date] en orden (agenda de la vista diaria y de la vista mensual, F-16 CA-2). */
     fun blocksOn(date: LocalDate): List<CalendarBlock> = blocksByDay[date].orEmpty()
 
+    /** Construcción de la agenda a partir de las tareas y orden canónico de sus bloques. */
     companion object {
-        private val BLOCK_ORDER: Comparator<CalendarBlock> = compareBy<CalendarBlock>(
-            { it.start },
-            { -it.priority.ordinal },
-            { it.end },
-            { it.taskId },
-        )
+        // compareByDescending usa el orden natural de TaskPriority (BAJA < MEDIA < ALTA) para
+        // poner ALTA primero sin depender de la aritmética sobre ordinal.
+        private val BLOCK_ORDER: Comparator<CalendarBlock> = compareBy<CalendarBlock> { it.start }
+            .thenByDescending { it.priority }
+            .thenBy { it.end }
+            .thenBy { it.taskId }
 
         /**
          * Construye la agenda de [period] a partir de [tasks]: descarta las tareas sin fecha

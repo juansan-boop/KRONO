@@ -131,6 +131,20 @@ class CalendarBlockTest {
         assertFalse(block.isInProgress(LocalDateTime(2026, 10, 30, 15, 1)))
     }
 
+    @Test
+    fun enCurso_soloMiraElIntervalo_unaTareaCompletadaDentroDelIntervaloDevuelveTrue() {
+        val start = LocalDateTime(2026, 10, 30, 14, 0)
+        val end = LocalDateTime(2026, 10, 30, 15, 0)
+        val completed = CalendarBlock(
+            Task(id = "t", title = "x", dueDate = end, isCompleted = true),
+            start,
+            end,
+            BlockDurationSource.ESTIMATED,
+        )
+
+        assertTrue(completed.isInProgress(LocalDateTime(2026, 10, 30, 14, 30)))
+    }
+
     private fun blockOf(start: LocalDateTime, end: LocalDateTime) =
         CalendarBlock(Task(id = "t", title = "x", dueDate = end), start, end, BlockDurationSource.ESTIMATED)
 }
