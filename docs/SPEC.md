@@ -319,9 +319,9 @@ botón "Asistente IA" de la lista de tareas.
 - **CA-3:** En Android 13 o superior, la app solicita el permiso de notificaciones y funciona sin fallar si el usuario lo niega. **Pendiente:** el permiso `POST_NOTIFICATIONS` no está declarado hoy en el manifest de `app`.
 
 #### F-16 — Calendario día, semana y mes
-- **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-calendar`, `core-domain`, `core-data` · **Depende de:** F-02 · **PR:** #42, #43
+- **Estado:** Hecho · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-calendar`, `core-domain`, `core-data` · **Depende de:** F-02 · **PR:** #42, #43, #44
 
-El dominio está hecho (bloques, períodos, agenda y estado "En curso" en `core-domain`, PR #42). La vista mensual con la agenda del día seleccionado está hecha (PR #43): cubre CA-2 y la parte de Mes de CA-1. Faltan las vistas Semana y Día (CA-1) y la vista diaria con "En curso" (CA-3).
+El dominio está hecho (bloques, períodos, agenda y estado "En curso" en `core-domain`, PR #42). La vista mensual con la agenda del día seleccionado está hecha (PR #43). Las vistas Semana y Día están hechas (PR #44): comparten ViewModel, franja de siete días y agenda con la vista mensual, el selector Mes / Semana / Día está habilitado y la vista diaria marca la tarea "En curso" y muestra el separador "Ahora · HH:mm". No falta nada de los criterios de F-16; quedan fuera, por no estar en ellos, el aviso "En X h Y min" de la próxima tarea del diseño y los conflictos (F-17).
 
 Decisión de producto (D-14): el calendario muestra SOLO TAREAS con fecha; no hay eventos propios ni creación de eventos. Intervalo de una tarea: termina en su fecha límite y empieza `estimación` antes; sin estimación ocupa 30 minutos por defecto (constante con nombre); sin fecha límite no aparece.
 
