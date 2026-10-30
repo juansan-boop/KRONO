@@ -82,7 +82,10 @@ private fun PeriodTitle(title: CalendarTitle, modifier: Modifier = Modifier) {
         }
         Text(
             text = title.title,
-            modifier = Modifier.semantics { heading() },
+            modifier = Modifier.semantics {
+                heading()
+                title.description?.let { contentDescription = it }
+            },
             style = MaterialTheme.typography.titleMedium,
             color = OnSurface,
         )

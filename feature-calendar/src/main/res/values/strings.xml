@@ -12,7 +12,8 @@
     <string name="calendar_today_description">Ir a hoy</string>
     <string name="calendar_week_eyebrow">Semana %d</string>
     <string name="calendar_week_range_same_month">%1$d - %2$d de %3$s</string>
-    <string name="calendar_week_range_two_months">%1$d de %2$s - %3$d de %4$s</string>
+    <string name="calendar_week_range_two_months">%1$d %2$s - %3$d %4$s</string>
+    <string name="calendar_week_range_two_months_description">%1$d de %2$s - %3$d de %4$s</string>
     <string name="calendar_day_eyebrow">%1$s · Semana %2$d</string>
     <string name="calendar_day_title">%1$d de %2$s</string>
 

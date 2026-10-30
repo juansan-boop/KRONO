@@ -27,6 +27,8 @@ enum class TimerStatus {
  * @property savedSession duración de la última sesión guardada, para confirmarla al usuario (CA-2).
  * @property isSavedSessionWithoutTask la tarea ya no existía al finalizar: la sesión se guardó,
  * pero su tiempo no se sumó a ninguna tarea y hay que avisarlo.
+ * @property isSessionTooShort la sesión duró menos de [com.krono.core.domain.timer.FinishTimerUseCase.MIN_SESSION_DURATION]:
+ * se descartó, no se guardó ni se sumó a la tarea, y hay que avisarlo.
  * @property errorMessageRes recurso del mensaje de error que hay que mostrar, si algo falló. Es un
  * texto genérico en español: los detalles técnicos del error no llegan a la pantalla.
  */
@@ -40,6 +42,7 @@ data class TaskTimerUiState(
     val isBusy: Boolean = false,
     val savedSession: Duration? = null,
     val isSavedSessionWithoutTask: Boolean = false,
+    val isSessionTooShort: Boolean = false,
     @StringRes val errorMessageRes: Int? = null,
 ) {
     /** Fracción de la estimación ya trabajada, entre 0 y 1, o `null` si la tarea no tiene estimación. */

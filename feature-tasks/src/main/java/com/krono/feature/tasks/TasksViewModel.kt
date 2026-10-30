@@ -3,6 +3,7 @@ package com.krono.feature.tasks
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.dashboard.DashboardSummary
 import com.krono.core.domain.task.DeleteTaskUseCase
 import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
@@ -178,8 +179,8 @@ class TasksViewModel @Inject constructor(
     ): TasksUiState {
         val today = currentDateProvider()
 
-        // Enfoque Diario se calcula con las tareas de hoy sin filtrar por chip (CA-3)
-        val allTodayTasks = allTasks.filter { TaskTimeClassifier.isToday(it, today) }
+        // Enfoque Diario es del día completo: mismo caso de uso que Inicio y sin filtrar por chip (CA-3)
+        val dailySummary = DashboardSummary.from(allTasks, emptyList(), today)
 
         // Filtrar tareas según la categoría activa (CA-2)
         val domainCategory = categoryFilter.toDomainCategory()
@@ -190,15 +191,20 @@ class TasksViewModel @Inject constructor(
             today = today,
             selectedCategory = categoryFilter,
             categoryCounts = countByFilter(allTasks),
-            dailyFocusPercentage = DailyFocusCalculator.calculatePercentage(allTodayTasks),
-            dailyPendingCount = DailyFocusCalculator.countPending(allTodayTasks),
-            // Agrupar en "Para Hoy" y "Esta Semana" (CA-1)
-            todayTasks = filteredTasks.filter { TaskTimeClassifier.isToday(it, today) },
+            dailyFocusPercentage = dailySummary.completedPercent,
+            dailyPendingCount = dailySummary.pendingCount,
+            // Agrupar en "Para Hoy", "Esta Semana" y "Completadas" (CA-1)
+            todayTasks = filteredTasks.filter { TaskTimeClassifier.isToday(it, today) }.overdueFirst(today),
             thisWeekTasks = filteredTasks.filter { TaskTimeClassifier.isThisWeek(it, today) },
+            completedEarlierTasks = filteredTasks.filter { TaskTimeClassifier.isCompletedEarlier(it, today) },
             taskPendingDelete = pendingDelete,
             errorMessage = error,
         )
     }
+
+    /** Pone primero las vencidas pendientes, que son las que más urgen, sin alterar el resto del orden. */
+    private fun List<Task>.overdueFirst(today: LocalDate): List<Task> =
+        sortedBy { task -> if ((task.dueDate?.date ?: today) < today) 0 else 1 }
 
     /** Conteo de tareas por filtro para los chips de la cabecera. */
     private fun countByFilter(allTasks: List<Task>): Map<TaskCategoryFilter, Int> =

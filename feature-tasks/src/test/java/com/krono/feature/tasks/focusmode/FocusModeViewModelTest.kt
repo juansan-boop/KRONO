@@ -43,6 +43,7 @@ import org.junit.Before
 import org.junit.Test
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Pruebas de [FocusModeViewModel] (F-09 CA-1 a CA-3) con un reloj falso: cuenta regresiva desde
@@ -270,9 +271,27 @@ class FocusModeViewModelTest {
     }
 
     @Test
+    fun alFinalizarUnEnfoqueDeMenosDeUnMinuto_noLoGuardaYAvisaQueEraMuyCorto() = focusTest {
+        val viewModel = createViewModel("informe")
+        runCurrent()
+        clock.advanceBy(13.seconds)
+
+        viewModel.onFinish()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertNull(state.phase)
+        assertTrue(state.isSessionTooShort)
+        assertNull(state.savedSession)
+        assertTrue(timers.sessions.isEmpty())
+        assertNull(timers.actualDurationByTask["informe"])
+    }
+
+    @Test
     fun despuesDeFinalizar_noReiniciaElEnfoqueSolo() = focusTest {
         val viewModel = createViewModel("informe")
         runCurrent()
+        clock.advanceBy(5.minutes)
         viewModel.onFinish()
         runCurrent()
 

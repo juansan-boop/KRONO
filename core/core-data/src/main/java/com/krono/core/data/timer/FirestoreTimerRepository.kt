@@ -102,7 +102,7 @@ class FirestoreTimerRepository @Inject constructor(
     override suspend fun finishActiveTimer(session: TimeSession): KronoResult<FinishedSession> =
         runCatchingTimer { userId ->
             finishMutex.withLock {
-                if (isStillActive(userId, session)) {
+                if (isStillActive(userId, session.id)) {
                     commitFinish(userId, session).also { lastFinished = it }
                 } else {
                     lastFinished?.takeIf { it.session.id == session.id } ?: throw TimerError.NoActiveTimer
@@ -111,11 +111,23 @@ class FirestoreTimerRepository @Inject constructor(
         }
 
     /**
-     * Indica si el cronómetro en curso es el que produce [session]. Si no se puede leer (sin red y
+     * Elimina el cronómetro en curso sin registrar sesión. Se serializa con [finishActiveTimer] y
+     * solo borra el cronómetro de [sessionId]: si ya no está (doble toque) o es otro, no hace nada.
+     */
+    override suspend fun discardActiveTimer(sessionId: String): KronoResult<Unit> = runCatchingTimer { userId ->
+        finishMutex.withLock {
+            if (isStillActive(userId, sessionId)) {
+                awaitConfirmationOrQueued { remoteDataSource.deleteActiveTimer(userId) }
+            }
+        }
+    }
+
+    /**
+     * Indica si el cronómetro en curso es el que produce la sesión [sessionId]. Si no se puede leer (sin red y
      * sin caché) se asume que sí: quien llama acaba de leerlo para construir la sesión.
      */
-    private suspend fun isStillActive(userId: String, session: TimeSession): Boolean = try {
-        readActiveTimer(userId)?.sessionId == session.id
+    private suspend fun isStillActive(userId: String, sessionId: String): Boolean = try {
+        readActiveTimer(userId)?.sessionId == sessionId
     } catch (offline: Exception) {
         if (!offline.isUnavailable()) throw offline
         true

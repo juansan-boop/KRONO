@@ -39,4 +39,7 @@ interface TimerRemoteDataSource {
         taskId: String,
         durationMillis: Long,
     ): Boolean
+
+    /** Elimina el documento del cronómetro en curso sin registrar sesión; suspende hasta la confirmación del servidor. */
+    suspend fun deleteActiveTimer(userId: String)
 }

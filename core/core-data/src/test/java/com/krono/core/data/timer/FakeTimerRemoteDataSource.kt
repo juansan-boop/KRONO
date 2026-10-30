@@ -78,4 +78,11 @@ class FakeTimerRemoteDataSource : TimerRemoteDataSource {
         serverConfirmation?.await()
         return addedToTask
     }
+
+    override suspend fun deleteActiveTimer(userId: String) {
+        writeFailure?.let { throw it }
+        timers.remove(userId)
+        timerFlow.value = null
+        serverConfirmation?.await()
+    }
 }

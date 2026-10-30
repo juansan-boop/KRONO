@@ -13,10 +13,14 @@ import kotlinx.datetime.todayIn
  * @property today Fecha de referencia para clasificar hoy vs esta semana.
  * @property selectedCategory Filtro de categoría activo actualmente.
  * @property categoryCounts Conteo de tareas por cada filtro disponible.
- * @property dailyFocusPercentage Porcentaje de avance de las tareas de hoy (0 a 100).
- * @property dailyPendingCount Cantidad de tareas de hoy pendientes de resolver.
- * @property todayTasks Lista de tareas clasificadas para la sección "Para Hoy".
- * @property thisWeekTasks Lista de tareas clasificadas para la sección "Esta Semana".
+ * @property dailyFocusPercentage Porcentaje de avance del día (0 a 100). Es el mismo cálculo del
+ * resumen de Inicio ([com.krono.core.domain.dashboard.DashboardSummary]): solo cuentan las tareas
+ * cuya fecha límite es hoy, de todas las categorías (no depende de [selectedCategory]).
+ * @property dailyPendingCount Tareas con fecha límite hoy aún pendientes (mismo cálculo que Inicio).
+ * @property todayTasks Sección "Para Hoy": las que vencen hoy (hechas o no) y las vencidas pendientes.
+ * @property thisWeekTasks Sección "Esta Semana": las de días posteriores a hoy y las sin fecha.
+ * @property completedEarlierTasks Sección "Completadas": las completadas con fecha límite de días
+ * anteriores; son historial y no cuentan en "Para Hoy" ni en el avance del día.
  * @property taskPendingDelete Tarea seleccionada pendiente de confirmación de eliminación o posposición (F-07).
  * @property errorMessage Mensaje de error a desplegar si alguna operación falla.
  * @property hasLoadError Indica que no se pudieron leer las tareas (por ejemplo, permiso denegado);
@@ -32,12 +36,13 @@ data class TasksUiState(
     val dailyPendingCount: Int = 0,
     val todayTasks: List<Task> = emptyList(),
     val thisWeekTasks: List<Task> = emptyList(),
+    val completedEarlierTasks: List<Task> = emptyList(),
     val taskPendingDelete: Task? = null,
     val errorMessage: String? = null,
     val hasLoadError: Boolean = false,
 ) {
     /** Indica si no hay ninguna tarea para mostrar en la vista actual (CA-4). */
-    val isEmpty: Boolean get() = todayTasks.isEmpty() && thisWeekTasks.isEmpty()
+    val isEmpty: Boolean get() = todayTasks.isEmpty() && thisWeekTasks.isEmpty() && completedEarlierTasks.isEmpty()
 
     /** Indica si corresponde el estado vacío: no hay tareas y la carga no falló (CA-4). */
     val showEmptyState: Boolean get() = !hasLoadError && isEmpty

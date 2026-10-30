@@ -72,6 +72,12 @@ class FakeTimerRepository : TimerRepository {
         activeTimer.value = null
         return KronoResult.Success(FinishedSession(session, addedToTask))
     }
+
+    override suspend fun discardActiveTimer(sessionId: String): KronoResult<Unit> {
+        failure?.let { return KronoResult.Error(it) }
+        if (activeTimer.value?.sessionId == sessionId) activeTimer.value = null
+        return KronoResult.Success(Unit)
+    }
 }
 
 /** Reloj de prueba que solo avanza cuando se le pide. */

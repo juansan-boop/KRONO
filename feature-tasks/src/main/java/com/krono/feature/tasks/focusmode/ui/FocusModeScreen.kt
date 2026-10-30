@@ -179,7 +179,11 @@ private fun FocusContent(state: FocusModeUiState, actions: FocusModeActions) {
     FocusTaskCard(state)
     if (state.isTaskDeleted) Notice(R.string.focus_mode_task_deleted)
     if (phase == null) {
-        state.savedSession?.let { SavedSessionMessage(it, state.isSavedSessionWithoutTask) } ?: Notice(R.string.focus_mode_idle)
+        if (state.savedSession == null && !state.isSessionTooShort) {
+            Notice(R.string.focus_mode_idle)
+        } else {
+            SessionOutcomeMessage(state.savedSession, state.isSavedSessionWithoutTask, state.isSessionTooShort)
+        }
         return
     }
     FocusRing(state, phase)
@@ -307,12 +311,21 @@ private fun Notice(@StringRes messageRes: Int) {
     )
 }
 
-/** Confirma la sesión guardada; si la tarea ya no existía, avisa que el tiempo no se sumó a ninguna. */
+/**
+ * Resultado de finalizar el enfoque: confirma la sesión guardada, avisa si el tiempo se guardó sin sumarse a
+ * ninguna tarea (ya no existe) o si la sesión fue demasiado corta y se descartó. No muestra nada
+ * si no hay resultado que informar.
+ */
 @Composable
-private fun SavedSessionMessage(duration: Duration, withoutTask: Boolean) {
-    val messageRes = if (withoutTask) R.string.timer_saved_without_task else R.string.timer_saved
+private fun SessionOutcomeMessage(savedSession: Duration?, withoutTask: Boolean, tooShort: Boolean) {
+    val text = when {
+        tooShort -> stringResource(R.string.timer_too_short)
+        savedSession == null -> return
+        withoutTask -> stringResource(R.string.timer_saved_without_task, formatClock(savedSession))
+        else -> stringResource(R.string.timer_saved, formatClock(savedSession))
+    }
     Text(
-        text = stringResource(messageRes, formatClock(duration)),
+        text = text,
         style = MaterialTheme.typography.bodyLarge,
         color = SecondaryCyan,
         textAlign = TextAlign.Center,

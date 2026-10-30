@@ -100,10 +100,13 @@ class TaskTimerViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = finishTimer()) {
                 is KronoResult.Success -> _uiState.update {
+                    val tooShort = result.data.discardedAsTooShort
                     it.copy(
                         isBusy = false,
-                        savedSession = result.data.session.duration,
-                        isSavedSessionWithoutTask = !result.data.addedToTask,
+                        // Una sesión descartada no se guardó: no se confirma como guardada.
+                        savedSession = result.data.session.duration.takeUnless { tooShort },
+                        isSavedSessionWithoutTask = !result.data.addedToTask && !tooShort,
+                        isSessionTooShort = tooShort,
                     )
                 }
                 is KronoResult.Error -> showActionError()
@@ -156,6 +159,7 @@ class TaskTimerViewModel @Inject constructor(
                 // Al empezar una sesión nueva, el resumen de la anterior ya no aplica.
                 savedSession = if (timer != null) null else it.savedSession,
                 isSavedSessionWithoutTask = timer == null && it.isSavedSessionWithoutTask,
+                isSessionTooShort = timer == null && it.isSessionTooShort,
             )
         }
         if (timer != null && timer.isRunning) tickJob = startTicking(timer)

@@ -11,8 +11,8 @@
 
     <!-- Enfoque Diario (CA-3) -->
     <string name="daily_focus_title">Enfoque Diario</string>
-    <string name="daily_focus_subtitle">%d pendientes críticos para hoy</string>
-    <string name="daily_focus_single_pending">1 pendiente crítico para hoy</string>
+    <string name="daily_focus_subtitle">%d pendientes para hoy, de todas las categorías</string>
+    <string name="daily_focus_single_pending">1 pendiente para hoy, de todas las categorías</string>
     <string name="daily_focus_all_done">Todas las tareas de hoy completadas</string>
     <string name="daily_focus_no_tasks">Sin tareas programadas para hoy</string>
     <string name="percentage_format">%d%%</string>
@@ -20,6 +20,7 @@
     <!-- Secciones temporales (CA-1) -->
     <string name="section_today">Para Hoy</string>
     <string name="section_this_week">Esta Semana</string>
+    <string name="section_completed">Completadas</string>
     <string name="tasks_count_multiple">%d tareas</string>
     <string name="tasks_count_single">1 tarea</string>
 
@@ -169,6 +170,7 @@
     <string name="cd_timer_clock">Tiempo trabajado: %s</string>
     <string name="timer_background_hint">El tiempo sigue contando aunque salgas de la app.</string>
     <string name="timer_saved">Sesión guardada: %s sumados a la tarea.</string>
+    <string name="timer_too_short">Sesión demasiado corta, no se guardó.</string>
     <string name="timer_saved_without_task">Sesión guardada (%s), pero la tarea ya no existe: el tiempo no se sumó a ninguna tarea.</string>
     <string name="timer_switch_title">¿Detener el cronómetro actual?</string>
     <string name="timer_switch_body">Ya tienes un cronómetro en curso en otra tarea. Se guardará su tiempo y empezará el de esta.</string>
@@ -203,6 +205,7 @@
     <string name="assistant_reason_due_soon">Vence en los próximos días; adelantarla te deja margen.</string>
     <string name="assistant_reason_high_priority">La marcaste como prioridad alta.</string>
     <string name="assistant_reason_tight_schedule">Tu estimación ocupa buena parte del tiempo que queda.</string>
+    <string name="assistant_reason_cannot_finish">Atención: la estimación es mayor que el tiempo que queda, así que ya no alcanzas a terminarla antes de su entrega. Conviene avisar o renegociar la fecha.</string>
     <string name="assistant_reason_default">Es la tarea pendiente con mejor puntuación según tus fechas y prioridades.</string>
     <string name="assistant_estimate_manual">Tu estimación</string>
     <string name="assistant_estimate_history">Según tu historial</string>

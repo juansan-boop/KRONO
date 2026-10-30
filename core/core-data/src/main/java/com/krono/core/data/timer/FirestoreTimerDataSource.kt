@@ -51,6 +51,10 @@ class FirestoreTimerDataSource @Inject constructor(
         activeTimerDocument(userId).set(timer).await()
     }
 
+    override suspend fun deleteActiveTimer(userId: String) {
+        activeTimerDocument(userId).delete().await()
+    }
+
     override suspend fun finishActiveTimer(
         userId: String,
         session: Map<String, Any?>,

@@ -312,4 +312,31 @@ class FirestoreTimerRepositoryTest {
         /** Toques casi simultáneos sobre Finalizar con los que QA reprodujo el doble incremento. */
         const val CONCURRENT_FINISHES = 6
     }
+
+    @Test
+    fun descartarElCronometro_loEliminaSinGuardarSesionNiSumarTiempo() = runTest {
+        auth.user.value = user
+        remote.existingTasks += "tarea-1"
+        val timer = ActiveTimer("tarea-1", start, runningSince = start, accumulated = 13.seconds)
+        repository.saveActiveTimer(timer)
+
+        val result = repository.discardActiveTimer(timer.sessionId)
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertNull(remote.timers[user.id])
+        assertTrue(remote.sessionsById.isEmpty())
+        assertTrue(remote.incrementsByTask.isEmpty())
+    }
+
+    @Test
+    fun descartarUnCronometroDeOtraSesion_noTocaElActual() = runTest {
+        auth.user.value = user
+        val current = ActiveTimer("tarea-2", start, runningSince = start, accumulated = Duration.ZERO)
+        repository.saveActiveTimer(current)
+
+        val result = repository.discardActiveTimer("tarea-1_0")
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertNotNull(remote.timers[user.id])
+    }
 }

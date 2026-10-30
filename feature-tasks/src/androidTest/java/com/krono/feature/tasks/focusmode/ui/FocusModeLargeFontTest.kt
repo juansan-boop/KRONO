@@ -178,6 +178,14 @@ class FocusModeLargeFontTest {
         textResult(str(R.string.focus_mode_complete_finish))
     }
 
+    @Test
+    fun sesionMuyCorta_alDoscientosPorCiento_elAvisoNoPartePalabras() {
+        showAtLargeFont(working.copy(phase = null, blockDuration = 0.seconds, isSessionTooShort = true))
+
+        textResult(str(R.string.timer_too_short))
+        assertNoBrokenWordsNorTruncation(minTexts = 2)
+    }
+
     /**
      * Android 13 y anteriores (el proyecto admite desde la API 26) escalan la fuente de forma lineal,
      * sin el amortiguado de las versiones nuevas: el reloj crece el doble y debe seguir cabiendo.

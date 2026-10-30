@@ -67,14 +67,14 @@ internal class CalendarStateBuilder(
     }
 
     /**
-     * El separador "Ahora" solo existe en la vista diaria de hoy y con tareas que separar. Va
-     * delante de la primera tarea que no terminó (en curso o por venir); si todas terminaron, al
-     * final.
+     * El separador "Ahora" solo existe en la vista diaria de hoy y con tareas que separar. Sigue el
+     * orden cronológico de la agenda: va después de toda tarea que ya empezó (terminada o en
+     * curso) y antes de la primera que empieza más tarde; si todas ya empezaron, al final.
      */
     private fun nowMarkerFor(items: List<AgendaItemUi>): NowMarker? {
         if (mode != CalendarViewMode.DAY || selectedDate != today || items.isEmpty()) return null
-        val firstUnfinished = items.indexOfFirst { it.end > now }
-        return NowMarker(beforeIndex = if (firstUnfinished >= 0) firstUnfinished else items.size, time = now)
+        val firstUpcoming = items.indexOfFirst { it.start > now }
+        return NowMarker(beforeIndex = if (firstUpcoming >= 0) firstUpcoming else items.size, time = now)
     }
 
     private fun CalendarBlock.toAgendaItem() = AgendaItemUi(

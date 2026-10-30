@@ -23,6 +23,8 @@ import kotlin.time.Duration
  * @property savedSession duración de la última sesión guardada, para confirmarla al usuario.
  * @property isSavedSessionWithoutTask la tarea ya no existía al finalizar: la sesión se guardó,
  * pero su tiempo no se sumó a ninguna tarea.
+ * @property isSessionTooShort la sesión duró menos de [com.krono.core.domain.timer.FinishTimerUseCase.MIN_SESSION_DURATION]:
+ * se descartó, no se guardó ni se sumó a la tarea, y hay que avisarlo.
  * @property errorMessageRes mensaje de error genérico en español que hay que mostrar, si algo falló.
  */
 data class FocusModeUiState(
@@ -40,6 +42,7 @@ data class FocusModeUiState(
     val isBusy: Boolean = false,
     val savedSession: Duration? = null,
     val isSavedSessionWithoutTask: Boolean = false,
+    val isSessionTooShort: Boolean = false,
     @StringRes val errorMessageRes: Int? = null,
 ) {
     private val orderedSteps get() = task?.subtasks.orEmpty().sortedBy { it.position }

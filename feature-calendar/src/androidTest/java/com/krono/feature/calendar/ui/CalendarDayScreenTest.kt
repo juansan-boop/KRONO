@@ -70,15 +70,15 @@ class CalendarDayScreenTest : CalendarScreenTestBase() {
     }
 
     @Test
-    fun elSeparadorAhoraMuestraLaHoraYVaAntesDeLaTareaEnCurso() {
+    fun elSeparadorAhoraMuestraLaHoraYVaDespuesDeLaTareaEnCursoYAntesDeLaSiguiente() {
         showDay()
 
         scrollTo(CLASS_TITLE)
         val nowTop = composeRule.onNodeWithText("Ahora · 14:00").getBoundsInRoot().top
         val supportTop = composeRule.onNodeWithText(SUPPORT_TITLE).getBoundsInRoot().top
         val classTop = composeRule.onNodeWithText(CLASS_TITLE).getBoundsInRoot().top
-        assertTrue("El separador debe ir antes del soporte en curso", nowTop < supportTop)
-        assertTrue("El soporte va antes que la clase", supportTop < classTop)
+        assertTrue("El soporte en curso ya empezó: va antes del separador", supportTop < nowTop)
+        assertTrue("El separador va antes de la clase, que empieza después", nowTop < classTop)
     }
 
     @Test

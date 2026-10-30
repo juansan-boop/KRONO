@@ -655,7 +655,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun enDia_laMarcaAhoraVaAntesDeLaPrimeraTareaQueNoHaTerminado() = runTest {
+    fun enDia_laMarcaAhoraVaEntreLasTareasYaIniciadasYLasQueEmpiezanDespues() = runTest {
         repository.givenTasks(
             task("manana", LocalDateTime(2024, 10, 24, 13, 0), 4.hours),
             task("tarde", LocalDateTime(2024, 10, 24, 16, 30), 90.minutes),
@@ -668,13 +668,28 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun enDia_conUnaTareaEnCurso_laMarcaAhoraVaAntesDeEsaTarea() = runTest {
+    fun enDia_conUnaTareaEnCurso_laMarcaAhoraVaDespuesDeEsaTareaPorqueYaEmpezo() = runTest {
         repository.givenTasks(task("actual", LocalDateTime(2024, 10, 24, 16, 0), 2.hours))
         val vm = started(viewModel())
         vm.onSelectMode(CalendarViewMode.DAY)
         runCurrent()
 
-        assertEquals(0, vm.state.nowMarker?.beforeIndex)
+        assertEquals(1, vm.state.nowMarker?.beforeIndex)
+    }
+
+    @Test
+    fun enDia_conUnaTareaEnCursoYOtraPorVenir_laMarcaAhoraVaEntreLasDos() = runTest {
+        repository.givenTasks(
+            task("actual", LocalDateTime(2024, 10, 24, 18, 0), 4.hours),
+            task("proxima", LocalDateTime(2024, 10, 24, 21, 30), 90.minutes),
+        )
+        clock.current = LocalDateTime(2024, 10, 24, 14, 46)
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("actual"))
+        assertEquals(1, vm.state.nowMarker?.beforeIndex)
     }
 
     @Test
