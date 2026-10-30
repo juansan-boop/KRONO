@@ -273,4 +273,36 @@
     <string name="focus_delete_active_note">Es la plantilla activa: se activará otra en su lugar.</string>
     <string name="focus_delete_confirm">Sí, eliminar</string>
     <string name="focus_delete_keep">Conservar</string>
+
+    <!-- Modo enfoque (F-09) -->
+    <string name="focus_mode_chip_working">Sesión de trabajo</string>
+    <string name="focus_mode_chip_paused">En pausa</string>
+    <string name="focus_mode_chip_break">Descanso</string>
+    <string name="focus_mode_chip_break_over">Descanso terminado</string>
+    <string name="focus_mode_chip_block_complete">Bloque completado</string>
+    <string name="focus_mode_block_minutes">%1$d min de bloque</string>
+    <string name="focus_mode_step">Paso %1$d de %2$d: %3$s</string>
+    <string name="focus_mode_steps_done">Todos los pasos están completos (%1$d de %1$d)</string>
+    <string name="focus_mode_caption_remaining">Tiempo restante</string>
+    <string name="focus_mode_caption_break">Descanso restante</string>
+    <string name="cd_focus_mode_remaining">Tiempo restante de concentración: %s</string>
+    <string name="cd_focus_mode_break_remaining">Tiempo restante del descanso: %s</string>
+    <string name="cd_focus_mode_pause">Pausar el enfoque</string>
+    <string name="cd_focus_mode_resume">Reanudar el trabajo</string>
+    <string name="focus_mode_extra_break">+%1$dm Descanso</string>
+    <string name="focus_mode_finish">Finalizar</string>
+    <string name="focus_mode_background_hint">El tiempo sigue contando aunque salgas de la app. Las pausas y los descansos no suman al tiempo trabajado.</string>
+    <string name="focus_mode_break_over">El descanso terminó. Reanuda cuando estés listo.</string>
+    <string name="focus_mode_task_deleted">Esta tarea ya no existe. Al finalizar se guardará el tiempo, pero no se sumará a ninguna tarea.</string>
+    <string name="focus_mode_idle">No hay un enfoque en curso para esta tarea.</string>
+    <string name="focus_mode_complete_title">¡Bloque completado!</string>
+    <string name="focus_mode_complete_body">Buen trabajo. Descansa %1$d min antes del siguiente bloque o finaliza la sesión.</string>
+    <string name="focus_mode_complete_break">Descansar %1$d min</string>
+    <string name="focus_mode_complete_finish">Finalizar</string>
+    <string name="focus_mode_switch_title">¿Detener la sesión actual?</string>
+    <string name="focus_mode_switch_body">Ya tienes un cronómetro o un enfoque en curso. Se guardará su tiempo y empezará este enfoque.</string>
+    <string name="focus_mode_switch_confirm">Detener y empezar</string>
+    <string name="focus_mode_switch_cancel">Cancelar</string>
+    <string name="focus_mode_error_generic">No pudimos actualizar el enfoque. Inténtalo de nuevo.</string>
+    <string name="focus_mode_error_load">No pudimos cargar esta tarea. Inténtalo de nuevo en un momento.</string>
 </resources>

@@ -8,6 +8,7 @@ import com.krono.core.domain.focus.CreateFocusTemplateUseCase
 import com.krono.core.domain.focus.DeleteFocusTemplateUseCase
 import com.krono.core.domain.focus.EditFocusTemplateUseCase
 import com.krono.core.domain.focus.FocusTemplateRepository
+import com.krono.core.domain.focus.GetActiveFocusTemplateUseCase
 import com.krono.core.domain.focus.ObserveFocusTemplatesUseCase
 import dagger.Binds
 import dagger.Module
@@ -61,4 +62,9 @@ object FocusTemplateModule {
     @Provides
     fun provideActivateFocusTemplateUseCase(repository: FocusTemplateRepository) =
         ActivateFocusTemplateUseCase(repository)
+
+    /** Caso de uso que obtiene la plantilla con la que arranca el modo enfoque (F-09). */
+    @Provides
+    fun provideGetActiveFocusTemplateUseCase(repository: FocusTemplateRepository) =
+        GetActiveFocusTemplateUseCase(repository)
 }

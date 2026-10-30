@@ -21,3 +21,15 @@ internal fun formatClock(duration: Duration): String {
         String.format(Locale.ROOT, "%02d:%02d", minutes, seconds)
     }
 }
+
+private const val MILLIS_PER_SECOND = 1000L
+
+/**
+ * Formato de la cuenta regresiva del modo enfoque: siempre "MM:SS", con los minutos sin tope
+ * (un bloque de una hora se ve "60:00") para que el reloj tenga un ancho estable. Redondea hacia
+ * arriba, así "00:00" solo aparece cuando el tiempo de verdad se acabó.
+ */
+internal fun formatCountdown(remaining: Duration): String {
+    val totalSeconds = ((remaining.inWholeMilliseconds + MILLIS_PER_SECOND - 1) / MILLIS_PER_SECOND).coerceAtLeast(0)
+    return String.format(Locale.ROOT, "%02d:%02d", totalSeconds / SECONDS_PER_MINUTE, totalSeconds % SECONDS_PER_MINUTE)
+}

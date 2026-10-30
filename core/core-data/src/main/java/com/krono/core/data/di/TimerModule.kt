@@ -5,6 +5,8 @@ import com.krono.core.data.timer.FirestoreTimerRepository
 import com.krono.core.data.timer.TimerRemoteDataSource
 import com.krono.core.domain.task.TaskRepository
 import com.krono.core.domain.timer.FinishTimerUseCase
+import com.krono.core.domain.timer.StartFocusBreakUseCase
+import com.krono.core.domain.timer.StartFocusUseCase
 import com.krono.core.domain.timer.ObserveActiveTimerUseCase
 import com.krono.core.domain.timer.PauseTimerUseCase
 import com.krono.core.domain.timer.ResumeTimerUseCase
@@ -68,4 +70,13 @@ object TimerModule {
     /** Caso de uso que reanuda el cronómetro (CA-1). */
     @Provides
     fun provideResumeTimerUseCase(repository: TimerRepository, clock: Clock) = ResumeTimerUseCase(repository, clock)
+
+    /** Caso de uso que inicia un enfoque con la plantilla activa (F-09 CA-1). */
+    @Provides
+    fun provideStartFocusUseCase(startTimer: StartTimerUseCase) = StartFocusUseCase(startTimer)
+
+    /** Caso de uso que empieza un descanso dentro del enfoque (F-09 CA-2, CA-3). */
+    @Provides
+    fun provideStartFocusBreakUseCase(repository: TimerRepository, clock: Clock) =
+        StartFocusBreakUseCase(repository, clock)
 }

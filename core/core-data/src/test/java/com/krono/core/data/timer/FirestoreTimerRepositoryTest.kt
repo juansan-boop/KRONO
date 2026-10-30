@@ -9,6 +9,8 @@ import com.krono.core.domain.auth.User
 import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.timer.ActiveTimer
 import com.krono.core.domain.timer.FinishTimerUseCase
+import com.krono.core.domain.timer.FocusBlock
+import com.krono.core.domain.timer.FocusBreak
 import com.krono.core.domain.timer.FinishedSession
 import com.krono.core.domain.timer.StartTimerUseCase
 import com.krono.core.domain.timer.TimeSession
@@ -59,6 +61,18 @@ class FirestoreTimerRepositoryTest {
     fun guardarYLeer_conservaTodosLosCampos() = runTest {
         auth.user.value = user
         val timer = ActiveTimer("tarea-1", start, runningSince = null, accumulated = 12.minutes)
+
+        repository.saveActiveTimer(timer)
+
+        assertEquals(KronoResult.Success(timer), repository.getActiveTimer())
+        assertEquals(timer, repository.observeActiveTimer().first())
+    }
+
+    @Test
+    fun guardarYLeerUnEnfoque_conservaElBloqueYElDescanso() = runTest {
+        auth.user.value = user
+        val focus = FocusBlock(45.minutes, 10.minutes, targetElapsed = 90.minutes, breakInProgress = FocusBreak(start, 5.minutes))
+        val timer = ActiveTimer("tarea-1", start, runningSince = null, accumulated = 12.minutes, focus = focus)
 
         repository.saveActiveTimer(timer)
 
