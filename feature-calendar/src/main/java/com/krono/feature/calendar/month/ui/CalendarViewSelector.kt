@@ -23,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import com.krono.core.domain.calendar.CalendarViewMode
 import com.krono.core.ui.theme.KronoGlass
@@ -82,7 +81,12 @@ internal fun CalendarViewSelector(modifier: Modifier = Modifier) {
 
 @Composable
 private fun RowScope.ViewModeTab(mode: CalendarViewMode, isSelected: Boolean, isAvailable: Boolean) {
-    val comingSoon = stringResource(R.string.calendar_view_coming_soon)
+    val label = stringResource(mode.labelRes)
+    val unavailableDescription = stringResource(
+        R.string.calendar_view_unavailable_description,
+        label,
+        stringResource(R.string.calendar_view_coming_soon),
+    )
     val textColor = when {
         isSelected -> PrimaryFixedDim
         isAvailable -> OnSurfaceVariant
@@ -96,11 +100,11 @@ private fun RowScope.ViewModeTab(mode: CalendarViewMode, isSelected: Boolean, is
             .background(if (isSelected) PrimaryFixedDim.copy(alpha = SELECTED_TAB_ALPHA) else SurfaceContainerLow)
             // La vista activa no hace nada al tocarla y las demás aún no existen.
             .selectable(selected = isSelected, enabled = isAvailable, role = Role.Tab, onClick = {})
-            .semantics { if (!isAvailable) stateDescription = comingSoon },
+            .semantics { if (!isAvailable) contentDescription = unavailableDescription },
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = stringResource(mode.labelRes),
+            text = label,
             style = MaterialTheme.typography.labelMedium,
             color = textColor,
             textAlign = TextAlign.Center,

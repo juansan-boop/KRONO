@@ -13,6 +13,7 @@
     <string name="calendar_view_week">Semana</string>
     <string name="calendar_view_day">Día</string>
     <string name="calendar_view_coming_soon">Próximamente</string>
+    <string name="calendar_view_unavailable_description">%1$s, %2$s</string>
     <string name="calendar_views_coming_soon_note">Las vistas Semana y Día llegarán pronto.</string>
 
     <!-- Rejilla del mes -->

@@ -1,7 +1,10 @@
 package com.krono.feature.calendar.month.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -22,6 +25,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.krono.core.domain.calendar.CurrentDateTimeProvider
@@ -60,7 +64,7 @@ class CalendarMonthScreenTest {
     private fun text(@StringRes id: Int, vararg args: Any): String =
         InstrumentationRegistry.getInstrumentation().targetContext.getString(id, *args)
 
-    private fun show(fontScale: Float? = null) {
+    private fun show(fontScale: Float? = null, widthDp: Dp? = null, heightDp: Dp? = null) {
         val viewModel = CalendarMonthViewModel(
             observeCalendar = ObserveCalendarUseCase(repository),
             dateTimeProvider = CurrentDateTimeProvider(FixedClock) { TimeZone.UTC },
@@ -70,7 +74,10 @@ class CalendarMonthScreenTest {
             val scaled = fontScale?.let { Density(density.density, it) } ?: density
             CompositionLocalProvider(LocalDensity provides scaled) {
                 KronoTheme {
-                    CalendarRoute(onOpenTask = { openedTasks += it }, viewModel = viewModel)
+                    val sizeModifier = Modifier
+                        .then(widthDp?.let { Modifier.width(it) } ?: Modifier)
+                        .then(heightDp?.let { Modifier.height(it) } ?: Modifier)
+                    CalendarRoute(onOpenTask = { openedTasks += it }, modifier = sizeModifier, viewModel = viewModel)
                 }
             }
         }
@@ -100,6 +107,9 @@ class CalendarMonthScreenTest {
     private fun dayCell(spokenDate: String) =
         composeRule.onNode(hasContentDescription(spokenDate, substring = true) and isSelectable())
 
+    /** Las celdas de día: seleccionables con una fecha hablada ("... de octubre de 2024"). */
+    private fun allDayCells() = composeRule.onAllNodes(isSelectable() and hasContentDescription(" de ", substring = true))
+
     private fun scrollTo(textToFind: String) {
         composeRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
             .performScrollToNode(hasText(textToFind))
@@ -112,7 +122,7 @@ class CalendarMonthScreenTest {
 
         composeRule.onNodeWithText("Octubre 2024").assertIsDisplayed()
         // Octubre de 2024 ocupa cinco semanas: del lunes 30 de septiembre al domingo 3 de noviembre.
-        assertEquals(DAYS_IN_FIVE_WEEKS, composeRule.onAllNodes(isSelectable() and hasContentDescription(", ", substring = true)).fetchSemanticsNodes().size)
+        assertEquals(DAYS_IN_FIVE_WEEKS, allDayCells().fetchSemanticsNodes().size)
         composeRule.onNodeWithContentDescription("jueves, 24 de octubre de 2024, 2 tareas").assertIsSelected()
         composeRule.onNodeWithContentDescription("sábado, 26 de octubre de 2024, sin tareas").assertExists()
         composeRule.onNodeWithContentDescription("lunes, 30 de septiembre de 2024, sin tareas").assertExists()
@@ -135,6 +145,28 @@ class CalendarMonthScreenTest {
 
         composeRule.onNodeWithContentDescription(text(R.string.calendar_today_description)).performClick()
         composeRule.onNodeWithText("Octubre 2024").assertIsDisplayed()
+    }
+
+
+    @Test
+    fun aAnchoDe360dp_cadaCeldaDeDiaMideAlMenos48dp() = assertEveryDayCellHasMinTouchTarget(fontScale = null)
+
+    @Test
+    fun aAnchoDe360dpYFuenteAl130PorCiento_cadaCeldaDeDiaMideAlMenos48dp() =
+        assertEveryDayCellHasMinTouchTarget(fontScale = LARGE_FONT_SCALE)
+
+    @Test
+    fun aAnchoDe360dpYFuenteAl200PorCiento_cadaCeldaDeDiaMideAlMenos48dp() =
+        assertEveryDayCellHasMinTouchTarget(fontScale = MAX_FONT_SCALE)
+
+    private fun assertEveryDayCellHasMinTouchTarget(fontScale: Float?) {
+        show(fontScale = fontScale, widthDp = NARROW_SCREEN_WIDTH)
+
+        val cells = allDayCells()
+        assertEquals(DAYS_IN_FIVE_WEEKS, cells.fetchSemanticsNodes().size)
+        repeat(DAYS_IN_FIVE_WEEKS) { index ->
+            cells[index].assertWidthIsAtLeast(MIN_TOUCH_TARGET).assertHeightIsAtLeast(MIN_TOUCH_TARGET)
+        }
     }
 
     @Test
@@ -213,6 +245,29 @@ class CalendarMonthScreenTest {
         composeRule.onNodeWithText(text(R.string.calendar_views_coming_soon_note)).assertIsDisplayed()
     }
 
+
+    @Test
+    fun semanaYDia_exponenProximamenteEnSuDescripcionYEstanDeshabilitadas() {
+        show()
+
+        listOf(R.string.calendar_view_week, R.string.calendar_view_day).forEach { viewName ->
+            val description = text(R.string.calendar_view_unavailable_description, text(viewName), text(R.string.calendar_view_coming_soon))
+            composeRule.onNodeWithContentDescription(description).assertIsNotEnabled()
+        }
+    }
+
+    @Test
+    fun enHorizontal_laRejillaYLaAgendaSeAlcanzanConScroll() {
+        givenDesignTasks()
+        show(widthDp = LANDSCAPE_WIDTH, heightDp = LANDSCAPE_HEIGHT)
+
+        composeRule.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+            .performScrollToNode(hasContentDescription(LAST_GRID_DAY, substring = true))
+        dayCell(LAST_GRID_DAY).assertIsDisplayed()
+        scrollTo(CLASS_TITLE)
+        composeRule.onNodeWithText(CLASS_TITLE).assertIsDisplayed()
+    }
+
     @Test
     fun conFuenteAl200PorCiento_ningunTextoSeRecortaNiPartePalabras() {
         givenDesignTasks()
@@ -264,7 +319,12 @@ class CalendarMonthScreenTest {
         const val REPORT_TITLE = "Entrega del informe"
         const val TECHNICAL_ERROR = "PERMISSION_DENIED: Missing or insufficient permissions."
         const val DAYS_IN_FIVE_WEEKS = 35
+        const val LARGE_FONT_SCALE = 1.3f
         const val MAX_FONT_SCALE = 2f
+        val NARROW_SCREEN_WIDTH = 360.dp
+        val LANDSCAPE_WIDTH = 640.dp
+        val LANDSCAPE_HEIGHT = 320.dp
+        const val LAST_GRID_DAY = "domingo, 3 de noviembre de 2024"
         val MIN_TOUCH_TARGET = 48.dp
     }
 }

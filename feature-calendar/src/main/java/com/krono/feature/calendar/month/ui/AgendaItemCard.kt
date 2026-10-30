@@ -1,5 +1,6 @@
 package com.krono.feature.calendar.month.ui
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,14 +14,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.krono.core.ui.icons.KronoIcons
 import com.krono.core.ui.theme.KronoGlass
 import com.krono.core.ui.theme.KronoShapes
 import com.krono.core.ui.theme.KronoSizes
@@ -113,25 +117,33 @@ private fun TimeRange(item: AgendaItemUi) {
 
 @Composable
 private fun StatusBadge(status: AgendaItemStatus) {
-    val (textRes, color) = when (status) {
-        AgendaItemStatus.IN_PROGRESS -> R.string.calendar_status_in_progress to PrimaryFixedDim
-        AgendaItemStatus.COMPLETED -> R.string.calendar_status_completed to SecondaryCyan
-        AgendaItemStatus.SCHEDULED -> return
+    when (status) {
+        AgendaItemStatus.IN_PROGRESS ->
+            TaskLabel(text = stringResource(R.string.calendar_status_in_progress), color = PrimaryFixedDim)
+        // El check distingue "Completada" de la categoría Trabajo, que comparte el cian, sin
+        // depender solo del color.
+        AgendaItemStatus.COMPLETED ->
+            TaskLabel(text = stringResource(R.string.calendar_status_completed), color = SecondaryCyan, icon = KronoIcons.CheckCircle)
+        AgendaItemStatus.SCHEDULED -> Unit
     }
-    TaskLabel(text = stringResource(textRes), color = color)
 }
 
 @Composable
-private fun TaskLabel(text: String, color: Color) {
-    Text(
-        text = text,
+private fun TaskLabel(text: String, color: Color, @DrawableRes icon: Int? = null) {
+    Row(
         modifier = Modifier
             .background(color.copy(alpha = LABEL_BACKGROUND_ALPHA), KronoShapes.extraSmall)
             .border(KronoGlass.borderWidth, color.copy(alpha = LABEL_BORDER_ALPHA), KronoShapes.extraSmall)
             .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs / 2),
-        style = MaterialTheme.typography.labelMedium,
-        color = color,
-    )
+        horizontalArrangement = Arrangement.spacedBy(KronoSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon?.let {
+            // Decorativo: el texto de la etiqueta ya dice el estado.
+            Icon(painter = painterResource(it), contentDescription = null, modifier = Modifier.size(KronoSizes.iconSmall), tint = color)
+        }
+        Text(text = text, style = MaterialTheme.typography.labelMedium, color = color)
+    }
 }
 
 private const val IN_PROGRESS_BORDER_ALPHA = 0.3f
