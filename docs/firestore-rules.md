@@ -12,6 +12,7 @@ Rutas que usa la app hoy:
 - `users/{uid}/tasks/{taskId}`
 - `users/{uid}/timer/active`
 - `users/{uid}/timeSessions/{sessionId}`
+- `users/{uid}/focusTemplates/{templateId}` (plantillas de enfoque, F-10; las cubre la regla de subcolecciones, no requirió cambiar `firestore.rules`)
 
 El script `KRONO-IA/` usa el Admin SDK, que se salta las reglas.
 
