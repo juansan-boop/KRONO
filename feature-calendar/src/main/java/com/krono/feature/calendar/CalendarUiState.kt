@@ -77,7 +77,8 @@ sealed interface DayAgendaState {
  * de la agenda de hoy.
  *
  * @property beforeIndex Posición en la lista de tareas delante de la que se dibuja: la de la
- * primera tarea que aún no terminó, o el tamaño de la lista si todas terminaron.
+ * primera tarea que empieza después de ahora, o el tamaño de la lista si todas ya empezaron
+ * (una tarea en curso queda antes de la marca).
  * @property time Hora actual que muestra el separador.
  */
 data class NowMarker(val beforeIndex: Int, val time: LocalDateTime)
