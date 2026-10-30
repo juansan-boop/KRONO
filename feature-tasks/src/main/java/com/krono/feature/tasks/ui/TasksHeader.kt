@@ -3,6 +3,7 @@ package com.krono.feature.tasks.ui
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,27 +45,35 @@ fun TasksHeader(
     modifier: Modifier = Modifier,
     onOpenAssistant: (() -> Unit)? = null,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = KronoSpacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        KronoSymbol(height = KronoSizes.brandSymbol, contentDescription = null)
-        Spacer(modifier = Modifier.width(KronoSpacing.md))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.tasks_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = OnSurface,
-            )
-            Text(
-                text = stringResource(R.string.tasks_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = OnSurfaceVariant,
-            )
+    val title: @Composable () -> Unit = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            KronoSymbol(height = KronoSizes.brandSymbol, contentDescription = null)
+            Spacer(modifier = Modifier.width(KronoSpacing.md))
+            Column {
+                Text(
+                    text = stringResource(R.string.tasks_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = OnSurface,
+                )
+                Text(
+                    text = stringResource(R.string.tasks_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant,
+                )
+            }
         }
-        onOpenAssistant?.let { AssistantButton(onClick = it) }
+    }
+    if (onOpenAssistant == null) {
+        Box(modifier = modifier.fillMaxWidth().padding(vertical = KronoSpacing.sm)) { title() }
+        return
+    }
+    // Con fuente grande el botón pasa debajo del título en vez de comprimirlo palabra por palabra.
+    TrailingRowOrStack(
+        modifier = modifier.fillMaxWidth().padding(vertical = KronoSpacing.sm),
+        spacing = KronoSpacing.md,
+    ) {
+        title()
+        AssistantButton(onClick = onOpenAssistant)
     }
 }
 

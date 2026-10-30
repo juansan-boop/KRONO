@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,6 +48,7 @@ import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.tasks.R
 import kotlinx.datetime.LocalDate
 
+@OptIn(ExperimentalLayoutApi::class)
 /**
  * Tarjeta individual de tarea que visualiza sus atributos y permite completarla o eliminarla (F-03 CA-1, CA-3).
  */
@@ -58,7 +61,6 @@ fun TaskCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    val context = LocalContext.current
     val borderColor = when {
         task.priority == TaskPriority.ALTA -> PrimaryMagenta.copy(alpha = HIGH_PRIORITY_BORDER_ALPHA)
         task.category == TaskCategory.PERSONAL -> SecondaryCyan.copy(alpha = SECONDARY_BORDER_ALPHA)
@@ -77,11 +79,11 @@ fun TaskCard(
             .glassSurface(borderColor = borderColor)
             .padding(KronoSpacing.md),
     ) {
-        // Fila superior: Categoría y Prioridad
-        Row(
+        // Fila superior: Categoría y Prioridad; con fuente grande la segunda pasa a otra línea
+        FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(KronoSpacing.xs),
         ) {
             CategoryBadge(category = task.category)
             PriorityBadge(priority = task.priority)
@@ -102,58 +104,65 @@ fun TaskCard(
 
         Spacer(modifier = Modifier.height(KronoSpacing.sm))
 
-        // Fila inferior: Fecha, Estimación y Acciones
-        Row(
+        // Fila inferior: fecha y estimación a la izquierda, acciones a la derecha (debajo con fuente grande)
+        TrailingRowOrStack(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+            stackedTrailingAtEnd = true,
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
-            ) {
-                // Fecha de entrega
-                Icon(
-                    painter = painterResource(R.drawable.ic_schedule),
-                    contentDescription = null,
-                    tint = OnSurfaceVariant,
-                    modifier = Modifier.size(KronoSizes.iconSmall),
-                )
-                Spacer(modifier = Modifier.width(KronoSpacing.xs))
-                Text(
-                    text = TaskDateFormatter.formatDueDate(context, task.dueDate, today),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = OnSurfaceVariant,
-                )
-
-                // Estimación si existe
-                val estimatedText = TaskDateFormatter.formatEstimatedDuration(context, task.estimatedDuration)
-                if (estimatedText != null) {
-                    Spacer(modifier = Modifier.width(KronoSpacing.sm))
-                    EstimatedDurationBadge(text = estimatedText)
-                }
-            }
-
-            // Acciones: Eliminar y Completar (mínimo 48dp de touch target)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = { onDelete(task.id) },
-                    modifier = Modifier.size(KronoSizes.minTouchTarget),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_delete),
-                        contentDescription = stringResource(R.string.cd_delete_task, task.title),
-                        tint = Outline,
-                        modifier = Modifier.size(KronoSizes.iconSmall),
-                    )
-                }
-
-                TaskCheckbox(
-                    isCompleted = task.isCompleted,
-                    onClick = { onToggleCompletion(task) },
-                )
-            }
+            DueDateAndEstimate(task = task, today = today)
+            TaskActions(task = task, onToggleCompletion = onToggleCompletion, onDelete = onDelete)
         }
+    }
+}
+
+/** Fecha de entrega y, si existe, la estimación; la estimación pasa a otra línea si no cabe. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DueDateAndEstimate(task: Task, today: LocalDate) {
+    val context = LocalContext.current
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(KronoSpacing.xs),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(R.drawable.ic_schedule),
+                contentDescription = null,
+                tint = OnSurfaceVariant,
+                modifier = Modifier.size(KronoSizes.iconSmall),
+            )
+            Spacer(modifier = Modifier.width(KronoSpacing.xs))
+            Text(
+                text = TaskDateFormatter.formatDueDate(context, task.dueDate, today),
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurfaceVariant,
+            )
+        }
+        TaskDateFormatter.formatEstimatedDuration(context, task.estimatedDuration)
+            ?.let { EstimatedDurationBadge(text = it) }
+    }
+}
+
+/** Acciones de la tarjeta: eliminar y completar, de al menos 48 dp. */
+@Composable
+private fun TaskActions(task: Task, onToggleCompletion: (Task) -> Unit, onDelete: (String) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            onClick = { onDelete(task.id) },
+            modifier = Modifier.size(KronoSizes.minTouchTarget),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_delete),
+                contentDescription = stringResource(R.string.cd_delete_task, task.title),
+                tint = Outline,
+                modifier = Modifier.size(KronoSizes.iconSmall),
+            )
+        }
+
+        TaskCheckbox(
+            isCompleted = task.isCompleted,
+            onClick = { onToggleCompletion(task) },
+        )
     }
 }
 

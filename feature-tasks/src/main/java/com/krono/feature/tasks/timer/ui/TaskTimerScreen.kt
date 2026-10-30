@@ -254,7 +254,7 @@ private fun TaskCard(task: Task) {
         )
         TaskDateFormatter.formatEstimatedDuration(context, task.estimatedDuration)?.let { estimate ->
             Text(
-                text = stringResource(R.string.timer_estimate, estimate),
+                text = estimate,
                 style = MaterialTheme.typography.bodyMedium,
                 color = OnSurfaceVariant,
             )

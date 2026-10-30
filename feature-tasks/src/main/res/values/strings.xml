@@ -157,7 +157,6 @@
     <string name="timer_chip_idle">Cronómetro</string>
     <string name="timer_chip_running">Midiendo tiempo</string>
     <string name="timer_chip_paused">En pausa</string>
-    <string name="timer_estimate">~%s estimado</string>
     <string name="timer_actual_total">Tiempo real acumulado: %s</string>
     <string name="timer_caption">Tiempo trabajado</string>
     <string name="timer_start">Iniciar</string>

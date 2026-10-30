@@ -34,6 +34,7 @@ import com.krono.feature.tasks.R
 
 /**
  * Tarjeta resumen del "Enfoque Diario" que muestra el avance porcentual y pendientes del día (F-03 CA-3).
+ * Con fuente grande el porcentaje pasa debajo del texto en vez de comprimirlo palabra por palabra.
  */
 @Composable
 fun DailyFocusCard(
@@ -43,15 +44,22 @@ fun DailyFocusCard(
 ) {
     val cdProgress = stringResource(R.string.cd_focus_progress, percentage)
 
-    Row(
+    TrailingRowOrStack(
         modifier = modifier
             .fillMaxWidth()
             .glassSurface()
             .padding(KronoSpacing.md)
             .semantics { contentDescription = cdProgress },
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Ícono de tendencia / progreso
+        DailyFocusSummary(percentage = percentage, pendingCount = pendingCount)
+        PercentageBadge(percentage = percentage)
+    }
+}
+
+/** Ícono de tendencia con el título y el texto de pendientes del día. */
+@Composable
+private fun DailyFocusSummary(percentage: Int, pendingCount: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
                 .size(KronoSizes.iconLarge)
@@ -69,8 +77,7 @@ fun DailyFocusCard(
 
         Spacer(modifier = Modifier.width(KronoSpacing.md))
 
-        // Textos descriptivos
-        Column(modifier = Modifier.weight(1f)) {
+        Column {
             Text(
                 text = stringResource(R.string.daily_focus_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -92,36 +99,37 @@ fun DailyFocusCard(
                 color = OnSurfaceVariant,
             )
         }
+    }
+}
 
-        Spacer(modifier = Modifier.width(KronoSpacing.sm))
-
-        // Badge con el porcentaje de completitud
-        val badgeShape = RoundedCornerShape(KronoSizes.minTouchTarget)
-        Row(
-            modifier = Modifier
-                .clip(badgeShape)
-                .background(PrimaryMagenta.copy(alpha = BADGE_BG_ALPHA))
-                .border(
-                    width = KronoSpacing.xs / 4,
-                    color = PrimaryMagenta.copy(alpha = BADGE_BORDER_ALPHA),
-                    shape = badgeShape,
-                )
-                .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_trending_up),
-                contentDescription = null,
-                tint = PrimaryFixedDim,
-                modifier = Modifier.size(KronoSizes.iconSmall),
+/** Insignia con el porcentaje de completitud. */
+@Composable
+private fun PercentageBadge(percentage: Int) {
+    val badgeShape = RoundedCornerShape(KronoSizes.minTouchTarget)
+    Row(
+        modifier = Modifier
+            .clip(badgeShape)
+            .background(PrimaryMagenta.copy(alpha = BADGE_BG_ALPHA))
+            .border(
+                width = KronoSpacing.xs / 4,
+                color = PrimaryMagenta.copy(alpha = BADGE_BORDER_ALPHA),
+                shape = badgeShape,
             )
-            Spacer(modifier = Modifier.width(KronoSpacing.xs))
-            Text(
-                text = stringResource(R.string.percentage_format, percentage),
-                style = MaterialTheme.typography.labelMedium,
-                color = PrimaryFixedDim,
-            )
-        }
+            .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_trending_up),
+            contentDescription = null,
+            tint = PrimaryFixedDim,
+            modifier = Modifier.size(KronoSizes.iconSmall),
+        )
+        Spacer(modifier = Modifier.width(KronoSpacing.xs))
+        Text(
+            text = stringResource(R.string.percentage_format, percentage),
+            style = MaterialTheme.typography.labelMedium,
+            color = PrimaryFixedDim,
+        )
     }
 }
 
