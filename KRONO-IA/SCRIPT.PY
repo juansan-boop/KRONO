@@ -37,13 +37,17 @@ CARPETA_SALIDA = "datos"
 # categoria: (d0 mediana en min, dispersión lognormal de d0, sesgo de subestimación)
 # sesgo > 1 => la tarea tarda MÁS de lo que "debería" -> el usuario subestima
 CATEGORIAS = {
-    "lectura":         (45, 0.45, 1.00),
-    "programacion":    (120, 0.50, 1.20),
-    "redaccion":       (90, 0.45, 1.12),
-    "estudio_parcial": (100, 0.40, 1.05),
-    "ejercicios":      (60, 0.40, 1.08),
-    "exposicion":      (75, 0.40, 1.15),
+    "lectura":         (40, 0.35, 1.00),
+    "programacion":    (80, 0.35, 1.20),
+    "redaccion":       (65, 0.35, 1.12),
+    "estudio_parcial": (90, 0.30, 1.05),
+    "ejercicios":      (50, 0.35, 1.08),
+    "exposicion":      (55, 0.35, 1.15),
 }
+
+# Tope realista de una sola tarea/sesión: una tarea de más de 4 h seguidas no es
+# creíble (se parte en varias). Aplica a la duración real y a la estimación.
+DURACION_MAXIMA_MIN = 240
 
 # Efecto de la hora del día sobre la velocidad (>1 = más lento)
 EFECTO_BLOQUE = {"manana": 0.95, "tarde": 1.00, "noche": 1.15}
@@ -99,13 +103,13 @@ def simular_tarea(rng, u, categoria, hora, dias_limite, prioridad, desplaz_cat=1
     # Esfuerzo intrínseco y estimación del usuario
     d0 = rng.lognormal(np.log(d0_med), d0_sig)
     estimacion = d0 * rng.lognormal(0, u["error_estim"])
-    estimacion = max(5, int(round(estimacion / 5.0)) * 5)
+    estimacion = min(DURACION_MAXIMA_MIN, max(5, int(round(estimacion / 5.0)) * 5))
 
     # Duración real = regla oculta
     efecto_fatiga = 1 + u["sens_fatiga"] * (fatiga - 1)
     ruido = rng.lognormal(0, u["sigma"])
     real = d0 * sesgo_cat * u["sesgo_usuario"] * efecto_fatiga * EFECTO_BLOQUE[bloque] * ruido
-    real = max(5, int(round(real)))
+    real = min(DURACION_MAXIMA_MIN, max(5, int(round(real))))
 
     return {
         "categoria": categoria,
