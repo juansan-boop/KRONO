@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
@@ -39,7 +39,7 @@ import kotlinx.datetime.LocalDate
  * @param onToday Vuelve al mes y al día actuales.
  */
 @Composable
-internal fun CalendarMonthHeader(
+internal fun CalendarHeader(
     displayedMonth: LocalDate,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,

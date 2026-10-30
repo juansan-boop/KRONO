@@ -1,10 +1,10 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.krono.feature.calendar.R
-import com.krono.feature.calendar.month.CalendarDayUi
+import com.krono.feature.calendar.CalendarDayUi
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime

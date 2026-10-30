@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month
+package com.krono.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -39,7 +39,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
-class CalendarMonthViewModel @Inject constructor(
+class CalendarViewModel @Inject constructor(
     private val observeCalendar: ObserveCalendarUseCase,
     private val dateTimeProvider: CurrentDateTimeProvider,
 ) : ViewModel() {
@@ -73,7 +73,7 @@ class CalendarMonthViewModel @Inject constructor(
     private var lastSeenToday = dateTimeProvider.today()
 
     /** Estado observable por la pantalla. */
-    val uiState: StateFlow<CalendarMonthUiState> = combine(loadedMonth, selection, clockTicks) { loaded, current, _ ->
+    val uiState: StateFlow<CalendarUiState> = combine(loadedMonth, selection, clockTicks) { loaded, current, _ ->
         buildState(current, loaded.resultFor(current.period))
     }.stateIn(
         scope = viewModelScope,
@@ -131,8 +131,8 @@ class CalendarMonthViewModel @Inject constructor(
         return MonthSelection(monthOf(today), today)
     }
 
-    private fun buildState(current: MonthSelection, result: KronoResult<CalendarSchedule>): CalendarMonthUiState =
-        CalendarMonthStateBuilder(
+    private fun buildState(current: MonthSelection, result: KronoResult<CalendarSchedule>): CalendarUiState =
+        CalendarStateBuilder(
             period = current.period,
             selectedDate = current.selectedDate,
             today = dateTimeProvider.today(),

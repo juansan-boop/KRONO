@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month
+package com.krono.feature.calendar
 
 import com.krono.core.common.KronoResult
 import com.krono.core.domain.task.FakeTaskRepository

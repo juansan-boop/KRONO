@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month
+package com.krono.feature.calendar
 
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
@@ -16,7 +16,7 @@ import kotlinx.datetime.LocalDateTime
  * vecinos.
  * @property agenda Estado de la agenda del día seleccionado: cargando, error o tareas.
  */
-data class CalendarMonthUiState(
+data class CalendarUiState(
     val displayedMonth: LocalDate,
     val today: LocalDate,
     val selectedDate: LocalDate,

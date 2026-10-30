@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month
+package com.krono.feature.calendar
 
 import com.krono.core.common.KronoResult
 import com.krono.core.domain.calendar.CalendarBlock
@@ -8,7 +8,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
- * Traduce la agenda del dominio a [CalendarMonthUiState] para un mes y un día seleccionado.
+ * Traduce la agenda del dominio a [CalendarUiState] para un mes y un día seleccionado.
  *
  * Toda la lógica de fechas (rejilla, días vecinos, bloques por día, "En curso") sale de
  * `core-domain`; aquí solo se arma el modelo de la pantalla.
@@ -18,16 +18,16 @@ import kotlinx.datetime.LocalDateTime
  * @param today Fecha actual, resaltada en la rejilla.
  * @param now Hora actual, para marcar las tareas "En curso".
  */
-internal class CalendarMonthStateBuilder(
+internal class CalendarStateBuilder(
     private val period: CalendarPeriod,
     private val selectedDate: LocalDate,
     private val today: LocalDate,
     private val now: LocalDateTime,
 ) {
     /** Estado de la pantalla para el [result] de observar el mes. */
-    fun build(result: KronoResult<CalendarSchedule>): CalendarMonthUiState {
+    fun build(result: KronoResult<CalendarSchedule>): CalendarUiState {
         val schedule = (result as? KronoResult.Success)?.data
-        return CalendarMonthUiState(
+        return CalendarUiState(
             displayedMonth = period.anchor,
             today = today,
             selectedDate = selectedDate,

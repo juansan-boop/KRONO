@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month
+package com.krono.feature.calendar
 
 import com.krono.core.common.KronoResult
 import com.krono.core.domain.calendar.CurrentDateTimeProvider
@@ -29,9 +29,9 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-/** Pruebas de [CalendarMonthViewModel]: vista mensual y agenda del día (F-16 CA-1, CA-2 y CA-3). */
+/** Pruebas de [CalendarViewModel]: vista mensual y agenda del día (F-16 CA-1, CA-2 y CA-3). */
 @OptIn(ExperimentalCoroutinesApi::class)
-class CalendarMonthViewModelTest {
+class CalendarViewModelTest {
 
     @get:Rule
     val mainDispatcherRule = MainDispatcherRule()
@@ -39,27 +39,27 @@ class CalendarMonthViewModelTest {
     private val repository = FakeTaskRepository()
     private val clock = FixedClock(NOW)
 
-    private fun viewModel(taskRepository: TaskRepository = repository) = CalendarMonthViewModel(
+    private fun viewModel(taskRepository: TaskRepository = repository) = CalendarViewModel(
         observeCalendar = ObserveCalendarUseCase(taskRepository),
         dateTimeProvider = CurrentDateTimeProvider(clock) { TimeZone.UTC },
     )
 
     /** Mantiene suscrito el estado (WhileSubscribed) y deja correr las corrutinas pendientes. */
-    private fun TestScope.started(vm: CalendarMonthViewModel): CalendarMonthViewModel {
+    private fun TestScope.started(vm: CalendarViewModel): CalendarViewModel {
         backgroundScope.launch { vm.uiState.collect {} }
         runCurrent()
         return vm
     }
 
-    private val CalendarMonthViewModel.state get() = uiState.value
+    private val CalendarViewModel.state get() = uiState.value
 
-    private fun CalendarMonthViewModel.agendaStatus(taskId: String): AgendaItemStatus =
+    private fun CalendarViewModel.agendaStatus(taskId: String): AgendaItemStatus =
         (state.agenda as DayAgendaState.Loaded).items.first { it.taskId == taskId }.status
 
-    private val CalendarMonthUiState.agendaIds: List<String>
+    private val CalendarUiState.agendaIds: List<String>
         get() = (agenda as DayAgendaState.Loaded).items.map { it.taskId }
 
-    private fun CalendarMonthUiState.day(date: LocalDate): CalendarDayUi = weeks.flatten().first { it.date == date }
+    private fun CalendarUiState.day(date: LocalDate): CalendarDayUi = weeks.flatten().first { it.date == date }
 
     @Test
     fun alAbrir_muestraElMesDeHoyConHoySeleccionado() = runTest {

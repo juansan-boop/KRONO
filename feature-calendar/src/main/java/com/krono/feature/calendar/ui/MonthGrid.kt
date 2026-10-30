@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,7 +34,7 @@ import com.krono.core.ui.theme.OnSurfaceVariant
 import com.krono.core.ui.theme.PrimaryFixedDim
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.calendar.R
-import com.krono.feature.calendar.month.CalendarDayUi
+import com.krono.feature.calendar.CalendarDayUi
 import kotlinx.datetime.LocalDate
 
 /**

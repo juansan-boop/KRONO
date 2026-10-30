@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -7,42 +7,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.krono.core.ui.theme.DeepMidnight
 import com.krono.core.ui.theme.KronoSpacing
-import com.krono.feature.calendar.month.CalendarMonthUiState
-import com.krono.feature.calendar.month.CalendarMonthViewModel
+import com.krono.feature.calendar.CalendarUiState
 import kotlinx.datetime.LocalDate
-
-/**
- * Punto de entrada con estado de la pestaña Calendario: vista mensual con agenda (F-16 CA-1 y
- * CA-2). `app` la monta en la ruta de la pestaña y decide a dónde lleva [onOpenTask].
- *
- * @param onOpenTask Abre el detalle de una tarea de la agenda por su identificador.
- */
-@Composable
-fun CalendarRoute(
-    onOpenTask: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: CalendarMonthViewModel = hiltViewModel(),
-) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    CalendarMonthScreen(
-        state = state,
-        actions = CalendarMonthActions(
-            onPreviousMonth = viewModel::onPreviousMonth,
-            onNextMonth = viewModel::onNextMonth,
-            onToday = viewModel::onToday,
-            onSelectDate = viewModel::onSelectDate,
-            onRetry = viewModel::onRetry,
-            onOpenTask = onOpenTask,
-        ),
-        modifier = modifier,
-    )
-}
 
 /**
  * Acciones de la vista mensual, agrupadas para no alargar la firma de la pantalla.
@@ -54,7 +23,7 @@ fun CalendarRoute(
  * @property onRetry Vuelve a leer las tareas tras un error.
  * @property onOpenTask Abre el detalle de una tarea.
  */
-data class CalendarMonthActions(
+data class CalendarActions(
     val onPreviousMonth: () -> Unit = {},
     val onNextMonth: () -> Unit = {},
     val onToday: () -> Unit = {},
@@ -72,9 +41,9 @@ data class CalendarMonthActions(
  * @param actions Acciones del usuario.
  */
 @Composable
-fun CalendarMonthScreen(
-    state: CalendarMonthUiState,
-    actions: CalendarMonthActions,
+fun CalendarScreen(
+    state: CalendarUiState,
+    actions: CalendarActions,
     modifier: Modifier = Modifier,
 ) {
     // Margen lateral de todo menos la rejilla: ella usa un margen menor para que cada día llegue a 48 dp
@@ -88,7 +57,7 @@ fun CalendarMonthScreen(
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.md),
     ) {
         item(key = HEADER_KEY) {
-            CalendarMonthHeader(
+            CalendarHeader(
                 displayedMonth = state.displayedMonth,
                 onPreviousMonth = actions.onPreviousMonth,
                 onNextMonth = actions.onNextMonth,

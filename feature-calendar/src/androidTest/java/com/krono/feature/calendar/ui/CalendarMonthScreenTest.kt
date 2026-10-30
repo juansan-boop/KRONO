@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.height
@@ -35,7 +35,8 @@ import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.calendar.R
-import com.krono.feature.calendar.month.CalendarMonthViewModel
+import com.krono.feature.calendar.CalendarViewModel
+import com.krono.feature.calendar.month.ui.CalendarRoute
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
@@ -65,7 +66,7 @@ class CalendarMonthScreenTest {
         InstrumentationRegistry.getInstrumentation().targetContext.getString(id, *args)
 
     private fun show(fontScale: Float? = null, widthDp: Dp? = null, heightDp: Dp? = null) {
-        val viewModel = CalendarMonthViewModel(
+        val viewModel = CalendarViewModel(
             observeCalendar = ObserveCalendarUseCase(repository),
             dateTimeProvider = CurrentDateTimeProvider(FixedClock) { TimeZone.UTC },
         )
