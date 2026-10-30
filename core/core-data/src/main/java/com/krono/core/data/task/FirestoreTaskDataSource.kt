@@ -11,6 +11,9 @@ import javax.inject.Inject
 /**
  * Implementación de [TaskRemoteDataSource] conectada a Cloud Firestore (D-1, D-3, F-02).
  * Opera bajo la ruta `users/{userId}/tasks/{taskId}` con persistencia offline de Firestore.
+ *
+ * Las escrituras suspenden hasta la confirmación del servidor, que sin red no llega: quien las
+ * llama debe acotar esa espera (ver [FirestoreTaskRepository]).
  */
 class FirestoreTaskDataSource @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -54,6 +57,12 @@ class FirestoreTaskDataSource @Inject constructor(
 
     override suspend fun saveTask(userId: String, taskDto: TaskDto) {
         tasksCollection(userId).document(taskDto.id).set(taskDto.toMap()).await()
+    }
+
+    // update (y no set) para que los campos que no vienen en el mapa, como el tiempo real que
+    // suma el cronómetro con increment, conserven su valor del servidor.
+    override suspend fun updateTaskFields(userId: String, taskId: String, fields: Map<String, Any?>) {
+        tasksCollection(userId).document(taskId).update(fields).await()
     }
 
     override suspend fun deleteTask(userId: String, taskId: String) {
