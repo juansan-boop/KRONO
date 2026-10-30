@@ -1,5 +1,6 @@
 package com.krono.core.data.task
 
+import com.krono.core.data.timer.FakeTimerRemoteDataSource
 import com.krono.core.domain.task.TaskError
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
@@ -13,8 +14,12 @@ import kotlinx.coroutines.flow.map
  *
  * Imita la caché local de Firestore: las escrituras se aplican en memoria al instante y, si hay
  * [serverConfirmation], después esperan a que se complete, como la confirmación del servidor.
+ *
+ * @param timers cronómetro en memoria que el borrado de una tarea descarta en el mismo lote.
  */
-class FakeTaskRemoteDataSource : TaskRemoteDataSource {
+class FakeTaskRemoteDataSource(
+    private val timers: FakeTimerRemoteDataSource = FakeTimerRemoteDataSource(),
+) : TaskRemoteDataSource {
 
     /** Almacén en memoria indexado por userId -> (taskId -> TaskDto). */
     private val data = MutableStateFlow<Map<String, Map<String, TaskDto>>>(emptyMap())
@@ -93,10 +98,11 @@ class FakeTaskRemoteDataSource : TaskRemoteDataSource {
         awaitServerConfirmation()
     }
 
-    override suspend fun deleteTask(userId: String, taskId: String) {
+    override suspend fun deleteTask(userId: String, taskId: String, discardActiveTimer: Boolean) {
         failure?.let { throw it }
+        if (discardActiveTimer) timers.timers.remove(userId)
         val current = data.value.toMutableMap()
-        val userTasks = current[userId]?.toMutableMap() ?: return
+        val userTasks = current[userId]?.toMutableMap() ?: mutableMapOf()
         userTasks.remove(taskId)
         current[userId] = userTasks
         data.value = current

@@ -60,6 +60,15 @@ interface TaskRepository {
     /**
      * Elimina una tarea y sus subtareas embebidas de Firestore (CA-1).
      *
+     * Si el cronómetro en curso mide esta tarea, se descarta en la misma escritura atómica, sin
+     * registrar sesión (F-08): así no queda un cronómetro apuntando a una tarea inexistente.
+     *
+     * Las sesiones de tiempo ya registradas de la tarea se conservan (no hay borrado en cascada):
+     * borrarlas exigiría consultar `timeSessions`, que sin conexión solo ve la caché, y lotes de
+     * hasta 500 operaciones. No afectan a la estimación (F-07 CA-4) porque el historial se lee de
+     * las tareas que existen ([Task.actualDuration]); quien lea sesiones debe ignorar las de
+     * tareas que ya no existen.
+     *
      * @param taskId Identificador único de la tarea a eliminar.
      * @return [KronoResult.Success] con [Unit] si fue eliminada o el borrado quedó encolado sin
      * conexión, o [KronoResult.Error] en caso de fallo.

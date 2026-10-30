@@ -12,6 +12,10 @@ import kotlin.time.Duration
  * Doble de prueba en memoria de [TimerRepository], compartido vía test fixtures.
  *
  * - [failure]: si no es nulo, toda operación suspendida devuelve `KronoResult.Error(failure)`.
+ * - [finishFailure]: si no es nulo, solo [finishActiveTimer] falla, como un lote rechazado.
+ * - [deletedTasks]: tareas que ya no existen; al finalizar, su sesión se guarda sin sumarse.
+ *
+ * Las sesiones se guardan por id, como un `set` de Firestore: repetir el id reemplaza la sesión.
  */
 class FakeTimerRepository : TimerRepository {
 
@@ -20,8 +24,19 @@ class FakeTimerRepository : TimerRepository {
     /** Error forzado que devolverán las operaciones; `null` para funcionamiento normal. */
     var failure: Throwable? = null
 
-    /** Sesiones registradas al finalizar, en orden. */
-    val sessions = mutableListOf<TimeSession>()
+    private val sessionsById = linkedMapOf<String, TimeSession>()
+
+    /** Error forzado solo al finalizar; `null` para funcionamiento normal. */
+    var finishFailure: Throwable? = null
+
+    /** Sesiones registradas al finalizar, en orden, sin repetir id. */
+    val sessions: List<TimeSession> get() = sessionsById.values.toList()
+
+    /** Todas las sesiones que se intentaron guardar, incluidas las que fallaron. */
+    val finishAttempts = mutableListOf<TimeSession>()
+
+    /** Tareas que se consideran eliminadas al finalizar el cronómetro. */
+    val deletedTasks = mutableSetOf<String>()
 
     /** Tiempo real acumulado por tarea, como lo sumaría la persistencia (CA-2). */
     val actualDurationByTask = mutableMapOf<String, Duration>()
@@ -45,13 +60,17 @@ class FakeTimerRepository : TimerRepository {
         return KronoResult.Success(Unit)
     }
 
-    override suspend fun finishActiveTimer(session: TimeSession): KronoResult<Unit> {
-        failure?.let { return KronoResult.Error(it) }
-        sessions += session
-        actualDurationByTask[session.taskId] =
-            (actualDurationByTask[session.taskId] ?: Duration.ZERO) + session.duration
+    override suspend fun finishActiveTimer(session: TimeSession): KronoResult<FinishedSession> {
+        finishAttempts += session
+        (failure ?: finishFailure)?.let { return KronoResult.Error(it) }
+        sessionsById[session.id] = session
+        val addedToTask = session.taskId !in deletedTasks
+        if (addedToTask) {
+            actualDurationByTask[session.taskId] =
+                (actualDurationByTask[session.taskId] ?: Duration.ZERO) + session.duration
+        }
         activeTimer.value = null
-        return KronoResult.Success(Unit)
+        return KronoResult.Success(FinishedSession(session, addedToTask))
     }
 }
 

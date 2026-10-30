@@ -169,11 +169,14 @@
     <string name="cd_timer_clock">Tiempo trabajado: %s</string>
     <string name="timer_background_hint">El tiempo sigue contando aunque salgas de la app.</string>
     <string name="timer_saved">Sesión guardada: %s sumados a la tarea.</string>
+    <string name="timer_saved_without_task">Sesión guardada (%s), pero la tarea ya no existe: el tiempo no se sumó a ninguna tarea.</string>
     <string name="timer_switch_title">¿Detener el cronómetro actual?</string>
     <string name="timer_switch_body">Ya tienes un cronómetro en curso en otra tarea. Se guardará su tiempo y empezará el de esta.</string>
     <string name="timer_switch_confirm">Detener y empezar</string>
     <string name="timer_switch_cancel">Cancelar</string>
     <string name="timer_task_not_found">No encontramos esta tarea.</string>
+    <string name="timer_error_generic">No pudimos actualizar el cronómetro. Inténtalo de nuevo.</string>
+    <string name="timer_error_load">No pudimos cargar esta tarea. Inténtalo de nuevo en un momento.</string>
 
     <!-- Estimación por historial (F-11) -->
     <string name="duration_suggestion">Sugerencia IA: ~%d min · Basado en historial</string>

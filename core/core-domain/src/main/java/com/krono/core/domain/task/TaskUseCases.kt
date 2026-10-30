@@ -80,6 +80,8 @@ class UpdateTaskFieldsUseCase(
 
 /**
  * Caso de uso para eliminar una tarea junto con sus subtareas embebidas (F-02 CA-1, CA-3).
+ * Si el cronómetro en curso la mide, también se descarta; sus sesiones de tiempo se conservan
+ * pero dejan de contar para la estimación (F-07 CA-4, ver [TaskRepository.deleteTask]).
  */
 class DeleteTaskUseCase(
     private val repository: TaskRepository,

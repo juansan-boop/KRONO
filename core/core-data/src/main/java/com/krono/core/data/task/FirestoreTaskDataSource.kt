@@ -2,6 +2,9 @@ package com.krono.core.data.task
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Source
+import com.krono.core.data.firestore.readFromServerOrCache
+import com.krono.core.data.timer.TimerDocuments
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -50,8 +53,14 @@ class FirestoreTaskDataSource @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    // Con límite de espera y caché local: la comprobación de un cronómetro huérfano al iniciar
+    // no debe bloquear al usuario sin red.
     override suspend fun getTask(userId: String, taskId: String): TaskDto? {
-        val snapshot = tasksCollection(userId).document(taskId).get().await()
+        val document = tasksCollection(userId).document(taskId)
+        val snapshot = readFromServerOrCache(
+            fromServer = { document.get().await() },
+            fromCache = { document.get(Source.CACHE).await() },
+        )
         return snapshot.data?.let { TaskDto.fromMap(snapshot.id, it) }
     }
 
@@ -65,8 +74,12 @@ class FirestoreTaskDataSource @Inject constructor(
         tasksCollection(userId).document(taskId).update(fields).await()
     }
 
-    override suspend fun deleteTask(userId: String, taskId: String) {
-        tasksCollection(userId).document(taskId).delete().await()
+    // Un solo lote: o se borran la tarea y su cronómetro en curso, o ninguno de los dos.
+    override suspend fun deleteTask(userId: String, taskId: String, discardActiveTimer: Boolean) {
+        val batch = firestore.batch()
+        batch.delete(tasksCollection(userId).document(taskId))
+        if (discardActiveTimer) batch.delete(TimerDocuments.activeTimer(firestore, userId))
+        batch.commit().await()
     }
 
     companion object {

@@ -2,6 +2,9 @@ package com.krono.core.data.task
 
 import com.krono.core.common.KronoResult
 import com.krono.core.data.auth.AuthRemoteDataSource
+import com.krono.core.data.firestore.awaitConfirmationOrQueued
+import com.krono.core.data.timer.ActiveTimerDto
+import com.krono.core.data.timer.TimerRemoteDataSource
 import com.krono.core.domain.auth.User
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskError
@@ -14,26 +17,24 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Implementación de [TaskRepository] con Cloud Firestore (D-1, D-3, F-02).
  * Gestiona la sincronización offline, el mapeo de modelos y la traducción de errores a [KronoResult].
  *
- * Las escrituras de Firestore se aplican al instante en la caché local (los listeners ya las ven)
- * y su `Task` solo se completa cuando el servidor confirma; sin red esa confirmación no llega
- * hasta reconectar. Por eso cada escritura espera la confirmación como mucho
- * [WRITE_CONFIRMATION_TIMEOUT]: si vence, la escritura ya quedó encolada en la caché y Firestore
- * la enviará al volver la red, así que se informa como éxito (F-02 CA-1). Los errores que llegan
- * antes del límite (validación local, permiso denegado) siguen devolviendo [KronoResult.Error].
+ * Cada escritura espera la confirmación del servidor con [awaitConfirmationOrQueued]: sin red se
+ * da por encolada y se informa como éxito (F-02 CA-1); los errores que llegan antes del límite
+ * (validación local, permiso denegado) siguen devolviendo [KronoResult.Error].
+ *
+ * @param timerDataSource se consulta al eliminar una tarea para descartar su cronómetro en curso.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FirestoreTaskRepository @Inject constructor(
     private val remoteDataSource: TaskRemoteDataSource,
     private val authDataSource: AuthRemoteDataSource,
+    private val timerDataSource: TimerRemoteDataSource,
 ) : TaskRepository {
 
     /**
@@ -74,10 +75,28 @@ class FirestoreTaskRepository @Inject constructor(
             awaitConfirmationOrQueued { remoteDataSource.updateTaskFields(userId, task.id, partial) }
         }
 
-    /** Elimina una tarea y sus subtareas embebidas en Firestore. */
+    /**
+     * Elimina una tarea y sus subtareas embebidas en Firestore. Si el cronómetro en curso mide esa
+     * tarea, se descarta en la misma escritura atómica para no dejar un cronómetro fantasma (F-07,
+     * F-08). Las sesiones de tiempo ya registradas se conservan (ver [TaskRepository.deleteTask]).
+     */
     override suspend fun deleteTask(taskId: String): KronoResult<Unit> = runCatchingTask {
         val userId = requireUser().id
-        awaitConfirmationOrQueued { remoteDataSource.deleteTask(userId, taskId) }
+        val discardActiveTimer = activeTimerTaskIdOrNull(userId) == taskId
+        awaitConfirmationOrQueued { remoteDataSource.deleteTask(userId, taskId, discardActiveTimer) }
+    }
+
+    /**
+     * Tarea que mide el cronómetro en curso, o `null` si no hay o no se puede leer. Una lectura
+     * fallida (sin red y sin el documento en caché) no impide borrar la tarea: si el cronómetro
+     * quedara huérfano, iniciar otro lo descarta sin pedir confirmación.
+     */
+    private suspend fun activeTimerTaskIdOrNull(userId: String): String? = try {
+        timerDataSource.getActiveTimer(userId)?.let(ActiveTimerDto::fromMap)?.taskId
+    } catch (e: CancellationException) {
+        throw e
+    } catch (unreadable: Exception) {
+        null
     }
 
     private fun <T> observeForUser(
@@ -94,24 +113,11 @@ class FirestoreTaskRepository @Inject constructor(
 
     private fun requireUser(): User = authDataSource.currentUser ?: throw TaskError.UnauthenticatedUser
 
-    /** Espera la confirmación del servidor; si vence el límite, la escritura queda encolada. */
-    private suspend fun awaitConfirmationOrQueued(write: suspend () -> Unit) {
-        withTimeoutOrNull(WRITE_CONFIRMATION_TIMEOUT) { write() }
-    }
-
     private suspend fun <T> runCatchingTask(block: suspend () -> T): KronoResult<T> = try {
         KronoResult.Success(block())
     } catch (e: CancellationException) {
         throw e
     } catch (t: Throwable) {
         KronoResult.Error(FirestoreTaskErrorMapper.map(t))
-    }
-
-    private companion object {
-        /**
-         * Espera máxima a la confirmación del servidor. Con red, Firestore suele confirmar en
-         * menos de un segundo; sin red, el usuario solo espera este tiempo antes de volver.
-         */
-        val WRITE_CONFIRMATION_TIMEOUT = 2.seconds
     }
 }

@@ -4,11 +4,13 @@ import com.krono.core.data.auth.AuthRemoteDataSource
 import com.krono.core.data.task.FirestoreTaskRepository
 import com.krono.core.data.task.TaskDto
 import com.krono.core.data.task.TaskRemoteDataSource
+import com.krono.core.data.timer.TimerRemoteDataSource
 import com.krono.core.domain.auth.User
 import com.krono.core.domain.task.Task
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
@@ -47,7 +49,7 @@ class OfflineTaskRemoteDataSource : TaskRemoteDataSource {
         awaitCancellation()
     }
 
-    override suspend fun deleteTask(userId: String, taskId: String) {
+    override suspend fun deleteTask(userId: String, taskId: String, discardActiveTimer: Boolean) {
         localCache.update { it - taskId }
         awaitCancellation()
     }
@@ -73,6 +75,25 @@ class SignedInAuthDataSource : AuthRemoteDataSource {
     private fun unsupported(): Nothing = throw UnsupportedOperationException("No se usa en estas pruebas")
 }
 
+/** Fuente del cronómetro sin ningún cronómetro en curso; solo expone lo que usa el repositorio de tareas. */
+class NoActiveTimerDataSource : TimerRemoteDataSource {
+
+    override fun observeActiveTimer(userId: String): Flow<Map<String, Any?>?> = flowOf(null)
+
+    override suspend fun getActiveTimer(userId: String): Map<String, Any?>? = null
+
+    override suspend fun saveActiveTimer(userId: String, timer: Map<String, Any?>) = unsupported()
+
+    override suspend fun finishActiveTimer(
+        userId: String,
+        session: Map<String, Any?>,
+        taskId: String,
+        durationMillis: Long,
+    ): Boolean = unsupported()
+
+    private fun unsupported(): Nothing = throw UnsupportedOperationException("No se usa en estas pruebas")
+}
+
 /** Repositorio real de tareas conectado a [remote] sin red y a una sesión activa. */
 fun offlineTaskRepository(remote: OfflineTaskRemoteDataSource): FirestoreTaskRepository =
-    FirestoreTaskRepository(remote, SignedInAuthDataSource())
+    FirestoreTaskRepository(remote, SignedInAuthDataSource(), NoActiveTimerDataSource())

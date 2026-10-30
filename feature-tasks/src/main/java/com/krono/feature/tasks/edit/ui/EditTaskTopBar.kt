@@ -2,10 +2,9 @@ package com.krono.feature.tasks.edit.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -73,11 +72,11 @@ fun EditTaskTopBar(
             )
         }
 
-        // Acción Guardar en la cabecera (derecha)
+        // Tamaño mínimo y no fijo: con un ancho fijo de 48 dp el texto se partía en dos líneas.
         TextButton(
             onClick = onSave,
             enabled = canSave,
-            modifier = Modifier.size(KronoSizes.minTouchTarget),
+            modifier = Modifier.sizeIn(minWidth = KronoSizes.minTouchTarget, minHeight = KronoSizes.minTouchTarget),
         ) {
             Text(
                 text = stringResource(R.string.action_confirm),

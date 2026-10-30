@@ -1,7 +1,11 @@
 package com.krono.core.data.timer
 
+import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.Source
+import com.krono.core.data.firestore.readFromServerOrCache
 import com.krono.core.data.task.TaskDto
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -12,9 +16,9 @@ import javax.inject.Inject
 /**
  * Implementación de [TimerRemoteDataSource] con Cloud Firestore (F-08).
  *
- * Las escrituras no esperan la confirmación del servidor: Firestore las aplica al instante
- * en su caché local (y los listeners las ven), y las sincroniza cuando hay conexión. Esperar
- * con `await()` dejaría los botones del cronómetro bloqueados sin internet.
+ * Las escrituras suspenden hasta la confirmación del servidor, que sin red no llega: quien las
+ * llama debe acotar esa espera (ver [FirestoreTimerRepository]). Así los errores reales (permiso
+ * denegado, datos inválidos, tarea inexistente) llegan a quien escribe en vez de perderse.
  */
 class FirestoreTimerDataSource @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -22,8 +26,7 @@ class FirestoreTimerDataSource @Inject constructor(
 
     private fun userDocument(userId: String) = firestore.collection(COLLECTION_USERS).document(userId)
 
-    private fun activeTimerDocument(userId: String) =
-        userDocument(userId).collection(COLLECTION_TIMER).document(DOCUMENT_ACTIVE)
+    private fun activeTimerDocument(userId: String) = TimerDocuments.activeTimer(firestore, userId)
 
     override fun observeActiveTimer(userId: String): Flow<Map<String, Any?>?> = callbackFlow {
         val listener = activeTimerDocument(userId).addSnapshotListener { snapshot, error ->
@@ -36,43 +39,50 @@ class FirestoreTimerDataSource @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    override suspend fun getActiveTimer(userId: String): Map<String, Any?>? =
-        activeTimerDocument(userId).get().await().data
-
-    override fun saveActiveTimer(userId: String, timer: Map<String, Any?>) {
-        activeTimerDocument(userId).set(timer)
+    override suspend fun getActiveTimer(userId: String): Map<String, Any?>? {
+        val document = activeTimerDocument(userId)
+        return readFromServerOrCache(
+            fromServer = { document.get().await() },
+            fromCache = { document.get(Source.CACHE).await() },
+        ).data
     }
 
-    override suspend fun taskExists(userId: String, taskId: String): Boolean =
-        userDocument(userId).collection(COLLECTION_TASKS).document(taskId).get().await().exists()
+    override suspend fun saveActiveTimer(userId: String, timer: Map<String, Any?>) {
+        activeTimerDocument(userId).set(timer).await()
+    }
 
-    override fun finishActiveTimer(
+    override suspend fun finishActiveTimer(
         userId: String,
         session: Map<String, Any?>,
         taskId: String,
         durationMillis: Long,
-        addToTask: Boolean,
-    ) {
+    ): Boolean {
         val sessionId = session[TimeSessionDto.FIELD_ID] as String
-        val batch = firestore.batch()
-        batch.set(userDocument(userId).collection(COLLECTION_TIME_SESSIONS).document(sessionId), session)
-        if (addToTask) {
-            // increment suma en el servidor: no pisa tiempo registrado desde otro dispositivo.
-            batch.update(
-                userDocument(userId).collection(COLLECTION_TASKS).document(taskId),
-                TaskDto.FIELD_ACTUAL_DURATION_MILLIS,
-                FieldValue.increment(durationMillis),
-            )
-        }
-        batch.delete(activeTimerDocument(userId))
-        batch.commit()
+        // Ambas escrituras se encolan antes de esperar a ninguna: así no queda una ventana en la
+        // que el proceso muera con la sesión guardada y el incremento sin encolar.
+        val sessionBatch = firestore.batch()
+            .set(userDocument(userId).collection(COLLECTION_TIME_SESSIONS).document(sessionId), session)
+            .delete(activeTimerDocument(userId))
+            .commit()
+        // increment suma en el servidor: no pisa tiempo registrado desde otro dispositivo.
+        val increment = userDocument(userId).collection(COLLECTION_TASKS).document(taskId)
+            .update(TaskDto.FIELD_ACTUAL_DURATION_MILLIS, FieldValue.increment(durationMillis))
+        sessionBatch.await()
+        return awaitIncrement(increment)
+    }
+
+    /** Espera el incremento; `false` si la tarea ya no existe (`NOT_FOUND`). */
+    private suspend fun awaitIncrement(increment: Task<Void>): Boolean = try {
+        increment.await()
+        true
+    } catch (notFound: FirebaseFirestoreException) {
+        if (notFound.code != FirebaseFirestoreException.Code.NOT_FOUND) throw notFound
+        false
     }
 
     private companion object {
         const val COLLECTION_USERS = "users"
         const val COLLECTION_TASKS = "tasks"
-        const val COLLECTION_TIMER = "timer"
         const val COLLECTION_TIME_SESSIONS = "timeSessions"
-        const val DOCUMENT_ACTIVE = "active"
     }
 }
