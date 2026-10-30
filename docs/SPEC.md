@@ -217,7 +217,7 @@ La persistencia usa Cloud Firestore (D-1) con el modelo de la sección 6 (D-3): 
 #### F-06 — Detalle de tarea y subtareas
 - **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Janer García (Janer-Garcia) · **Módulos:** `feature-tasks` · **Depende de:** F-02 · **PR:** #28
 
-**Pendiente (CA-1 y CA-3 sin cumplir):** CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve porque ningún formulario permite capturarla ni editarla (el detalle solo la muestra si `Task.note` tiene valor). CA-3: "Iniciar Enfoque" no abre nada, porque `KronoNavHost` deja vacía la navegación a F-09 (modo enfoque) hasta que exista. Mientras no se corrijan, F-06 sigue En progreso.
+**Pendiente (CA-1 sin cumplir):** CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve porque ningún formulario permite capturarla ni editarla (el detalle solo la muestra si `Task.note` tiene valor). CA-3 queda resuelto con F-09: "Iniciar Enfoque" abre el modo enfoque de la tarea (`KronoNavHost`). Mientras no se corrija CA-1, F-06 sigue En progreso.
 
 - **CA-1:** Dada una tarea, cuando se abre su detalle, entonces muestra categoría, prioridad, límite de entrega con tiempo restante ("En 3 horas"), estimación, subtareas con progreso (x/n) y nota rápida.
 - **CA-2:** Dado el detalle, cuando se agrega, marca o desmarca una subtarea, entonces el progreso se actualiza y persiste.
@@ -251,7 +251,11 @@ la tarea.
 - **CA-4:** Solo puede haber un cronómetro activo a la vez; iniciar otro pide confirmar que se detiene el actual.
 
 #### F-09 — Modo enfoque
-- **Estado:** Pendiente · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks` · **Depende de:** F-08, F-10 · **PR:** —
+- **Estado:** En revisión · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-08, F-10 · **PR:** #47
+
+Implementación: un enfoque es el mismo documento `users/{uid}/timer/active` del cronómetro con un bloque opcional (`FocusBlock`: duración del bloque, descanso de la plantilla, tiempo trabajado con el que termina el bloque y descanso en curso), así solo hay un cronómetro o enfoque activo (F-08 CA-4) y se reutiliza la finalización y el id idempotente de sesión (F-08). Iniciar un enfoque sobre un cronómetro de la misma tarea (o al revés) pide confirmar, como cualquier otra sesión activa. La cuenta regresiva y los descansos salen de marcas de tiempo, no de ticks, así que sobreviven a segundo plano y a cerrar la app. Al llegar a cero el tiempo trabajado deja de sumar (no pasa del bloque). "+5m Descanso" detiene el trabajo durante 5 minutos (el descanso no cuenta como tiempo trabajado y reanudar lo corta); al llegar a cero se ofrece el descanso de la plantilla, tras el cual se puede encadenar otro bloque. Al finalizar se registra una `TimeSession` `ENFOQUE` con solo el tiempo trabajado y se suma a `actualDuration`; si la tarea se elimina durante el enfoque, la sesión se guarda igualmente y se avisa (como F-08). Sin plantillas, se usa la activa sembrada.
+
+**Limitación:** el aviso al llegar a cero es dentro de la app más una vibración corta; no hay notificación del sistema ni sonido porque `POST_NOTIFICATIONS` no está declarado (sección 11).
 
 - **CA-1:** Dada una tarea y una plantilla activa, cuando se inicia el modo enfoque, entonces muestra cuenta regresiva del bloque, nombre de la tarea y subtarea actual ("Paso 3 de 4").
 - **CA-2:** Dado el modo enfoque, cuando se usa pausar, "+5m Descanso" o "Finalizar", entonces el temporizador responde y al finalizar se registra una `TimeSession` de tipo `ENFOQUE` con el tiempo realmente trabajado.
@@ -300,9 +304,9 @@ botón "Asistente IA" de la lista de tareas.
 ### Fase 2 — Organización diaria
 
 #### F-13 — Dashboard de inicio
-- **Estado:** En progreso · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-dashboard`, `core-domain`, `core-data`, `app` · **Depende de:** F-02, F-08 · **PR:** #45
+- **Estado:** Hecho · **Prioridad:** Alta · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-dashboard`, `core-domain`, `core-data`, `app` · **Depende de:** F-02, F-08, F-09 · **PR:** #45, #47
 
-Hecho: saludo, resumen del día, tareas prioritarias y estados de carga, vacío y error (CA-1, CA-3, CA-4). CA-2 queda parcial: "Iniciar" navega por callback, y hasta que existan F-09 y F-10 (plantilla activa) abre el cronómetro de la tarea prioritaria de hoy o la lista de tareas.
+Hecho: saludo, resumen del día, tareas prioritarias y estados de carga, vacío y error (CA-1 a CA-4). CA-2: "Iniciar" navega por callback y `app` abre el modo enfoque (F-09) con la plantilla activa sobre la tarea prioritaria de hoy; sin tareas abre la lista de tareas.
 
 - **CA-1:** Dado el inicio, cuando carga, entonces muestra saludo con el nombre del usuario, porcentaje del día completado, conteo de completadas y pendientes y tiempo de enfoque del día.
 - **CA-2:** Dado el bloque "Sesión de Enfoque", cuando se toca "Iniciar", entonces arranca el modo enfoque con la plantilla activa.
@@ -449,6 +453,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-30 | v0.8 (continuación): F-13 pasa a En progreso (PR #45): dashboard de inicio hecho salvo CA-2, que depende de F-09 y F-10. |
 | 2026-10-30 | F-16 (Semana y Día) pasa a Hecha: vistas Semana y Día del calendario con franja LUN-DOM, agenda del día elegido y marca "Ahora" en la vista diaria, según `calendarweekscreen_vista_semanal_krono` y `calendardayscreen_vista_diaria_krono` |
 | 2026-10-30 | F-10 pasa a En progreso: plantillas de enfoque en Firestore (`users/{uid}/focusTemplates`, siembra idempotente, una sola activa por lote atómico) y pantalla de gestión en `feature-tasks` con ruta cableada en `app`; falta el acceso desde Ajustes (F-20 CA-1, `feature-profile`). |
+| 2026-10-30 | F-09 pasa a En revisión (PR #47): modo enfoque sobre el cronómetro activo (`FocusBlock`), con descansos, aviso al llegar a cero y sesión `ENFOQUE`; F-13 pasa a Hecho (CA-2 resuelto) y F-06 CA-3 queda resuelto al cablear `app` (Inicio y detalle de tarea abren el enfoque). Se retira de la sección 11 la deuda de F-06 CA-3. |
 
 ## 11. Deuda técnica conocida
 
@@ -461,12 +466,12 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 
 **Funcionalidades incompletas**
 - F-06 CA-1: el detalle muestra "Tiempo estimado: Sin fecha límite" (texto erróneo en la estimación) y la nota rápida no se ve: ningún formulario de creación o edición permite capturarla.
-- F-06 CA-3: "Iniciar Enfoque" no abre nada hasta que exista F-09 (la navegación en `KronoNavHost` está vacía).
 - F-15 CA-1 y CA-3: falta el recordatorio del sistema a los 30 minutos y el permiso `POST_NOTIFICATIONS`, que hoy no está declarado en el manifest de `app`.
 - F-20 CA-1: falta el acceso a las plantillas de enfoque (F-10): la pantalla existe en la ruta `ajustes/plantillas-enfoque`, pero `SettingsRoute` de `feature-profile` no tiene el callback ni la fila que la abra.
 - F-10: si un dispositivo inicia por primera vez sin red y sin caché, siembra las plantillas por defecto aunque la cuenta ya las tuviera editadas en otro dispositivo; al reconectar, los ids fijos las sobrescriben.
 
-**Cronómetro y datos (F-08)**
+**Cronómetro y datos (F-08) y modo enfoque (F-09)**
+- F-09: el aviso al llegar a cero no sale de la app (sin notificación del sistema ni sonido): falta `POST_NOTIFICATIONS` y leer desde `feature-tasks` el tono de inicio de enfoque, que vive en `feature-profile`. Con la app cerrada el bloque queda detenido en cero y el aviso aparece al volver.
 - No hay notificación persistente mientras el cronómetro corre; el tiempo no se pierde (se calcula con marcas de tiempo), pero el usuario no lo ve fuera de la app.
 - Si la tarea ya no existe al finalizar, el aviso "Sesión guardada… la tarea ya no existe" solo aparece con conexión; sin red la finalización se da por confirmada (escritura encolada) y el mensaje es el habitual, sin aviso.
 - El contador de 1 s sigue corriendo en segundo plano. El catálogo ya incluye `androidx-lifecycle-runtime-compose` para recolectar el estado según el ciclo de vida.
