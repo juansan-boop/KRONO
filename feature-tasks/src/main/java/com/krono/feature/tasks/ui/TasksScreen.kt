@@ -1,5 +1,6 @@
 package com.krono.feature.tasks.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,6 +51,7 @@ import com.krono.feature.tasks.R
 import com.krono.feature.tasks.TaskCategoryFilter
 import com.krono.feature.tasks.TasksUiState
 import com.krono.feature.tasks.TasksViewModel
+import kotlinx.datetime.LocalDate
 
 /**
  * Punto de entrada con estado para la pantalla de tareas (F-03, F-07).
@@ -116,6 +119,13 @@ fun TasksScreen(
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val addTaskLabel = stringResource(R.string.action_add_task)
+    val actions = TaskCardActions(
+        onToggleCompletion = onToggleCompletion,
+        onDelete = { task ->
+            if (onRequestDeleteTask != null) onRequestDeleteTask(task) else onDeleteTask(task.id)
+        },
+        onClick = onTaskClick,
+    )
 
     Scaffold(
         modifier = modifier,
@@ -203,53 +213,9 @@ fun TasksScreen(
                             )
                         }
                     } else {
-                        if (state.todayTasks.isNotEmpty()) {
-                            item {
-                                TaskSectionHeader(
-                                    title = stringResource(R.string.section_today),
-                                    count = state.todayTasks.size,
-                                )
-                            }
-                            items(state.todayTasks, key = { it.id }) { task ->
-                                TaskCard(
-                                    task = task,
-                                    today = state.today,
-                                    onToggleCompletion = onToggleCompletion,
-                                    onDelete = {
-                                        if (onRequestDeleteTask != null) {
-                                            onRequestDeleteTask(task)
-                                        } else {
-                                            onDeleteTask(task.id)
-                                        }
-                                    },
-                                    onClick = onTaskClick?.let { { it(task.id) } },
-                                )
-                            }
-                        }
-
-                        if (state.thisWeekTasks.isNotEmpty()) {
-                            item {
-                                TaskSectionHeader(
-                                    title = stringResource(R.string.section_this_week),
-                                    count = state.thisWeekTasks.size,
-                                )
-                            }
-                            items(state.thisWeekTasks, key = { it.id }) { task ->
-                                TaskCard(
-                                    task = task,
-                                    today = state.today,
-                                    onToggleCompletion = onToggleCompletion,
-                                    onDelete = {
-                                        if (onRequestDeleteTask != null) {
-                                            onRequestDeleteTask(task)
-                                        } else {
-                                            onDeleteTask(task.id)
-                                        }
-                                    },
-                                    onClick = onTaskClick?.let { { it(task.id) } },
-                                )
-                            }
-                        }
+                        taskSection(R.string.section_today, state.todayTasks, state.today, actions)
+                        taskSection(R.string.section_this_week, state.thisWeekTasks, state.today, actions)
+                        taskSection(R.string.section_completed, state.completedEarlierTasks, state.today, actions)
                     }
                 }
             }
@@ -265,6 +231,35 @@ fun TasksScreen(
                 )
             }
         }
+    }
+}
+
+/** Acciones que comparten todas las tarjetas de la lista. */
+private class TaskCardActions(
+    val onToggleCompletion: (Task) -> Unit,
+    val onDelete: (Task) -> Unit,
+    val onClick: ((String) -> Unit)?,
+)
+
+/** Agrega una sección con su cabecera y conteo; no agrega nada si [tasks] está vacía. */
+private fun LazyListScope.taskSection(
+    @StringRes title: Int,
+    tasks: List<Task>,
+    today: LocalDate,
+    actions: TaskCardActions,
+) {
+    if (tasks.isEmpty()) return
+    item(key = "section-$title") {
+        TaskSectionHeader(title = stringResource(title), count = tasks.size)
+    }
+    items(tasks, key = { it.id }) { task ->
+        TaskCard(
+            task = task,
+            today = today,
+            onToggleCompletion = actions.onToggleCompletion,
+            onDelete = { actions.onDelete(task) },
+            onClick = actions.onClick?.let { { it(task.id) } },
+        )
     }
 }
 

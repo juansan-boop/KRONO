@@ -11,8 +11,8 @@
 
     <!-- Enfoque Diario (CA-3) -->
     <string name="daily_focus_title">Enfoque Diario</string>
-    <string name="daily_focus_subtitle">%d pendientes críticos para hoy</string>
-    <string name="daily_focus_single_pending">1 pendiente crítico para hoy</string>
+    <string name="daily_focus_subtitle">%d pendientes para hoy, de todas las categorías</string>
+    <string name="daily_focus_single_pending">1 pendiente para hoy, de todas las categorías</string>
     <string name="daily_focus_all_done">Todas las tareas de hoy completadas</string>
     <string name="daily_focus_no_tasks">Sin tareas programadas para hoy</string>
     <string name="percentage_format">%d%%</string>
@@ -20,6 +20,7 @@
     <!-- Secciones temporales (CA-1) -->
     <string name="section_today">Para Hoy</string>
     <string name="section_this_week">Esta Semana</string>
+    <string name="section_completed">Completadas</string>
     <string name="tasks_count_multiple">%d tareas</string>
     <string name="tasks_count_single">1 tarea</string>
 
