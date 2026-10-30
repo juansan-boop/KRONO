@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -76,11 +77,14 @@ fun CalendarMonthScreen(
     actions: CalendarMonthActions,
     modifier: Modifier = Modifier,
 ) {
+    // Margen lateral de todo menos la rejilla: ella usa un margen menor para que cada día llegue a 48 dp
+    // de ancho incluso en pantallas de 360 dp (7 x 48 = 336 dp).
+    val contentMargin = Modifier.padding(horizontal = KronoSpacing.md)
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .background(DeepMidnight),
-        contentPadding = PaddingValues(horizontal = KronoSpacing.md, vertical = KronoSpacing.md),
+        contentPadding = PaddingValues(vertical = KronoSpacing.md),
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.md),
     ) {
         item(key = HEADER_KEY) {
@@ -89,16 +93,22 @@ fun CalendarMonthScreen(
                 onPreviousMonth = actions.onPreviousMonth,
                 onNextMonth = actions.onNextMonth,
                 onToday = actions.onToday,
+                modifier = contentMargin,
             )
         }
         item(key = GRID_KEY) {
-            MonthGrid(weeks = state.weeks, onSelectDate = actions.onSelectDate)
+            MonthGrid(
+                weeks = state.weeks,
+                onSelectDate = actions.onSelectDate,
+                modifier = Modifier.padding(horizontal = KronoSpacing.sm),
+            )
         }
         dayAgenda(
             selectedDate = state.selectedDate,
             agenda = state.agenda,
             onOpenTask = actions.onOpenTask,
             onRetry = actions.onRetry,
+            itemModifier = contentMargin,
         )
     }
 }

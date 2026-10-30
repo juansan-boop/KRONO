@@ -40,7 +40,8 @@ import kotlinx.datetime.LocalDate
 /**
  * Rejilla del mes en una superficie de vidrio: cabecera con las iniciales de los días y una fila
  * por semana. Los días de los meses vecinos se atenúan; hoy lleva un anillo y el día
- * seleccionado, un fondo magenta.
+ * seleccionado, un fondo magenta. No lleva relleno lateral propio: el margen lo pone quien la usa,
+ * para que cada día pueda medir 48 dp de ancho en pantallas de 360 dp.
  *
  * @param weeks Semanas de la rejilla.
  * @param onSelectDate Selecciona un día para ver su agenda.
@@ -55,7 +56,7 @@ internal fun MonthGrid(
         modifier = modifier
             .fillMaxWidth()
             .glassSurface()
-            .padding(KronoSpacing.sm),
+            .padding(vertical = KronoSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.xs),
     ) {
         WeekdayHeader(weeks.firstOrNull().orEmpty())

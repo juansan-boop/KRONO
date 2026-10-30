@@ -41,24 +41,32 @@ import kotlinx.datetime.LocalDate
  * @param agenda Estado de la agenda.
  * @param onOpenTask Abre el detalle de una tarea por su identificador.
  * @param onRetry Vuelve a leer las tareas tras un error.
+ * @param itemModifier Modificador que se aplica a cada elemento de la agenda (su margen lateral).
  */
 internal fun LazyListScope.dayAgenda(
     selectedDate: LocalDate,
     agenda: DayAgendaState,
     onOpenTask: (String) -> Unit,
     onRetry: () -> Unit,
+    itemModifier: Modifier = Modifier,
 ) {
     item(key = AGENDA_HEADER_KEY) {
-        AgendaHeader(selectedDate = selectedDate, taskCount = (agenda as? DayAgendaState.Loaded)?.items?.size)
+        AgendaHeader(
+            selectedDate = selectedDate,
+            taskCount = (agenda as? DayAgendaState.Loaded)?.items?.size,
+            modifier = itemModifier,
+        )
     }
     when (agenda) {
-        DayAgendaState.Loading -> item(key = AGENDA_STATUS_KEY) { AgendaLoading() }
-        DayAgendaState.LoadError -> item(key = AGENDA_STATUS_KEY) { CalendarLoadErrorCard(onRetry = onRetry) }
+        DayAgendaState.Loading -> item(key = AGENDA_STATUS_KEY) { AgendaLoading(itemModifier) }
+        DayAgendaState.LoadError -> item(key = AGENDA_STATUS_KEY) {
+            CalendarLoadErrorCard(onRetry = onRetry, modifier = itemModifier)
+        }
         is DayAgendaState.Loaded -> if (agenda.items.isEmpty()) {
-            item(key = AGENDA_STATUS_KEY) { AgendaEmptyState() }
+            item(key = AGENDA_STATUS_KEY) { AgendaEmptyState(itemModifier) }
         } else {
             items(agenda.items, key = { it.taskId }) { item ->
-                AgendaItemCard(item = item, onClick = { onOpenTask(item.taskId) })
+                AgendaItemCard(item = item, onClick = { onOpenTask(item.taskId) }, modifier = itemModifier)
             }
         }
     }
@@ -66,9 +74,9 @@ internal fun LazyListScope.dayAgenda(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AgendaHeader(selectedDate: LocalDate, taskCount: Int?) {
+private fun AgendaHeader(selectedDate: LocalDate, taskCount: Int?, modifier: Modifier = Modifier) {
     FlowRow(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(top = KronoSpacing.sm),
         horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
@@ -99,10 +107,10 @@ private fun AgendaHeader(selectedDate: LocalDate, taskCount: Int?) {
 }
 
 @Composable
-private fun AgendaLoading() {
+private fun AgendaLoading(modifier: Modifier = Modifier) {
     val description = stringResource(R.string.calendar_agenda_loading)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(KronoSpacing.lg),
         contentAlignment = Alignment.Center,
@@ -116,10 +124,10 @@ private fun AgendaLoading() {
 }
 
 @Composable
-private fun AgendaEmptyState() {
+private fun AgendaEmptyState(modifier: Modifier = Modifier) {
     Text(
         text = stringResource(R.string.calendar_agenda_empty),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .glassSurface()
             .padding(KronoSpacing.lg),
