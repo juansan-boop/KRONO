@@ -258,7 +258,7 @@ la tarea.
 - **CA-3:** Dado que el bloque llega a cero, cuando termina, entonces se avisa al usuario y se ofrece el descanso de la plantilla.
 
 #### F-10 — Plantillas de bloques de enfoque
-- **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-02 · **PR:** pendiente de abrir
+- **Estado:** En progreso · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-tasks`, `core-domain`, `core-data`, `app` · **Depende de:** F-02 · **PR:** #46
 
 Implementación: plantillas en `users/{uid}/focusTemplates/{id}` (`FocusTemplate`), sembradas al observarlas con ids fijos (idempotente) si no hay ninguna; crear, editar, eliminar y activar son un lote atómico (`FocusTemplateChanges`), así siempre hay exactamente una activa: eliminar la activa activa otra y la única plantilla no se puede eliminar. Pantalla en `feature-tasks` (ruta `ajustes/plantillas-enfoque`, cableada en `KronoNavHost`). **Pendiente:** el acceso desde Ajustes (F-20 CA-1) es de `feature-profile` y no está cableado, así que la pantalla aún no es alcanzable desde la UI; por eso F-10 queda En progreso.
 
