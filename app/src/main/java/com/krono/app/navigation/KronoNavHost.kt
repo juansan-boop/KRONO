@@ -24,6 +24,7 @@ import com.krono.app.R
 import com.krono.core.ui.theme.DeepMidnight
 import com.krono.feature.auth.navigation.AUTH_GRAPH_ROUTE
 import com.krono.feature.auth.navigation.authGraph
+import com.krono.feature.calendar.month.ui.CalendarRoute
 import com.krono.feature.profile.navigation.SettingsRoute
 import com.krono.feature.profile.navigation.editProfileScreen
 import com.krono.feature.profile.navigation.navigateToEditProfile
@@ -73,6 +74,9 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
                 onLoggedOut = alCerrarSesion,
             )
         },
+        calendario = {
+            CalendarRoute(onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) })
+        },
         tareas = {
             TasksRoute(
                 onAddTask = { navController.navigateToCreateTask() },
@@ -95,6 +99,8 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
  * @param grafoAuth añade el grafo de auth; recibe el callback que se invoca al autenticarse.
  * @param ajustes contenido de la pestaña Ajustes; recibe el callback que se invoca al cerrar sesión.
  * @param tareas contenido de la pestaña Tareas (F-03).
+ * @param calendario contenido de la pestaña Calendario (F-16). Tocar una tarea de su agenda abre el
+ * detalle de tareas desde `app`, sin que `feature-calendar` importe `feature-tasks`.
  */
 @Composable
 fun KronoShell(
@@ -103,6 +109,7 @@ fun KronoShell(
     grafoAuth: NavGraphBuilder.(alAutenticarse: () -> Unit) -> Unit,
     ajustes: @Composable (alCerrarSesion: () -> Unit) -> Unit,
     tareas: @Composable () -> Unit = { TasksRoute(onAddTask = {}) },
+    calendario: @Composable () -> Unit = { CalendarRoute(onOpenTask = {}) },
 ) {
     val entradaActual by navController.currentBackStackEntryAsState()
     val seleccionado = entradaActual?.destination.pestanaSeleccionada()
@@ -127,6 +134,7 @@ fun KronoShell(
             grafoPrincipal(
                 ajustes = { ajustes { navController.volverAAutenticacion() } },
                 tareas = tareas,
+                calendario = calendario,
                 alVolverDeCrearTarea = { navController.popBackStack() },
                 alVolverDeEditarTarea = { navController.popBackStack() },
                 alVolverDeDetalleTarea = { navController.popBackStack() },
@@ -149,6 +157,7 @@ fun KronoShell(
 private fun NavGraphBuilder.grafoPrincipal(
     ajustes: @Composable () -> Unit,
     tareas: @Composable () -> Unit,
+    calendario: @Composable () -> Unit,
     alVolverDeCrearTarea: () -> Unit = {},
     alVolverDeEditarTarea: () -> Unit = {},
     alVolverDeDetalleTarea: () -> Unit = {},
@@ -164,8 +173,7 @@ private fun NavGraphBuilder.grafoPrincipal(
     alEliminarCuenta: () -> Unit = {},
 ) {
     navigation(startDestination = KronoDestination.Inicial.route, route = RUTA_GRAFO_PRINCIPAL) {
-        // Cada pantalla provisional se reemplaza por el grafo que exponga su feature
-        // (dashboard, tasks, calendar, profile) cuando se implemente.
+        // Inicio sigue provisional hasta que feature-dashboard exponga su pantalla.
         composable(KronoDestination.Inicio.route) { SeccionProvisional(R.string.seccion_inicio) }
         composable(KronoDestination.Tareas.route) { tareas() }
         createTaskScreen(onBack = alVolverDeCrearTarea)
@@ -181,7 +189,7 @@ private fun NavGraphBuilder.grafoPrincipal(
             onBack = alVolverDeAsistente,
             onOpenTask = alAbrirTareaDesdeAsistente,
         )
-        composable(KronoDestination.Calendario.route) { SeccionProvisional(R.string.seccion_calendario) }
+        composable(KronoDestination.Calendario.route) { calendario() }
         composable(KronoDestination.Ajustes.route) { ajustes() }
         editProfileScreen(
             onBackClick = alVolverDeEditarPerfil,
