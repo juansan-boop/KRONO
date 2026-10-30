@@ -47,4 +47,13 @@ object KronoSizes {
 
     /** Diámetro del botón principal de iniciar o pausar el cronómetro (F-08). */
     val timerMainButton = 72.dp
+
+    /** Ancho máximo del texto de apoyo centrado bajo un encabezado, para que no se estire. */
+    val supportingTextMaxWidth = 320.dp
+
+    /** Diámetro del indicador circular de una opción seleccionable (estilo radio). */
+    val radioIndicator = 20.dp
+
+    /** Diámetro del punto interior del indicador de radio cuando la opción está seleccionada. */
+    val radioIndicatorDot = 10.dp
 }
