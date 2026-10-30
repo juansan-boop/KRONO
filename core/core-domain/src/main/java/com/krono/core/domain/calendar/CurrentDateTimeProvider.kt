@@ -1,9 +1,11 @@
 package com.krono.core.domain.calendar
 
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 
 /**
@@ -23,4 +25,7 @@ class CurrentDateTimeProvider(
 
     /** Fecha local actual (el botón "Hoy" y el día resaltado). */
     fun today(): LocalDate = now().date
+
+    /** Instante en que empieza [date] (00:00) en la zona del usuario, para acotar consultas por día. */
+    fun startOfDay(date: LocalDate): Instant = date.atStartOfDayIn(timeZone())
 }
