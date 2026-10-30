@@ -3,12 +3,15 @@ package com.krono.core.data.task
 import app.cash.turbine.test
 import com.krono.core.common.KronoResult
 import com.krono.core.data.auth.FakeAuthRemoteDataSource
+import com.krono.core.data.timer.ActiveTimerDto
+import com.krono.core.data.timer.FakeTimerRemoteDataSource
 import com.krono.core.domain.auth.User
 import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.task.TaskPriority
+import com.krono.core.domain.timer.ActiveTimer
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.krono.core.domain.task.TaskField
 import kotlinx.coroutines.CompletableDeferred
@@ -17,6 +20,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -34,6 +38,7 @@ import kotlin.time.Duration.Companion.seconds
 @OptIn(ExperimentalCoroutinesApi::class)
 class FirestoreTaskRepositoryTest {
 
+    private lateinit var fakeTimerDataSource: FakeTimerRemoteDataSource
     private lateinit var fakeTaskDataSource: FakeTaskRemoteDataSource
     private lateinit var fakeAuthDataSource: FakeAuthRemoteDataSource
     private lateinit var repository: FirestoreTaskRepository
@@ -42,9 +47,10 @@ class FirestoreTaskRepositoryTest {
 
     @Before
     fun setUp() {
-        fakeTaskDataSource = FakeTaskRemoteDataSource()
+        fakeTimerDataSource = FakeTimerRemoteDataSource()
+        fakeTaskDataSource = FakeTaskRemoteDataSource(fakeTimerDataSource)
         fakeAuthDataSource = FakeAuthRemoteDataSource()
-        repository = FirestoreTaskRepository(fakeTaskDataSource, fakeAuthDataSource)
+        repository = FirestoreTaskRepository(fakeTaskDataSource, fakeAuthDataSource, fakeTimerDataSource)
     }
 
     @Test
@@ -339,6 +345,49 @@ class FirestoreTaskRepositoryTest {
             assertTrue(error is TaskError.StorageError)
             awaitComplete()
         }
+    }
+
+    @Test
+    fun deleteTask_conElCronometroActivoEnEsaTarea_loDescartaJuntoConLaTarea() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Midiendo"))
+        fakeTimerDataSource.givenActiveTimer(testUser.id, activeTimerFor("t1"))
+
+        val result = repository.deleteTask("t1")
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+        assertNull(fakeTimerDataSource.timers[testUser.id])
+    }
+
+    @Test
+    fun deleteTask_conElCronometroActivoEnOtraTarea_loConserva() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Sin cronómetro"))
+        fakeTimerDataSource.givenActiveTimer(testUser.id, activeTimerFor("otra"))
+
+        repository.deleteTask("t1")
+
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+        assertEquals("otra", fakeTimerDataSource.timers[testUser.id]?.get(ActiveTimerDto.FIELD_TASK_ID))
+    }
+
+    @Test
+    fun deleteTask_siNoSePuedeLeerElCronometro_igualEliminaLaTarea() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Por borrar"))
+        fakeTimerDataSource.givenActiveTimer(testUser.id, activeTimerFor("t1"))
+        fakeTimerDataSource.readFailure = FirebaseFirestoreException("Sin red", FirebaseFirestoreException.Code.UNAVAILABLE)
+
+        val result = repository.deleteTask("t1")
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+    }
+
+    private fun activeTimerFor(taskId: String): Map<String, Any?> {
+        val start = Instant.parse("2026-10-22T14:00:00Z")
+        return ActiveTimerDto.toMap(ActiveTimer(taskId, start, start, Duration.ZERO))
     }
 
     private fun permissionDenied() = FirebaseFirestoreException(

@@ -14,17 +14,19 @@ interface TimerRemoteDataSource {
     /** Lee una vez el documento del cronómetro en curso, o `null` si no existe. */
     suspend fun getActiveTimer(userId: String): Map<String, Any?>?
 
-    /** Escribe el documento del cronómetro en curso. */
-    fun saveActiveTimer(userId: String, timer: Map<String, Any?>)
+    /** Escribe el documento del cronómetro en curso; suspende hasta la confirmación del servidor. */
+    suspend fun saveActiveTimer(userId: String, timer: Map<String, Any?>)
 
     /** Indica si la tarea todavía existe (pudo eliminarse mientras corría el cronómetro). */
     suspend fun taskExists(userId: String, taskId: String): Boolean
 
     /**
-     * En una sola escritura atómica: guarda la sesión, suma [durationMillis] a la tarea
-     * (solo si [addToTask]) y elimina el cronómetro en curso.
+     * En una sola escritura atómica: guarda la sesión (con su id como id del documento, así que
+     * repetirla la reemplaza), suma [durationMillis] a la tarea (solo si [addToTask]) y elimina el
+     * cronómetro en curso. Suspende hasta la confirmación del servidor; si [addToTask] y la tarea
+     * ya no existe, el lote entero falla con `NOT_FOUND`.
      */
-    fun finishActiveTimer(
+    suspend fun finishActiveTimer(
         userId: String,
         session: Map<String, Any?>,
         taskId: String,

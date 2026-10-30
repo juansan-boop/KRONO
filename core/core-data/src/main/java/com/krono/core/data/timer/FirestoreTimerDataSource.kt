@@ -12,9 +12,9 @@ import javax.inject.Inject
 /**
  * Implementación de [TimerRemoteDataSource] con Cloud Firestore (F-08).
  *
- * Las escrituras no esperan la confirmación del servidor: Firestore las aplica al instante
- * en su caché local (y los listeners las ven), y las sincroniza cuando hay conexión. Esperar
- * con `await()` dejaría los botones del cronómetro bloqueados sin internet.
+ * Las escrituras suspenden hasta la confirmación del servidor, que sin red no llega: quien las
+ * llama debe acotar esa espera (ver [FirestoreTimerRepository]). Así los errores reales (permiso
+ * denegado, datos inválidos, tarea inexistente) llegan a quien escribe en vez de perderse.
  */
 class FirestoreTimerDataSource @Inject constructor(
     private val firestore: FirebaseFirestore,
@@ -22,8 +22,7 @@ class FirestoreTimerDataSource @Inject constructor(
 
     private fun userDocument(userId: String) = firestore.collection(COLLECTION_USERS).document(userId)
 
-    private fun activeTimerDocument(userId: String) =
-        userDocument(userId).collection(COLLECTION_TIMER).document(DOCUMENT_ACTIVE)
+    private fun activeTimerDocument(userId: String) = TimerDocuments.activeTimer(firestore, userId)
 
     override fun observeActiveTimer(userId: String): Flow<Map<String, Any?>?> = callbackFlow {
         val listener = activeTimerDocument(userId).addSnapshotListener { snapshot, error ->
@@ -39,14 +38,14 @@ class FirestoreTimerDataSource @Inject constructor(
     override suspend fun getActiveTimer(userId: String): Map<String, Any?>? =
         activeTimerDocument(userId).get().await().data
 
-    override fun saveActiveTimer(userId: String, timer: Map<String, Any?>) {
-        activeTimerDocument(userId).set(timer)
+    override suspend fun saveActiveTimer(userId: String, timer: Map<String, Any?>) {
+        activeTimerDocument(userId).set(timer).await()
     }
 
     override suspend fun taskExists(userId: String, taskId: String): Boolean =
         userDocument(userId).collection(COLLECTION_TASKS).document(taskId).get().await().exists()
 
-    override fun finishActiveTimer(
+    override suspend fun finishActiveTimer(
         userId: String,
         session: Map<String, Any?>,
         taskId: String,
@@ -65,14 +64,12 @@ class FirestoreTimerDataSource @Inject constructor(
             )
         }
         batch.delete(activeTimerDocument(userId))
-        batch.commit()
+        batch.commit().await()
     }
 
     private companion object {
         const val COLLECTION_USERS = "users"
         const val COLLECTION_TASKS = "tasks"
-        const val COLLECTION_TIMER = "timer"
         const val COLLECTION_TIME_SESSIONS = "timeSessions"
-        const val DOCUMENT_ACTIVE = "active"
     }
 }

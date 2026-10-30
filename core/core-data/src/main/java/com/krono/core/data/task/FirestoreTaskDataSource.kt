@@ -2,6 +2,7 @@ package com.krono.core.data.task
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.krono.core.data.timer.TimerDocuments
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -65,8 +66,12 @@ class FirestoreTaskDataSource @Inject constructor(
         tasksCollection(userId).document(taskId).update(fields).await()
     }
 
-    override suspend fun deleteTask(userId: String, taskId: String) {
-        tasksCollection(userId).document(taskId).delete().await()
+    // Un solo lote: o se borran la tarea y su cronómetro en curso, o ninguno de los dos.
+    override suspend fun deleteTask(userId: String, taskId: String, discardActiveTimer: Boolean) {
+        val batch = firestore.batch()
+        batch.delete(tasksCollection(userId).document(taskId))
+        if (discardActiveTimer) batch.delete(TimerDocuments.activeTimer(firestore, userId))
+        batch.commit().await()
     }
 
     companion object {

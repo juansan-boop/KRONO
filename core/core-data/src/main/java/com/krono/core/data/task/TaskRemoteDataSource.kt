@@ -52,10 +52,12 @@ interface TaskRemoteDataSource {
     suspend fun updateTaskFields(userId: String, taskId: String, fields: Map<String, Any?>)
 
     /**
-     * Elimina el documento de la tarea de Firestore.
+     * Elimina el documento de la tarea de Firestore y, si se pide, el cronómetro en curso
+     * (`users/{userId}/timer/active`) en la misma escritura atómica.
      *
      * @param userId Identificador del usuario.
      * @param taskId Identificador de la tarea a eliminar.
+     * @param discardActiveTimer `true` si el cronómetro en curso mide esta tarea y debe descartarse.
      */
-    suspend fun deleteTask(userId: String, taskId: String)
+    suspend fun deleteTask(userId: String, taskId: String, discardActiveTimer: Boolean)
 }
