@@ -55,7 +55,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.krono.core.ui.icons.KronoIcons
@@ -358,7 +357,7 @@ private fun SecurityZoneHeroSection(
             style = MaterialTheme.typography.bodySmall,
             color = OnSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.widthIn(max = 320.dp),
+            modifier = Modifier.widthIn(max = KronoSizes.supportingTextMaxWidth),
         )
     }
 }
@@ -443,7 +442,7 @@ private fun SecurityOptionCard(
             Box(
                 modifier = Modifier
                     .padding(top = KronoSpacing.xs / 2)
-                    .size(KronoSizes.iconMedium - 4.dp)
+                    .size(KronoSizes.radioIndicator)
                     .clip(CircleShape)
                     .border(
                         KronoGlass.borderWidth * 2,
@@ -455,7 +454,7 @@ private fun SecurityOptionCard(
                 if (isSelected) {
                     Box(
                         modifier = Modifier
-                            .size(KronoSizes.iconSmall - 6.dp)
+                            .size(KronoSizes.radioIndicatorDot)
                             .clip(CircleShape)
                             .background(accentColor),
                     )

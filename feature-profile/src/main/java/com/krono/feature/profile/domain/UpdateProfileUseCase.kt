@@ -35,7 +35,7 @@ open class UpdateProfileUseCase @Inject constructor(
      * @param role Rol académico / profesional (obligatorio).
      * @param avatarUri URI local de la foto de perfil seleccionada (opcional).
      * @return [KronoResult.Success] si los cambios son válidos, o [KronoResult.Error]
-     * con [IllegalArgumentException] si algún campo obligatorio se encuentra vacío.
+     * con [BlankNameException] o [BlankRoleException] si algún campo obligatorio se encuentra vacío.
      */
     open suspend operator fun invoke(
         name: String,
@@ -45,26 +45,28 @@ open class UpdateProfileUseCase @Inject constructor(
         val trimmedName = name.trim()
         val trimmedRole = role.trim()
         if (trimmedName.isBlank()) {
-            return KronoResult.Error(IllegalArgumentException("El nombre no puede estar vacío"))
+            return KronoResult.Error(BlankNameException())
         }
         if (trimmedRole.isBlank()) {
-            return KronoResult.Error(IllegalArgumentException("El rol no puede estar vacío"))
+            return KronoResult.Error(BlankRoleException())
         }
         // 1. Guardar en caché local instantánea
         localStore.saveProfile(trimmedName, trimmedRole, avatarUri)
 
         // 2. Sincronizar en Cloud Firestore (users/{uid}) y Firebase Auth en modo best-effort
-        try {
+        syncRemoteBestEffort(OPERATION_SAVE_PROFILE) {
             remoteDataSource.saveUserProfile(
                 userId = localStore.activeUserId,
                 name = trimmedName,
                 role = trimmedRole,
                 avatarUri = avatarUri,
             )
-        } catch (_: Throwable) {
-            // Sincronización remota tolerante a falta de red o reglas en despliegue
         }
 
         return KronoResult.Success(Unit)
+    }
+
+    private companion object {
+        const val OPERATION_SAVE_PROFILE = "guardar perfil"
     }
 }

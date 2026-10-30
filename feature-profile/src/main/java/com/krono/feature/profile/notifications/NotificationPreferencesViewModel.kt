@@ -7,6 +7,7 @@ import com.krono.feature.profile.data.ProfileLocalStore
 import com.krono.feature.profile.domain.NotificationPrefs
 import com.krono.feature.profile.domain.ResetNotificationPrefsUseCase
 import com.krono.feature.profile.domain.SaveNotificationPrefsUseCase
+import com.krono.feature.profile.ui.toProfileSaveError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +72,7 @@ class NotificationPreferencesViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 deadlineReminderMinutes = minutes,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -85,7 +86,7 @@ class NotificationPreferencesViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 deadlineRemindersEnabled = enabled,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -99,7 +100,7 @@ class NotificationPreferencesViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 focusStartSound = enabled,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -113,7 +114,7 @@ class NotificationPreferencesViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 soundTone = tone,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -130,7 +131,7 @@ class NotificationPreferencesViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 isPermissionGranted = isGranted,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -171,13 +172,13 @@ class NotificationPreferencesViewModel @Inject constructor(
                             deadlineRemindersEnabled = defaults.deadlineRemindersEnabled,
                             focusStartSound = defaults.focusStartSound,
                             soundTone = defaults.soundTone,
-                            errorMessage = null,
+                            saveError = null,
                         )
                     }
                     _events.send(NotificationPreferencesEvent.DefaultsRestored)
                 }
                 is KronoResult.Error -> {
-                    _uiState.update { it.copy(errorMessage = result.throwable.message) }
+                    _uiState.update { it.copy(saveError = result.throwable.toProfileSaveError(OPERATION_RESET_PREFS)) }
                 }
                 KronoResult.Loading -> Unit
             }
@@ -193,7 +194,7 @@ class NotificationPreferencesViewModel @Inject constructor(
         val currentState = _uiState.value
         if (currentState.isSaving) return
 
-        _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+        _uiState.update { it.copy(isSaving = true, saveError = null) }
 
         viewModelScope.launch {
             val prefs = NotificationPrefs(
@@ -213,12 +214,17 @@ class NotificationPreferencesViewModel @Inject constructor(
                         it.copy(
                             isSaving = false,
                             isSuccess = false,
-                            errorMessage = result.throwable.message ?: "Error al guardar preferencias",
+                            saveError = result.throwable.toProfileSaveError(OPERATION_SAVE_PREFS),
                         )
                     }
                 }
                 KronoResult.Loading -> Unit
             }
         }
+    }
+
+    private companion object {
+        const val OPERATION_SAVE_PREFS = "guardar preferencias de notificación"
+        const val OPERATION_RESET_PREFS = "restablecer preferencias de notificación"
     }
 }

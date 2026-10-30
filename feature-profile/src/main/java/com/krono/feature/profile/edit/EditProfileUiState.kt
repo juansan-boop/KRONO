@@ -1,5 +1,7 @@
 package com.krono.feature.profile.edit
 
+import com.krono.feature.profile.ui.ProfileSaveError
+
 /**
  * Eventos de un solo uso emitidos desde [EditProfileViewModel] hacia la capa de presentación.
  */
@@ -23,9 +25,9 @@ sealed interface EditProfileEvent {
  * @property role Rol académico/profesional seleccionado por el usuario.
  * @property availableRoles Catálogo de roles seleccionables en la interfaz.
  * @property avatarUri URI local de la foto de perfil o `null` si se usan iniciales.
- * @property nameError Mensaje de error si la validación del nombre obligatorio falla.
+ * @property isNameMissing Indica que se intentó guardar con el nombre obligatorio vacío; la UI muestra el copy.
  * @property isSaving Indica si la operación de guardado se encuentra en curso (bloquea envíos concurrentes).
- * @property errorMessage Mensaje de error expuesto si la persistencia falla.
+ * @property saveError Causa tipada del fallo de guardado (la UI la traduce a copy), o `null` si no hay.
  * @property isSuccess Indica si la persistencia se completó exitosamente.
  */
 data class EditProfileUiState(
@@ -39,9 +41,9 @@ data class EditProfileUiState(
         "Trabajador tiempo parcial",
     ),
     val avatarUri: String? = null,
-    val nameError: String? = null,
+    val isNameMissing: Boolean = false,
     val isSaving: Boolean = false,
-    val errorMessage: String? = null,
+    val saveError: ProfileSaveError? = null,
     val isSuccess: Boolean = false,
 ) {
     /**

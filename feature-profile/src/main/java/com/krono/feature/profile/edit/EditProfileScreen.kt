@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -93,6 +94,7 @@ import com.krono.core.ui.theme.SurfaceContainerHigh
 import com.krono.core.ui.theme.SurfaceContainerLow
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.profile.R
+import com.krono.feature.profile.ui.ProfileSaveError
 import com.krono.feature.profile.ui.rememberAsyncAvatarBitmap
 
 /**
@@ -224,11 +226,11 @@ fun EditProfileScreen(
 
             // Mensaje de error general si ocurre fallo
             AnimatedVisibility(
-                visible = state.errorMessage != null,
+                visible = state.saveError != null,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                state.errorMessage?.let { errorMsg ->
+                state.saveError?.let { saveError ->
                     Surface(
                         shape = RoundedCornerShape(KronoSpacing.sm),
                         color = ErrorColor.copy(alpha = 0.15f),
@@ -247,7 +249,7 @@ fun EditProfileScreen(
                                 modifier = Modifier.size(KronoSizes.iconMedium),
                             )
                             Text(
-                                text = errorMsg,
+                                text = stringResource(saveError.messageRes()),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = OnSurface,
                             )
@@ -411,7 +413,7 @@ private fun EditProfileForm(
             // Campo 1: Nombre Completo
             EditProfileNameField(
                 name = state.name,
-                nameError = state.nameError,
+                nameError = if (state.isNameMissing) stringResource(R.string.edit_profile_error_name_empty) else null,
                 onNameChange = onNameChange,
             )
 
@@ -802,4 +804,11 @@ private fun EditProfileScreenSavingPreview() {
             onCancelClick = {},
         )
     }
+}
+
+/** Recurso de copy para cada causa de fallo al guardar el perfil. */
+@StringRes
+private fun ProfileSaveError.messageRes(): Int = when (this) {
+    ProfileSaveError.INVALID_DATA -> R.string.edit_profile_error_invalid
+    ProfileSaveError.UNEXPECTED -> R.string.edit_profile_error_generic
 }

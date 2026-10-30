@@ -5,10 +5,12 @@ import com.krono.core.common.KronoResult
 import com.krono.feature.profile.MainDispatcherRule
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.domain.InvalidReminderMinutesException
 import com.krono.feature.profile.domain.NotificationPrefs
 
 import com.krono.feature.profile.domain.ResetNotificationPrefsUseCase
 import com.krono.feature.profile.domain.SaveNotificationPrefsUseCase
+import com.krono.feature.profile.ui.ProfileSaveError
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -68,7 +70,7 @@ class NotificationPreferencesViewModelTest {
         assertTrue(state.isPermissionGranted)
         assertFalse(state.isSaving)
         assertFalse(state.isSuccess)
-        assertNull(state.errorMessage)
+        assertNull(state.saveError)
     }
 
     @Test
@@ -85,7 +87,7 @@ class NotificationPreferencesViewModelTest {
         assertFalse(state.deadlineRemindersEnabled)
         assertFalse(state.focusStartSound)
         assertEquals("Discreet", state.soundTone)
-        assertNull(state.errorMessage)
+        assertNull(state.saveError)
     }
 
     @Test
@@ -107,7 +109,7 @@ class NotificationPreferencesViewModelTest {
             assertTrue(state.deadlineRemindersEnabled)
             assertTrue(state.focusStartSound)
             assertEquals("Chime", state.soundTone)
-            assertNull(state.errorMessage)
+            assertNull(state.saveError)
 
             assertEquals(NotificationPreferencesEvent.DefaultsRestored, awaitItem())
             cancelAndIgnoreRemainingEvents()
@@ -137,7 +139,7 @@ class NotificationPreferencesViewModelTest {
     }
 
     @Test
-    fun fallaEnGuardadoDesactivaIsSavingYExponeMensajeDeError() = runTest {
+    fun fallaEnGuardadoDesactivaIsSavingYExponeErrorTipadoSinTextoTecnico() = runTest {
         saveNotificationPrefsUseCase.failure = RuntimeException("Error en Firestore de prueba")
         val vm = createViewModel()
 
@@ -148,12 +150,24 @@ class NotificationPreferencesViewModelTest {
             val state = vm.uiState.value
             assertFalse(state.isSaving)
             assertFalse(state.isSuccess)
-            assertEquals("Error en Firestore de prueba", state.errorMessage)
+            assertEquals(ProfileSaveError.UNEXPECTED, state.saveError)
 
             expectNoEvents()
         }
     }
 
+
+    @Test
+    fun fallaDeValidacionExponeErrorDeDatosInvalidos() = runTest {
+        saveNotificationPrefsUseCase.failure = InvalidReminderMinutesException()
+        val vm = createViewModel()
+
+        vm.onSaveClick()
+        advanceUntilIdle()
+
+        assertEquals(ProfileSaveError.INVALID_DATA, vm.uiState.value.saveError)
+        assertFalse(vm.uiState.value.isSaving)
+    }
     @Test
     fun bloqueoDeDobleClicConcurrenteMientrasIsSavingEstaActivo() = runTest {
         val gate = CompletableDeferred<Unit>()
@@ -191,7 +205,7 @@ class NotificationPreferencesViewModelTest {
 
         val state = vm.uiState.value
         assertFalse("El permiso debe marcarse como no otorgado", state.isPermissionGranted)
-        assertNull(state.errorMessage)
+        assertNull(state.saveError)
 
         // La pantalla sigue siendo 100% interactiva
         vm.onDeadlineReminderMinutesChange(10)
