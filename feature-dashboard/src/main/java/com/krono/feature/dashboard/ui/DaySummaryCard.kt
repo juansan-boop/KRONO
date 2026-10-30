@@ -2,7 +2,6 @@ package com.krono.feature.dashboard.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
@@ -67,21 +66,18 @@ internal fun DaySummaryCard(content: DashboardUiState.Content, modifier: Modifie
                 trackColor = SurfaceContainerHighest,
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm)) {
+        EqualWidthRowOrStack {
             SummaryStat(
                 value = content.completedCount.toString(),
                 label = stringResource(R.string.dashboard_stat_completed),
-                modifier = Modifier.weight(1f),
             )
             SummaryStat(
                 value = content.pendingCount.toString(),
                 label = stringResource(R.string.dashboard_stat_pending),
-                modifier = Modifier.weight(1f),
             )
             SummaryStat(
                 value = focusTimeText(content.focusTime),
                 label = stringResource(R.string.dashboard_stat_focus),
-                modifier = Modifier.weight(1f),
                 valueColor = SecondaryCyan,
             )
         }

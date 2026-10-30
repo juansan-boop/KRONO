@@ -69,7 +69,7 @@ internal fun DashboardErrorCard(onRetry: () -> Unit, modifier: Modifier = Modifi
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .glassSurface(borderColor = ErrorColor.copy(alpha = ERROR_BORDER_ALPHA))
+            .glassSurface(borderColor = KronoGlass.errorBorderColor)
             .padding(KronoSpacing.lg)
             .semantics { liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.md),
@@ -111,7 +111,7 @@ internal fun DashboardErrorCard(onRetry: () -> Unit, modifier: Modifier = Modifi
                 .fillMaxWidth()
                 .heightIn(min = KronoSizes.minTouchTarget),
             shape = KronoShapes.small,
-            border = BorderStroke(KronoGlass.borderWidth, ErrorColor.copy(alpha = ERROR_BORDER_ALPHA)),
+            border = BorderStroke(KronoGlass.borderWidth, KronoGlass.errorBorderColor),
             colors = ButtonDefaults.outlinedButtonColors(
                 containerColor = ErrorContainer.copy(alpha = RETRY_CONTAINER_ALPHA),
                 contentColor = ErrorColor,
@@ -141,6 +141,5 @@ internal fun MessageCard(
     }
 }
 
-private const val ERROR_BORDER_ALPHA = 0.4f
 private const val RETRY_CONTAINER_ALPHA = 0.25f
 private const val BADGE_CONTAINER_ALPHA = 0.35f

@@ -23,7 +23,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextOverflow
 import com.krono.core.ui.theme.KronoGlass
 import com.krono.core.ui.theme.KronoShapes
 import com.krono.core.ui.theme.KronoSizes
@@ -110,21 +109,17 @@ private fun PriorityTaskCard(task: PriorityTaskUi, onClick: () -> Unit) {
     ) {
         // Decorativo: el acento de color repite la categoría que ya dice el texto.
         Box(modifier = Modifier.size(KronoSizes.calendarCategoryDot).background(accent, CircleShape))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(KronoSpacing.xs)) {
-            Text(
-                text = task.title,
-                style = MaterialTheme.typography.titleMedium,
-                color = OnSurface,
-                maxLines = TITLE_MAX_LINES,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = taskDetailLine(task),
-                style = MaterialTheme.typography.labelMedium,
-                color = OnSurfaceVariant,
-            )
+        TrailingLabelRowOrStack(modifier = Modifier.weight(1f)) {
+            Column(verticalArrangement = Arrangement.spacedBy(KronoSpacing.xs)) {
+                Text(text = task.title, style = MaterialTheme.typography.titleMedium, color = OnSurface)
+                Text(
+                    text = taskDetailLine(task),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = OnSurfaceVariant,
+                )
+            }
+            PriorityBadge(text = stringResource(task.priority.labelRes), color = accent)
         }
-        PriorityBadge(text = stringResource(task.priority.labelRes), color = accent)
     }
 }
 
@@ -144,10 +139,9 @@ private fun PriorityBadge(text: String, color: Color) {
         modifier = Modifier
             .background(color.copy(alpha = BADGE_BACKGROUND_ALPHA), KronoShapes.extraSmall)
             .border(KronoGlass.borderWidth, color.copy(alpha = BADGE_BORDER_ALPHA), KronoShapes.extraSmall)
-            .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs / 2),
+            .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs),
     )
 }
 
-private const val TITLE_MAX_LINES = 2
 private const val BADGE_BACKGROUND_ALPHA = 0.1f
 private const val BADGE_BORDER_ALPHA = 0.3f
