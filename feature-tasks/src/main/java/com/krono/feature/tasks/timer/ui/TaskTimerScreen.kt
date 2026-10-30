@@ -74,8 +74,9 @@ fun TaskTimerRoute(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.errorMessage) {
-        state.errorMessage?.let {
+    val errorMessage = state.errorMessageRes?.let { stringResource(it) }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.onErrorShown()
         }

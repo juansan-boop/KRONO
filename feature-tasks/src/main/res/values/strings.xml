@@ -175,6 +175,8 @@
     <string name="timer_switch_confirm">Detener y empezar</string>
     <string name="timer_switch_cancel">Cancelar</string>
     <string name="timer_task_not_found">No encontramos esta tarea.</string>
+    <string name="timer_error_generic">No pudimos actualizar el cronómetro. Inténtalo de nuevo.</string>
+    <string name="timer_error_load">No pudimos cargar esta tarea. Inténtalo de nuevo en un momento.</string>
 
     <!-- Estimación por historial (F-11) -->
     <string name="duration_suggestion">Sugerencia IA: ~%d min · Basado en historial</string>

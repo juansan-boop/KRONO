@@ -1,5 +1,6 @@
 package com.krono.feature.tasks.timer
 
+import androidx.annotation.StringRes
 import com.krono.core.domain.task.Task
 import kotlin.time.Duration
 
@@ -26,7 +27,8 @@ enum class TimerStatus {
  * @property savedSession duración de la última sesión guardada, para confirmarla al usuario (CA-2).
  * @property isSavedSessionWithoutTask la tarea ya no existía al finalizar: la sesión se guardó,
  * pero su tiempo no se sumó a ninguna tarea y hay que avisarlo.
- * @property errorMessage mensaje de error de la última acción, si falló.
+ * @property errorMessageRes recurso del mensaje de error que hay que mostrar, si algo falló. Es un
+ * texto genérico en español: los detalles técnicos del error no llegan a la pantalla.
  */
 data class TaskTimerUiState(
     val isLoading: Boolean = true,
@@ -38,7 +40,7 @@ data class TaskTimerUiState(
     val isBusy: Boolean = false,
     val savedSession: Duration? = null,
     val isSavedSessionWithoutTask: Boolean = false,
-    val errorMessage: String? = null,
+    @StringRes val errorMessageRes: Int? = null,
 ) {
     /** Fracción de la estimación ya trabajada, entre 0 y 1, o `null` si la tarea no tiene estimación. */
     val estimateProgress: Float?
