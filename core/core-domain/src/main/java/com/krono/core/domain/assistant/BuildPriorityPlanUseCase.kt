@@ -2,6 +2,8 @@ package com.krono.core.domain.assistant
 
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
+import com.krono.core.domain.time.durationUntil
+import com.krono.core.domain.time.plus
 import kotlinx.datetime.LocalDateTime
 import kotlin.math.roundToInt
 import kotlin.time.Duration

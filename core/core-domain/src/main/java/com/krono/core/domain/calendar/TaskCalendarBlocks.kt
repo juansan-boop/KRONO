@@ -1,6 +1,6 @@
 package com.krono.core.domain.calendar
 
-import com.krono.core.domain.assistant.plus
+import com.krono.core.domain.time.plus
 import com.krono.core.domain.task.Task
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes

@@ -90,6 +90,35 @@ class CalendarPeriodTest {
     }
 
     @Test
+    fun mesDe31DiasQueEmpiezaEnLunes_ocupaCincoSemanasYTerminaEnEnero() {
+        // Diciembre de 2025: del lunes 1 al miércoles 31; la rejilla cierra el domingo 4 de enero.
+        val period = CalendarPeriod(CalendarViewMode.MONTH, LocalDate(2025, 12, 15))
+
+        assertEquals(LocalDate(2025, 12, 1), period.firstDay)
+        assertEquals(LocalDate(2026, 1, 5), period.endExclusive)
+        assertEquals(5, period.weeks.size)
+        assertEquals(LocalDate(2026, 1, 4), period.days.last())
+    }
+
+    @Test
+    fun navegacion_mesCruzaElCambioDeAnioEnAmbosSentidos() {
+        val december = CalendarPeriod(CalendarViewMode.MONTH, LocalDate(2025, 12, 20))
+        val january = CalendarPeriod(CalendarViewMode.MONTH, LocalDate(2026, 1, 10))
+
+        assertEquals(LocalDate(2026, 1, 1), december.next().anchor)
+        assertEquals(LocalDate(2025, 12, 1), january.previous().anchor)
+    }
+
+    @Test
+    fun anclaEn29DeFebrero_navegaAlDia1DeLosMesesVecinos() {
+        val period = CalendarPeriod(CalendarViewMode.MONTH, LocalDate(2024, 2, 29))
+
+        assertTrue(period.isInAnchorMonth(LocalDate(2024, 2, 29)))
+        assertEquals(LocalDate(2024, 3, 1), period.next().anchor)
+        assertEquals(LocalDate(2024, 1, 1), period.previous().anchor)
+    }
+
+    @Test
     fun mes_distingueLosDiasDelMesDeLosVecinos() {
         val period = CalendarPeriod(CalendarViewMode.MONTH, LocalDate(2024, 10, 24))
 

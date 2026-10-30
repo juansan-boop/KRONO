@@ -28,6 +28,12 @@ object KronoIcons {
     /** Círculo con una marca de verificación (requisito cumplido). */
     @DrawableRes val CheckCircle: Int = R.drawable.ic_check_circle
 
+    /** Chevrón hacia la izquierda (período anterior); se invierte en RTL. */
+    @DrawableRes val ChevronLeft: Int = R.drawable.ic_chevron_left
+
+    /** Chevrón hacia la derecha (período siguiente); se invierte en RTL. */
+    @DrawableRes val ChevronRight: Int = R.drawable.ic_chevron_right
+
     /** Lista de tareas con casillas. */
     @DrawableRes val Checklist: Int = R.drawable.ic_checklist
 

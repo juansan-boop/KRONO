@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Encabezado de la vista mensual (F-16) -->
+    <string name="calendar_month_title">%1$s %2$d</string>
+    <string name="calendar_previous_month">Mes anterior</string>
+    <string name="calendar_next_month">Mes siguiente</string>
+    <string name="calendar_today">Hoy</string>
+    <string name="calendar_today_description">Ir a hoy</string>
+
+    <!-- Selector de vista: solo la vista Mes existe por ahora -->
+    <string name="calendar_view_selector">Vista del calendario</string>
+    <string name="calendar_view_month">Mes</string>
+    <string name="calendar_view_week">Semana</string>
+    <string name="calendar_view_day">Día</string>
+    <string name="calendar_view_coming_soon">Próximamente</string>
+    <string name="calendar_view_unavailable_description">%1$s, %2$s</string>
+    <string name="calendar_views_coming_soon_note">Las vistas Semana y Día llegarán pronto.</string>
+
+    <!-- Rejilla del mes -->
+    <string name="calendar_day_description">%1$s, %2$s</string>
+    <string name="calendar_day_no_tasks">sin tareas</string>
+    <plurals name="calendar_day_tasks">
+        <item quantity="one">%d tarea</item>
+        <item quantity="many">%d tareas</item>
+        <item quantity="other">%d tareas</item>
+    </plurals>
+    <string name="calendar_day_today_state">Hoy</string>
+
+    <!-- Agenda del día seleccionado -->
+    <string name="calendar_agenda_title">Agenda</string>
+    <string name="calendar_agenda_day_chip">%1$s %2$d</string>
+    <plurals name="calendar_agenda_count">
+        <item quantity="one">%d tarea</item>
+        <item quantity="many">%d tareas</item>
+        <item quantity="other">%d tareas</item>
+    </plurals>
+    <string name="calendar_agenda_empty">No hay tareas para este día</string>
+    <string name="calendar_agenda_loading">Cargando tus tareas</string>
+    <string name="calendar_time">%1$02d:%2$02d</string>
+    <string name="calendar_time_range">%1$s - %2$s</string>
+    <string name="calendar_open_task">Abrir tarea</string>
+
+    <!-- Estado, categoría y prioridad de una tarea de la agenda -->
+    <string name="calendar_status_in_progress">En curso</string>
+    <string name="calendar_status_completed">Completada</string>
+    <string name="calendar_category_study">Estudio</string>
+    <string name="calendar_category_work">Trabajo</string>
+    <string name="calendar_category_personal">Personal</string>
+    <string name="calendar_priority_high">Prioridad alta</string>
+    <string name="calendar_priority_medium">Prioridad media</string>
+    <string name="calendar_priority_low">Prioridad baja</string>
+
+    <!-- Error de carga -->
+    <string name="calendar_load_error_title">No pudimos cargar tu calendario</string>
+    <string name="calendar_load_error_body">Hubo un problema al leer tus tareas. Inténtalo de nuevo en un momento.</string>
+    <string name="calendar_retry">Reintentar</string>
+</resources>

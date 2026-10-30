@@ -158,10 +158,24 @@ class ObserveCalendarUseCaseTest {
     }
 
     @Test
-    fun lasFechasSeTratanComoLocalesSinConversionDeZona() = runTest {
-        // Sin conversión de zona: en el día de cambio de hora, un bloque de las 02:30 sigue
-        // empezando y terminando en la hora de pared indicada, sin saltos.
-        repository.givenTasks(task("dst", LocalDateTime(2026, 3, 8, 2, 30), estimate = 30.minutes))
+    fun aIgualInicioPrioridadYFin_desempataPorIdentificador() = runTest {
+        repository.givenTasks(
+            task("c", at(10, 0), estimate = 1.hours),
+            task("a", at(10, 0), estimate = 1.hours),
+            task("b", at(10, 0), estimate = 1.hours),
+        )
+
+        observeCalendar(day).test {
+            assertEquals(listOf("a", "b", "c"), nextSchedule().blocks.map { it.taskId })
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun elBloqueConservaLaHoraDePared_restaLaEstimacionSinAjustarZona() = runTest {
+        // Solo verifica que la fecha límite y la estimación se usan tal cual, como hora local
+        // sin zona. No prueba el cambio de horario de verano: la aritmética es en UTC, que no lo tiene.
+        repository.givenTasks(task("pared", LocalDateTime(2026, 3, 8, 2, 30), estimate = 30.minutes))
         val period = CalendarPeriod(CalendarViewMode.DAY, LocalDate(2026, 3, 8))
 
         observeCalendar(period).test {
