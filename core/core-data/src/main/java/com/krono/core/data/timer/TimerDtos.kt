@@ -2,6 +2,7 @@ package com.krono.core.data.timer
 
 import com.krono.core.domain.timer.ActiveTimer
 import com.krono.core.domain.timer.TimeSession
+import com.krono.core.domain.timer.TimeSessionType
 import kotlinx.datetime.Instant
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -54,4 +55,25 @@ object TimeSessionDto {
         FIELD_DURATION_MILLIS to session.duration.inWholeMilliseconds,
         FIELD_TYPE to session.type.name,
     )
+
+    /**
+     * Reconstruye la sesión desde un documento; `null` si le faltan datos obligatorios o su tipo
+     * es desconocido, para que un documento dañado no rompa toda la lectura.
+     */
+    fun fromMap(map: Map<String, Any?>): TimeSession? {
+        val id = map[FIELD_ID] as? String ?: return null
+        val taskId = map[FIELD_TASK_ID] as? String ?: return null
+        val startedAt = (map[FIELD_STARTED_AT_MILLIS] as? Number)?.toLong() ?: return null
+        val endedAt = (map[FIELD_ENDED_AT_MILLIS] as? Number)?.toLong() ?: return null
+        val durationMillis = (map[FIELD_DURATION_MILLIS] as? Number)?.toLong() ?: return null
+        val type = TimeSessionType.entries.firstOrNull { it.name == map[FIELD_TYPE] } ?: return null
+        return TimeSession(
+            id = id,
+            taskId = taskId,
+            startedAt = Instant.fromEpochMilliseconds(startedAt),
+            endedAt = Instant.fromEpochMilliseconds(endedAt),
+            duration = durationMillis.milliseconds,
+            type = type,
+        )
+    }
 }
