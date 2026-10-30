@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -140,6 +141,33 @@ abstract class CalendarScreenTestBase {
         }
     }
 
+    /**
+     * Comprueba que las siete etiquetas de día de la franja (abreviadas o de una letra) son visibles,
+     * no se tocan entre sí y quedan dentro de la franja, en la vista [view].
+     */
+    protected fun assertStripLabelsAreSeparated(fontScale: Float?, @StringRes view: Int) {
+        show(fontScale = fontScale, widthDp = NARROW_SCREEN_WIDTH)
+        selectView(view)
+
+        val strip = composeRule.onNodeWithContentDescription(text(R.string.calendar_week_strip)).fetchSemanticsNode()
+            .boundsInRoot
+        val labels = WEEKDAY_LABELS.map { candidates -> labelBounds(candidates, strip) }
+        labels.forEach { bounds ->
+            assertTrue("Etiqueta fuera de la franja: $bounds en $strip", bounds.left >= strip.left && bounds.right <= strip.right)
+        }
+        labels.zipWithNext().forEach { (left, right) ->
+            assertTrue("Etiquetas pegadas o solapadas: $left y $right", left.right < right.left)
+        }
+    }
+
+    private fun labelBounds(candidates: List<String>, strip: Rect): Rect {
+        val matches = candidates.flatMap { candidate ->
+            composeRule.onAllNodesWithText(candidate, useUnmergedTree = true).fetchSemanticsNodes()
+        }.map { it.boundsInRoot }.filter { strip.overlaps(it) }
+        assertEquals("Etiqueta de día no encontrada entre $candidates", 1, matches.size)
+        return matches.single()
+    }
+
     /** Comprueba que los botones de navegación y "Hoy" miden al menos 48 dp. */
     protected fun assertNavigationButtonsHaveMinTouchTarget(@StringRes previous: Int, @StringRes next: Int) {
         listOf(previous, next, R.string.calendar_today_description).forEach { description ->
@@ -182,5 +210,11 @@ abstract class CalendarScreenTestBase {
         val LANDSCAPE_WIDTH = 640.dp
         val LANDSCAPE_HEIGHT = 320.dp
         val MIN_TOUCH_TARGET = 48.dp
+
+        /** Abreviatura de tres letras y de una letra de LUN a DOM; la franja usa una u otra según el ancho. */
+        val WEEKDAY_LABELS = listOf(
+            listOf("LUN", "L"), listOf("MAR", "M"), listOf("MIÉ", "X"), listOf("JUE", "J"),
+            listOf("VIE", "V"), listOf("SÁB", "S"), listOf("DOM", "D"),
+        )
     }
 }

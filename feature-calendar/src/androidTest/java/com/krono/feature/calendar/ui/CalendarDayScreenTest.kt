@@ -158,6 +158,10 @@ class CalendarDayScreenTest : CalendarScreenTestBase() {
     }
 
     @Test
+    fun aAnchoDe360dpYFuenteAl200PorCiento_lasEtiquetasDeLaFranjaNoSeTocanYCabenEnLaFranja() =
+        assertStripLabelsAreSeparated(MAX_FONT_SCALE, view = R.string.calendar_view_day)
+
+    @Test
     fun conFuenteAl200PorCiento_ningunTextoSeRecortaNiPartePalabras() {
         showDay(fontScale = MAX_FONT_SCALE)
 

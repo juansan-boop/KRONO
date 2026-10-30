@@ -103,6 +103,14 @@ class CalendarWeekScreenTest : CalendarScreenTestBase() {
     fun aAnchoDe360dpYFuenteAl200PorCiento_cadaDiaDeLaFranjaMideAlMenos48dp() =
         assertWeekStripTouchTargets(MAX_FONT_SCALE)
 
+    @Test
+    fun aAnchoDe360dpYFuenteAl200PorCiento_lasEtiquetasDeLaFranjaNoSeTocanYCabenEnLaFranja() =
+        assertStripLabelsAreSeparated(MAX_FONT_SCALE, view = R.string.calendar_view_week)
+
+    @Test
+    fun aAnchoDe360dpYFuenteNormal_lasEtiquetasDeLaFranjaNoSeTocanYCabenEnLaFranja() =
+        assertStripLabelsAreSeparated(fontScale = null, view = R.string.calendar_view_week)
+
     private fun assertWeekStripTouchTargets(fontScale: Float?) =
         assertEveryDayCellHasMinTouchTarget(WEEK_DAYS, fontScale, view = R.string.calendar_view_week)
 
