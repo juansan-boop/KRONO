@@ -26,7 +26,9 @@ interface TaskRemoteDataSource {
     fun observeTask(userId: String, taskId: String): Flow<TaskDto?>
 
     /**
-     * Obtiene una tarea puntual de Firestore.
+     * Obtiene una tarea puntual de Firestore. No espera al servidor más de un límite corto: sin
+     * red o con red lenta lee de la caché local, y si tampoco está ahí lanza la excepción
+     * `UNAVAILABLE` de Firestore.
      *
      * @param userId Identificador del usuario.
      * @param taskId Identificador de la tarea.

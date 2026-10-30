@@ -2,6 +2,8 @@ package com.krono.core.data.task
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Source
+import com.krono.core.data.firestore.readFromServerOrCache
 import com.krono.core.data.timer.TimerDocuments
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -51,8 +53,14 @@ class FirestoreTaskDataSource @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    // Con límite de espera y caché local: la comprobación de un cronómetro huérfano al iniciar
+    // no debe bloquear al usuario sin red.
     override suspend fun getTask(userId: String, taskId: String): TaskDto? {
-        val snapshot = tasksCollection(userId).document(taskId).get().await()
+        val document = tasksCollection(userId).document(taskId)
+        val snapshot = readFromServerOrCache(
+            fromServer = { document.get().await() },
+            fromCache = { document.get(Source.CACHE).await() },
+        )
         return snapshot.data?.let { TaskDto.fromMap(snapshot.id, it) }
     }
 

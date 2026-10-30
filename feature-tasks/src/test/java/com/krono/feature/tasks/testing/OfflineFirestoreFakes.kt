@@ -84,15 +84,12 @@ class NoActiveTimerDataSource : TimerRemoteDataSource {
 
     override suspend fun saveActiveTimer(userId: String, timer: Map<String, Any?>) = unsupported()
 
-    override suspend fun taskExists(userId: String, taskId: String): Boolean = unsupported()
-
     override suspend fun finishActiveTimer(
         userId: String,
         session: Map<String, Any?>,
         taskId: String,
         durationMillis: Long,
-        addToTask: Boolean,
-    ) = unsupported()
+    ): Boolean = unsupported()
 
     private fun unsupported(): Nothing = throw UnsupportedOperationException("No se usa en estas pruebas")
 }
