@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Encabezado (F-13 CA-1) -->
+    <string name="dashboard_greeting_named">Hola, %1$s</string>
+    <string name="dashboard_greeting">Hola</string>
+
+    <!-- Resumen de hoy (F-13 CA-1) -->
+    <string name="dashboard_summary_title">Resumen de hoy</string>
+    <string name="dashboard_summary_percent">%1$d%% completado</string>
+    <string name="dashboard_summary_progress_description">%1$d%% del día completado</string>
+    <string name="dashboard_stat_completed">Completadas</string>
+    <string name="dashboard_stat_pending">Pendientes</string>
+    <string name="dashboard_stat_focus">Enfoque</string>
+    <string name="dashboard_stat_description">%1$s: %2$s</string>
+    <string name="dashboard_focus_minutes">%1$d min</string>
+    <string name="dashboard_focus_hours">%1$d h</string>
+    <string name="dashboard_focus_hours_minutes">%1$d h %2$d min</string>
+
+    <!-- Sesión de Enfoque (F-13 CA-2) -->
+    <string name="dashboard_focus_title">Sesión de Enfoque</string>
+    <string name="dashboard_focus_body">Trabaja sin distracciones y mide tu tiempo real</string>
+    <string name="dashboard_focus_start">Iniciar</string>
+    <string name="dashboard_focus_start_description">Iniciar sesión de enfoque</string>
+
+    <!-- Tareas prioritarias (F-13 CA-3) -->
+    <string name="dashboard_priority_title">Tareas prioritarias</string>
+    <string name="dashboard_see_all">Ver todas</string>
+    <string name="dashboard_see_all_description">Ver todas las tareas</string>
+    <string name="dashboard_open_task">Abrir tarea</string>
+    <string name="dashboard_task_time_category">%1$s • %2$s</string>
+    <string name="dashboard_time">%1$02d:%2$02d</string>
+    <string name="dashboard_priority_high">Prioridad alta</string>
+    <string name="dashboard_priority_medium">Prioridad media</string>
+    <string name="dashboard_priority_low">Prioridad baja</string>
+    <string name="dashboard_category_study">Estudio</string>
+    <string name="dashboard_category_work">Trabajo</string>
+    <string name="dashboard_category_personal">Personal</string>
+
+    <!-- Estados vacío, carga y error -->
+    <string name="dashboard_empty_title">No tienes tareas para hoy</string>
+    <string name="dashboard_empty_body">Agrega una tarea con fecha de hoy y aquí verás tu avance.</string>
+    <string name="dashboard_all_done_title">Completaste todas las tareas de hoy</string>
+    <string name="dashboard_all_done_body">Buen trabajo. Revisa tus próximas tareas en la lista.</string>
+    <string name="dashboard_loading">Cargando tu día</string>
+    <string name="dashboard_error_title">No pudimos cargar tu día</string>
+    <string name="dashboard_error_body">Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="dashboard_retry">Reintentar</string>
+</resources>
