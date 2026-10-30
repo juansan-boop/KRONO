@@ -103,7 +103,7 @@ private fun RowScope.DayCell(day: CalendarDayUi, onClick: () -> Unit) {
         verticalArrangement = Arrangement.Center,
     ) {
         DayNumber(day)
-        DayIndicators(categories = day.categories, dimmed = !day.isInDisplayedMonth)
+        DayIndicators(categories = day.categories, dimmed = !day.isInDisplayedPeriod)
     }
 }
 
@@ -111,7 +111,7 @@ private fun RowScope.DayCell(day: CalendarDayUi, onClick: () -> Unit) {
 private fun DayNumber(day: CalendarDayUi) {
     val textColor = when {
         day.isSelected -> PrimaryFixedDim
-        day.isInDisplayedMonth -> OnSurface
+        day.isInDisplayedPeriod -> OnSurface
         else -> OnSurfaceVariant.copy(alpha = NEIGHBOR_MONTH_ALPHA)
     }
     val background = if (day.isSelected) PrimaryFixedDim.copy(alpha = SELECTED_DAY_ALPHA) else Color.Transparent

@@ -58,7 +58,7 @@ fun CalendarScreen(
     ) {
         item(key = HEADER_KEY) {
             CalendarHeader(
-                displayedMonth = state.displayedMonth,
+                displayedMonth = state.selectedDate,
                 onPreviousMonth = actions.onPreviousMonth,
                 onNextMonth = actions.onNextMonth,
                 onToday = actions.onToday,

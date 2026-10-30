@@ -4,33 +4,41 @@ import com.krono.core.common.KronoResult
 import com.krono.core.domain.calendar.CalendarBlock
 import com.krono.core.domain.calendar.CalendarPeriod
 import com.krono.core.domain.calendar.CalendarSchedule
+import com.krono.core.domain.calendar.CalendarViewMode
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.toJavaLocalDate
+import java.time.temporal.IsoFields
 
 /**
- * Traduce la agenda del dominio a [CalendarUiState] para un mes y un día seleccionado.
+ * Traduce la agenda del dominio a [CalendarUiState] para una vista, un período y un día
+ * seleccionado.
  *
  * Toda la lógica de fechas (rejilla, días vecinos, bloques por día, "En curso") sale de
  * `core-domain`; aquí solo se arma el modelo de la pantalla.
  *
- * @param period Mes mostrado.
+ * @param mode Vista activa.
+ * @param period Período cuya agenda se cargó: el mes en Mes y la semana en Semana y Día (la vista
+ * diaria muestra la franja de su semana, así que comparte la carga con Semana).
  * @param selectedDate Día cuya agenda se muestra.
- * @param today Fecha actual, resaltada en la rejilla.
- * @param now Hora actual, para marcar las tareas "En curso".
+ * @param today Fecha actual, resaltada en la rejilla o la franja.
+ * @param now Hora actual, para marcar las tareas "En curso" y colocar el separador "Ahora".
  */
 internal class CalendarStateBuilder(
+    private val mode: CalendarViewMode,
     private val period: CalendarPeriod,
     private val selectedDate: LocalDate,
     private val today: LocalDate,
     private val now: LocalDateTime,
 ) {
-    /** Estado de la pantalla para el [result] de observar el mes. */
+    /** Estado de la pantalla para el [result] de observar el período. */
     fun build(result: KronoResult<CalendarSchedule>): CalendarUiState {
         val schedule = (result as? KronoResult.Success)?.data
         return CalendarUiState(
-            displayedMonth = period.anchor,
+            mode = mode,
             today = today,
             selectedDate = selectedDate,
+            weekNumber = selectedDate.toJavaLocalDate().get(IsoFields.WEEK_OF_WEEK_BASED_YEAR),
             weeks = period.weeks.map { week -> week.map { dayCell(it, schedule) } },
             agenda = agendaState(result),
         )
@@ -40,7 +48,8 @@ internal class CalendarStateBuilder(
         val blocks = schedule?.blocksOn(date)
         return CalendarDayUi(
             date = date,
-            isInDisplayedMonth = period.isInAnchorMonth(date),
+            // Solo la rejilla mensual atenúa días: la franja semanal pertenece entera al período.
+            isInDisplayedPeriod = mode != CalendarViewMode.MONTH || period.isInAnchorMonth(date),
             isToday = date == today,
             isSelected = date == selectedDate,
             taskCount = blocks?.size,
@@ -51,7 +60,21 @@ internal class CalendarStateBuilder(
     private fun agendaState(result: KronoResult<CalendarSchedule>): DayAgendaState = when (result) {
         KronoResult.Loading -> DayAgendaState.Loading
         is KronoResult.Error -> DayAgendaState.LoadError
-        is KronoResult.Success -> DayAgendaState.Loaded(result.data.blocksOn(selectedDate).map { it.toAgendaItem() })
+        is KronoResult.Success -> {
+            val items = result.data.blocksOn(selectedDate).map { it.toAgendaItem() }
+            DayAgendaState.Loaded(items, nowMarkerFor(items))
+        }
+    }
+
+    /**
+     * El separador "Ahora" solo existe en la vista diaria de hoy y con tareas que separar. Va
+     * delante de la primera tarea que no terminó (en curso o por venir); si todas terminaron, al
+     * final.
+     */
+    private fun nowMarkerFor(items: List<AgendaItemUi>): NowMarker? {
+        if (mode != CalendarViewMode.DAY || selectedDate != today || items.isEmpty()) return null
+        val firstUnfinished = items.indexOfFirst { it.end > now }
+        return NowMarker(beforeIndex = if (firstUnfinished >= 0) firstUnfinished else items.size, time = now)
     }
 
     private fun CalendarBlock.toAgendaItem() = AgendaItemUi(

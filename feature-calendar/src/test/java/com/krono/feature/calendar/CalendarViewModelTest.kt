@@ -1,6 +1,7 @@
 package com.krono.feature.calendar
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.calendar.CalendarViewMode
 import com.krono.core.domain.calendar.CurrentDateTimeProvider
 import com.krono.core.domain.calendar.ObserveCalendarUseCase
 import com.krono.core.domain.task.FakeTaskRepository
@@ -67,8 +68,8 @@ class CalendarViewModelTest {
 
         assertEquals(TODAY, vm.state.selectedDate)
         assertEquals(TODAY, vm.state.today)
-        assertEquals(2024, vm.state.displayedMonth.year)
-        assertEquals(10, vm.state.displayedMonth.monthNumber)
+        assertEquals(2024, vm.state.selectedDate.year)
+        assertEquals(10, vm.state.selectedDate.monthNumber)
         // Octubre de 2024: rejilla del lunes 30 de septiembre al domingo 3 de noviembre.
         assertEquals(LocalDate(2024, 9, 30), vm.state.weeks.first().first().date)
         assertEquals(LocalDate(2024, 11, 3), vm.state.weeks.last().last().date)
@@ -159,8 +160,8 @@ class CalendarViewModelTest {
         assertTrue(today.isSelected)
         assertEquals(3, today.taskCount)
         assertEquals(listOf(TaskCategory.ESTUDIO, TaskCategory.TRABAJO), today.categories)
-        assertFalse(vm.state.day(LocalDate(2024, 9, 30)).isInDisplayedMonth)
-        assertTrue(vm.state.day(LocalDate(2024, 10, 1)).isInDisplayedMonth)
+        assertFalse(vm.state.day(LocalDate(2024, 9, 30)).isInDisplayedPeriod)
+        assertTrue(vm.state.day(LocalDate(2024, 10, 1)).isInDisplayedPeriod)
         assertFalse(vm.state.day(LocalDate(2024, 10, 1)).isToday)
     }
 
@@ -169,23 +170,23 @@ class CalendarViewModelTest {
         repository.givenTasks(task("nov", LocalDateTime(2024, 11, 1, 9, 0)))
         val vm = started(viewModel())
 
-        vm.onNextMonth()
+        vm.onNext()
         runCurrent()
 
-        assertEquals(11, vm.state.displayedMonth.monthNumber)
+        assertEquals(11, vm.state.selectedDate.monthNumber)
         assertEquals(LocalDate(2024, 11, 1), vm.state.selectedDate)
         assertEquals(listOf("nov"), vm.state.agendaIds)
-        assertTrue(vm.state.day(LocalDate(2024, 11, 30)).isInDisplayedMonth)
+        assertTrue(vm.state.day(LocalDate(2024, 11, 30)).isInDisplayedPeriod)
     }
 
     @Test
     fun mesAnterior_muestraSeptiembreYSeleccionaSuDia1() = runTest {
         val vm = started(viewModel())
 
-        vm.onPreviousMonth()
+        vm.onPrevious()
         runCurrent()
 
-        assertEquals(9, vm.state.displayedMonth.monthNumber)
+        assertEquals(9, vm.state.selectedDate.monthNumber)
         assertEquals(LocalDate(2024, 9, 1), vm.state.selectedDate)
     }
 
@@ -193,8 +194,8 @@ class CalendarViewModelTest {
     fun alVolverAlMesActual_seSeleccionaHoy() = runTest {
         val vm = started(viewModel())
 
-        vm.onNextMonth()
-        vm.onPreviousMonth()
+        vm.onNext()
+        vm.onPrevious()
         runCurrent()
 
         assertEquals(TODAY, vm.state.selectedDate)
@@ -204,15 +205,15 @@ class CalendarViewModelTest {
     fun hoy_vuelveAlMesYAlDiaActualesDesdeOtroMes() = runTest {
         repository.givenTasks(task("hoy", LocalDateTime(2024, 10, 24, 10, 0)))
         val vm = started(viewModel())
-        vm.onNextMonth()
-        vm.onNextMonth()
+        vm.onNext()
+        vm.onNext()
         vm.onSelectDate(LocalDate(2024, 12, 10))
         runCurrent()
 
         vm.onToday()
         runCurrent()
 
-        assertEquals(10, vm.state.displayedMonth.monthNumber)
+        assertEquals(10, vm.state.selectedDate.monthNumber)
         assertEquals(TODAY, vm.state.selectedDate)
         assertEquals(listOf("hoy"), vm.state.agendaIds)
     }
@@ -227,7 +228,7 @@ class CalendarViewModelTest {
 
         assertEquals(LocalDate(2024, 11, 5), vm.state.selectedDate)
         assertEquals(LocalDate(2024, 11, 5), vm.state.today)
-        assertEquals(11, vm.state.displayedMonth.monthNumber)
+        assertEquals(11, vm.state.selectedDate.monthNumber)
     }
 
     @Test
@@ -238,7 +239,7 @@ class CalendarViewModelTest {
         vm.onSelectDate(LocalDate(2024, 9, 30))
         runCurrent()
 
-        assertEquals(9, vm.state.displayedMonth.monthNumber)
+        assertEquals(9, vm.state.selectedDate.monthNumber)
         assertEquals(LocalDate(2024, 9, 30), vm.state.selectedDate)
         assertEquals(listOf("sep"), vm.state.agendaIds)
     }
@@ -341,7 +342,7 @@ class CalendarViewModelTest {
         advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
         runCurrent()
 
-        assertEquals(11, vm.state.displayedMonth.monthNumber)
+        assertEquals(11, vm.state.selectedDate.monthNumber)
         assertEquals(LocalDate(2024, 11, 1), vm.state.selectedDate)
     }
 
@@ -374,6 +375,363 @@ class CalendarViewModelTest {
         runCurrent()
 
         assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("en-curso"))
+    }
+
+    private val CalendarUiState.stripDates: List<LocalDate>
+        get() = weeks.single().map { it.date }
+
+    private val CalendarUiState.nowMarker: NowMarker?
+        get() = (agenda as DayAgendaState.Loaded).nowMarker
+
+    @Test
+    fun alElegirSemana_muestraLaFranjaDeLunesADomingoConElMismoDiaSeleccionado() = runTest {
+        repository.givenTasks(task("hoy", LocalDateTime(2024, 10, 24, 10, 0)))
+        val vm = started(viewModel())
+
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+
+        assertEquals(CalendarViewMode.WEEK, vm.state.mode)
+        assertEquals((21..27).map { LocalDate(2024, 10, it) }, vm.state.stripDates)
+        assertEquals(TODAY, vm.state.selectedDate)
+        assertEquals(43, vm.state.weekNumber)
+        assertEquals(listOf("hoy"), vm.state.agendaIds)
+    }
+
+    @Test
+    fun unDomingoPerteneceALaSemanaQueTerminaEnEl_yElLunesSiguienteAbreOtra() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectDate(LocalDate(2024, 10, 27))
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 21), vm.state.stripDates.first())
+        assertEquals(LocalDate(2024, 10, 27), vm.state.stripDates.last())
+
+        vm.onSelectDate(LocalDate(2024, 10, 28))
+        runCurrent()
+
+        assertEquals(LocalDate(2024, 10, 28), vm.state.stripDates.first())
+        assertEquals(LocalDate(2024, 11, 3), vm.state.stripDates.last())
+        assertEquals(44, vm.state.weekNumber)
+    }
+
+    @Test
+    fun laSemanaQueCruzaElAnio_numeraSegunIsoYNoAtenuaLosDiasDelOtroMes() = runTest {
+        clock.current = LocalDateTime(2024, 12, 30, 9, 0)
+        val vm = started(viewModel())
+
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+
+        assertEquals(LocalDate(2024, 12, 30), vm.state.stripDates.first())
+        assertEquals(LocalDate(2025, 1, 5), vm.state.stripDates.last())
+        assertEquals(1, vm.state.weekNumber)
+        assertTrue(vm.state.weeks.single().all { it.isInDisplayedPeriod })
+    }
+
+    @Test
+    fun enSemana_cadaDiaCuentaSusTareasYMuestraUnPuntoPorCategoria() = runTest {
+        repository.givenTasks(
+            task("a", LocalDateTime(2024, 10, 22, 10, 0), category = TaskCategory.ESTUDIO),
+            task("b", LocalDateTime(2024, 10, 22, 12, 0), category = TaskCategory.TRABAJO),
+            task("fuera", LocalDateTime(2024, 10, 28, 12, 0)),
+        )
+        val vm = started(viewModel())
+
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+
+        val tuesday = vm.state.weeks.single().first { it.date == LocalDate(2024, 10, 22) }
+        assertEquals(2, tuesday.taskCount)
+        assertEquals(listOf(TaskCategory.ESTUDIO, TaskCategory.TRABAJO), tuesday.categories)
+        assertEquals(0, vm.state.weeks.single().first { it.date == LocalDate(2024, 10, 26) }.taskCount)
+        assertTrue(vm.state.weeks.single().first { it.date == TODAY }.isToday)
+    }
+
+    @Test
+    fun semanaSiguiente_seleccionaElMismoDiaDeLaSemanaYMuestraSuAgenda() = runTest {
+        repository.givenTasks(task("jueves-siguiente", LocalDateTime(2024, 10, 31, 9, 0)))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.WEEK)
+
+        vm.onNext()
+        runCurrent()
+
+        assertEquals(LocalDate(2024, 10, 31), vm.state.selectedDate)
+        assertEquals(LocalDate(2024, 10, 28), vm.state.stripDates.first())
+        assertEquals(44, vm.state.weekNumber)
+        assertEquals(listOf("jueves-siguiente"), vm.state.agendaIds)
+    }
+
+    @Test
+    fun semanaAnterior_yAlVolverALaSemanaActual_seSeleccionaHoy() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.WEEK)
+
+        vm.onPrevious()
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 17), vm.state.selectedDate)
+        assertEquals(42, vm.state.weekNumber)
+
+        vm.onNext()
+        runCurrent()
+        assertEquals(TODAY, vm.state.selectedDate)
+    }
+
+    @Test
+    fun enSemana_tocarUnDiaDeLaFranjaMuestraSuAgendaSinCambiarDeSemana() = runTest {
+        repository.givenTasks(task("martes", LocalDateTime(2024, 10, 22, 10, 0)))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.WEEK)
+
+        vm.onSelectDate(LocalDate(2024, 10, 22))
+        runCurrent()
+
+        assertEquals(listOf("martes"), vm.state.agendaIds)
+        assertTrue(vm.state.weeks.single().first { it.date == LocalDate(2024, 10, 22) }.isSelected)
+        assertEquals(LocalDate(2024, 10, 21), vm.state.stripDates.first())
+    }
+
+    @Test
+    fun hoy_enSemana_vuelveALaSemanaActualConservandoLaVista() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        vm.onNext()
+        vm.onNext()
+
+        vm.onToday()
+        runCurrent()
+
+        assertEquals(CalendarViewMode.WEEK, vm.state.mode)
+        assertEquals(TODAY, vm.state.selectedDate)
+        assertEquals(43, vm.state.weekNumber)
+    }
+
+    @Test
+    fun alElegirDia_conservaElDiaSeleccionadoYMuestraLaFranjaDeSuSemana() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectDate(LocalDate(2024, 10, 29))
+
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+
+        assertEquals(CalendarViewMode.DAY, vm.state.mode)
+        assertEquals(LocalDate(2024, 10, 29), vm.state.selectedDate)
+        assertEquals(LocalDate(2024, 10, 28), vm.state.stripDates.first())
+        assertTrue(vm.state.weeks.single().first { it.date == LocalDate(2024, 10, 29) }.isSelected)
+    }
+
+    @Test
+    fun diaSiguienteYAnterior_mueveElDiaDeUnoEnUnoYCambiaDeSemanaAlCruzarElDomingo() = runTest {
+        repository.givenTasks(task("lunes", LocalDateTime(2024, 10, 28, 9, 0)))
+        val vm = started(viewModel())
+        vm.onSelectDate(LocalDate(2024, 10, 27))
+        vm.onSelectMode(CalendarViewMode.DAY)
+
+        vm.onNext()
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 28), vm.state.selectedDate)
+        assertEquals(LocalDate(2024, 10, 28), vm.state.stripDates.first())
+        assertEquals(listOf("lunes"), vm.state.agendaIds)
+
+        vm.onPrevious()
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 27), vm.state.selectedDate)
+        assertEquals(LocalDate(2024, 10, 21), vm.state.stripDates.first())
+    }
+
+    @Test
+    fun dia_hoyVuelveAlDiaActualDesdeOtroDia() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+
+        vm.onNext()
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 25), vm.state.selectedDate)
+
+        vm.onToday()
+        runCurrent()
+        assertEquals(TODAY, vm.state.selectedDate)
+    }
+
+    @Test
+    fun alCambiarDeVista_elDiaSeleccionadoSeConservaDeIdaYVuelta() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectDate(LocalDate(2024, 10, 30))
+
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        vm.onSelectMode(CalendarViewMode.DAY)
+        vm.onSelectMode(CalendarViewMode.MONTH)
+        runCurrent()
+
+        assertEquals(CalendarViewMode.MONTH, vm.state.mode)
+        assertEquals(LocalDate(2024, 10, 30), vm.state.selectedDate)
+        assertEquals(5, vm.state.weeks.size)
+    }
+
+    @Test
+    fun semanaYDiaComparten_laObservacionYSoloUnaSemanaNuevaLaReabre() = runTest {
+        val vm = started(viewModel())
+        assertEquals(1, repository.observeTasksSubscriptions)
+
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+        assertEquals(2, repository.observeTasksSubscriptions)
+
+        vm.onSelectMode(CalendarViewMode.DAY)
+        vm.onNext()
+        vm.onSelectDate(LocalDate(2024, 10, 27))
+        runCurrent()
+        assertEquals(2, repository.observeTasksSubscriptions)
+
+        vm.onNext()
+        runCurrent()
+        assertEquals(3, repository.observeTasksSubscriptions)
+    }
+
+    @Test
+    fun enSemana_unErrorMuestraElErrorYReintentarRecuperaLasTareas() = runTest {
+        repository.observeFailure = IllegalStateException("PERMISSION_DENIED")
+        repository.givenTasks(task("hoy", LocalDateTime(2024, 10, 24, 10, 0)))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+        assertEquals(DayAgendaState.LoadError, vm.state.agenda)
+        assertTrue(vm.state.weeks.single().all { it.taskCount == null })
+
+        repository.observeFailure = null
+        vm.onRetry()
+        runCurrent()
+
+        assertEquals(listOf("hoy"), vm.state.agendaIds)
+    }
+
+    @Test
+    fun unaTareaQueCruzaLaMedianoche_apareceEnAmbosDiasYEstaEnCursoDesdeLaNoche() = runTest {
+        // Bloque del jueves 22:00 al viernes 01:00.
+        repository.givenTasks(task("noche", LocalDateTime(2024, 10, 25, 1, 0), 3.hours))
+        clock.current = LocalDateTime(2024, 10, 24, 23, 0)
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+        assertEquals(listOf("noche"), vm.state.agendaIds)
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("noche"))
+
+        vm.onNext()
+        runCurrent()
+
+        assertEquals(listOf("noche"), vm.state.agendaIds)
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("noche"))
+    }
+
+    @Test
+    fun alCruzarLaMedianoche_enDiaElDiaSeleccionadoAvanzaAlNuevoHoy() = runTest {
+        clock.current = LocalDateTime(2024, 10, 24, 23, 59)
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+
+        clock.current = LocalDateTime(2024, 10, 25, 0, 0)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(CalendarViewMode.DAY, vm.state.mode)
+        assertEquals(LocalDate(2024, 10, 25), vm.state.selectedDate)
+        assertEquals(LocalDate(2024, 10, 25), vm.state.today)
+    }
+
+    @Test
+    fun enSemana_enCursoSeActualizaConElReloj() = runTest {
+        repository.givenTasks(task("proxima", LocalDateTime(2024, 10, 24, 16, 0), 1.hours))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+        assertEquals(AgendaItemStatus.SCHEDULED, vm.agendaStatus("proxima"))
+
+        clock.current = LocalDateTime(2024, 10, 24, 15, 30)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(AgendaItemStatus.IN_PROGRESS, vm.agendaStatus("proxima"))
+    }
+
+    @Test
+    fun enDia_laMarcaAhoraVaAntesDeLaPrimeraTareaQueNoHaTerminado() = runTest {
+        repository.givenTasks(
+            task("manana", LocalDateTime(2024, 10, 24, 13, 0), 4.hours),
+            task("tarde", LocalDateTime(2024, 10, 24, 16, 30), 90.minutes),
+        )
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+
+        assertEquals(NowMarker(beforeIndex = 1, time = NOW), vm.state.nowMarker)
+    }
+
+    @Test
+    fun enDia_conUnaTareaEnCurso_laMarcaAhoraVaAntesDeEsaTarea() = runTest {
+        repository.givenTasks(task("actual", LocalDateTime(2024, 10, 24, 16, 0), 2.hours))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+
+        assertEquals(0, vm.state.nowMarker?.beforeIndex)
+    }
+
+    @Test
+    fun enDia_siTodasLasTareasYaTerminaron_laMarcaAhoraVaAlFinal() = runTest {
+        repository.givenTasks(task("temprano", LocalDateTime(2024, 10, 24, 10, 0), 1.hours))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+
+        assertEquals(1, vm.state.nowMarker?.beforeIndex)
+    }
+
+    @Test
+    fun laMarcaAhora_soloApareceEnDiaHoyConTareas() = runTest {
+        repository.givenTasks(
+            task("hoy", LocalDateTime(2024, 10, 24, 16, 0)),
+            task("manana", LocalDateTime(2024, 10, 25, 16, 0)),
+        )
+        val vm = started(viewModel())
+        assertNull(vm.state.nowMarker)
+
+        vm.onSelectMode(CalendarViewMode.WEEK)
+        runCurrent()
+        assertNull(vm.state.nowMarker)
+
+        vm.onSelectMode(CalendarViewMode.DAY)
+        vm.onNext()
+        runCurrent()
+        assertNull(vm.state.nowMarker)
+
+        vm.onToday()
+        runCurrent()
+        assertEquals(0, vm.state.nowMarker?.beforeIndex)
+    }
+
+    @Test
+    fun laMarcaAhora_noApareceSiElDiaNoTieneTareas() = runTest {
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+
+        assertNull(vm.state.nowMarker)
+    }
+
+    @Test
+    fun laMarcaAhora_avanzaConElReloj() = runTest {
+        repository.givenTasks(task("proxima", LocalDateTime(2024, 10, 24, 16, 0), 1.hours))
+        val vm = started(viewModel())
+        vm.onSelectMode(CalendarViewMode.DAY)
+        runCurrent()
+        assertEquals(0, vm.state.nowMarker?.beforeIndex)
+
+        clock.current = LocalDateTime(2024, 10, 24, 17, 30)
+        advanceTimeBy(CLOCK_REFRESH_INTERVAL + 1.seconds)
+        runCurrent()
+
+        assertEquals(NowMarker(beforeIndex = 1, time = clock.current), vm.state.nowMarker)
     }
 
     private fun task(
