@@ -8,11 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -28,6 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -60,7 +61,6 @@ import com.krono.feature.tasks.R
  * @param template plantilla a mostrar.
  * @param canDelete `false` cuando es la única plantilla y no se puede eliminar.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FocusTemplateCard(
     template: FocusTemplate,
@@ -74,17 +74,10 @@ fun FocusTemplateCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .glassSurface(borderColor = borderColor),
+            .glassSurface(borderColor = borderColor)
+            .then(if (template.isActive) Modifier.drawBehind { drawActiveStripe() } else Modifier),
     ) {
-        if (template.isActive) {
-            Box(
-                Modifier
-                    .width(KronoSpacing.xs)
-                    .fillMaxHeight()
-                    .background(PrimaryMagenta),
-            )
-        }
+        if (template.isActive) Spacer(Modifier.width(KronoSpacing.xs))
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -99,6 +92,15 @@ fun FocusTemplateCard(
             if (!template.isActive) ActivateButton(template.name, onActivate)
         }
     }
+}
+
+/**
+ * Dibuja la franja magenta del borde izquierdo de la tarjeta activa. Se pinta por detrás en lugar
+ * de medir la fila con `IntrinsicSize.Min`: el `FlowRow` de las etiquetas no tiene altura
+ * intrínseca fiable y, con la fuente al 200 %, la tarjeta quedaba cortada.
+ */
+private fun DrawScope.drawActiveStripe() {
+    drawRect(color = PrimaryMagenta, size = Size(KronoSpacing.xs.toPx(), size.height))
 }
 
 @OptIn(ExperimentalLayoutApi::class)
