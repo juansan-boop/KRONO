@@ -77,8 +77,8 @@ internal fun CalendarMonthHeader(
 
 @Composable
 private fun MonthStepButton(@DrawableRes icon: Int, description: String, onClick: () -> Unit) {
-    // IconButton ya garantiza el área táctil mínima de 48dp.
-    IconButton(onClick = onClick) {
+    // Tamaño explícito: el IconButton de M3 mide 40dp y solo amplía la zona táctil por fuera.
+    IconButton(onClick = onClick, modifier = Modifier.size(KronoSizes.minTouchTarget)) {
         Icon(
             painter = painterResource(icon),
             contentDescription = description,
