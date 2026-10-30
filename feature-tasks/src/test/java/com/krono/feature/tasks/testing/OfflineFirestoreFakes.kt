@@ -84,6 +84,8 @@ class NoActiveTimerDataSource : TimerRemoteDataSource {
 
     override suspend fun saveActiveTimer(userId: String, timer: Map<String, Any?>) = unsupported()
 
+    override suspend fun deleteActiveTimer(userId: String) = unsupported()
+
     override suspend fun finishActiveTimer(
         userId: String,
         session: Map<String, Any?>,

@@ -80,10 +80,14 @@ data class ActiveTimer(
  * @property session sesión registrada.
  * @property addedToTask `false` si la tarea ya no existía: la sesión se conservó, pero su tiempo
  * no se sumó a ninguna tarea y la UI debe avisarlo.
+ * @property discardedAsTooShort `true` si el tiempo trabajado no llegó a
+ * [FinishTimerUseCase.MIN_SESSION_DURATION]: la sesión NO se guardó ni se sumó a la tarea, y
+ * [session] solo describe lo que se descartó para poder avisarlo.
  */
 data class FinishedSession(
     val session: TimeSession,
     val addedToTask: Boolean,
+    val discardedAsTooShort: Boolean = false,
 )
 
 /** Origen de una sesión de tiempo (Sección 6 del SPEC). */

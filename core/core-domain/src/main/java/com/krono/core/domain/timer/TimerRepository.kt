@@ -40,4 +40,13 @@ interface TimerRepository {
      * indica con [FinishedSession.addedToTask] en `false`.
      */
     suspend fun finishActiveTimer(session: TimeSession): KronoResult<FinishedSession>
+
+    /**
+     * Descarta el cronómetro en curso sin registrar ninguna sesión ni sumar tiempo a la tarea
+     * (sesiones demasiado cortas, [FinishTimerUseCase.MIN_SESSION_DURATION]).
+     *
+     * Es idempotente: solo elimina el cronómetro cuya [TimeSession] tendría el id [sessionId];
+     * si ya no hay uno, o es otro, no hace nada y devuelve éxito.
+     */
+    suspend fun discardActiveTimer(sessionId: String): KronoResult<Unit>
 }

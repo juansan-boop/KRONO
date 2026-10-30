@@ -6,6 +6,7 @@ import com.krono.core.domain.task.TaskRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /** Observa el cronómetro en curso (F-08). */
 class ObserveActiveTimerUseCase(
@@ -123,6 +124,10 @@ class ResumeTimerUseCase(
  * trabajado y lo suma a la tarea. El tipo es [TimeSessionType.ENFOQUE] si el cronómetro era un
  * enfoque (F-09 CA-2) y [TimeSessionType.CRONOMETRO] si no. Las pausas y los descansos no cuentan.
  *
+ * Si el tiempo trabajado es menor que [MIN_SESSION_DURATION], la sesión no se guarda ni se suma
+ * a la tarea: el cronómetro se cierra igual y el resultado lo indica con
+ * [FinishedSession.discardedAsTooShort].
+ *
  * El id de la sesión es [ActiveTimer.sessionId]: si una escritura falla y el usuario reintenta,
  * se guarda la misma sesión en vez de una segunda.
  */
@@ -149,7 +154,27 @@ class FinishTimerUseCase(
             duration = timer.elapsedAt(now),
             type = timer.sessionType,
         )
-        return repository.finishActiveTimer(session)
+        val isTooShort = session.duration < MIN_SESSION_DURATION
+        return if (isTooShort) discard(session) else repository.finishActiveTimer(session)
+    }
+
+    /** Cierra el cronómetro sin guardar la sesión, que es demasiado corta para contar. */
+    private suspend fun discard(session: TimeSession): KronoResult<FinishedSession> =
+        when (val result = repository.discardActiveTimer(session.id)) {
+            is KronoResult.Success ->
+                KronoResult.Success(FinishedSession(session, addedToTask = false, discardedAsTooShort = true))
+            is KronoResult.Error -> result
+            KronoResult.Loading -> KronoResult.Loading
+        }
+
+    /** Constantes de la finalización. */
+    companion object {
+        /**
+         * Duración mínima de una sesión para guardarla (decisión de producto pendiente de
+         * confirmar, F-08 y F-09): una sesión más corta suele ser un toque accidental y ensucia
+         * el historial con el que se estiman las tareas.
+         */
+        val MIN_SESSION_DURATION: Duration = 1.minutes
     }
 }
 

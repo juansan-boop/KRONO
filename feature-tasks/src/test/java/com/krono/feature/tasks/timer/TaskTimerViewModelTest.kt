@@ -141,6 +141,24 @@ class TaskTimerViewModelTest {
     }
 
     @Test
+    fun alFinalizarUnaSesionDeMenosDeUnMinuto_noLaGuardaYAvisaQueEraMuyCorta() = runTimerTest {
+        runCurrent()
+        viewModel.onStart()
+        runCurrent()
+        clock.advanceBy(13.seconds)
+
+        viewModel.onFinish()
+        runCurrent()
+
+        val state = viewModel.uiState.value
+        assertEquals(TimerStatus.IDLE, state.status)
+        assertTrue(state.isSessionTooShort)
+        assertNull(state.savedSession)
+        assertTrue(timers.sessions.isEmpty())
+        assertNull(timers.actualDurationByTask["informe"])
+    }
+
+    @Test
     fun alFinalizarSiLaTareaYaNoExiste_avisaQueLaSesionNoSeSumo() = runTimerTest {
         runCurrent()
         viewModel.onStart()

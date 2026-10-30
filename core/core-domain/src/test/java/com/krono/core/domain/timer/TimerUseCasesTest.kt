@@ -153,6 +153,52 @@ class TimerUseCasesTest {
     }
 
     @Test
+    fun unaSesionDeMenosDeUnMinuto_noSeGuardaNiSumaALaTareaYSeAvisa() = runTest {
+        startTimer("tarea-1")
+        clock.advanceBy(13.seconds)
+
+        val finished = (finish() as KronoResult.Success).data
+
+        assertTrue(finished.discardedAsTooShort)
+        assertFalse(finished.addedToTask)
+        assertTrue(repository.sessions.isEmpty())
+        assertNull(repository.actualDurationByTask["tarea-1"])
+        assertNull(repository.currentTimer)
+    }
+
+    @Test
+    fun unaSesionDeExactamenteUnMinuto_siSeGuarda() = runTest {
+        startTimer("tarea-1")
+        clock.advanceBy(FinishTimerUseCase.MIN_SESSION_DURATION)
+
+        val finished = (finish() as KronoResult.Success).data
+
+        assertFalse(finished.discardedAsTooShort)
+        assertEquals(1, repository.sessions.size)
+        assertEquals(FinishTimerUseCase.MIN_SESSION_DURATION, repository.actualDurationByTask["tarea-1"])
+    }
+
+    @Test
+    fun alFinalizarUnEnfoqueDeMenosDeUnMinuto_tampocoSeGuarda() = runTest {
+        repository.givenActiveTimer(
+            ActiveTimer(
+                taskId = "tarea-1",
+                startedAt = start,
+                runningSince = start,
+                accumulated = Duration.ZERO,
+                focus = FocusBlock(blockDuration = 25.minutes, breakDuration = 5.minutes),
+            ),
+        )
+        clock.advanceBy(30.seconds)
+
+        val finished = (finish() as KronoResult.Success).data
+
+        assertTrue(finished.discardedAsTooShort)
+        assertTrue(repository.sessions.isEmpty())
+        assertNull(repository.currentTimer)
+    }
+
+    @Test
     fun siLaTareaYaNoExiste_conservaLaSesionYAvisaQueNoSeSumo() = runTest {
         startTimer("tarea-1")
         clock.advanceBy(10.minutes)

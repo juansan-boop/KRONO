@@ -38,11 +38,14 @@ internal fun FocusTaskCard(state: FocusModeUiState, modifier: Modifier = Modifie
             .padding(KronoSpacing.md),
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
     ) {
-        Text(
-            text = stringResource(R.string.focus_mode_block_minutes, state.blockDuration.inWholeMinutes),
-            style = MaterialTheme.typography.labelLarge,
-            color = SecondaryCyan,
-        )
+        // Sin enfoque en curso (por ejemplo, ya finalizado) no hay bloque que mostrar.
+        if (state.phase != null) {
+            Text(
+                text = stringResource(R.string.focus_mode_block_minutes, state.blockDuration.inWholeMinutes),
+                style = MaterialTheme.typography.labelLarge,
+                color = SecondaryCyan,
+            )
+        }
         Text(
             text = task.title,
             style = MaterialTheme.typography.titleMedium,

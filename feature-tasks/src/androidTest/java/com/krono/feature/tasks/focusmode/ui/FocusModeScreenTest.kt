@@ -187,4 +187,19 @@ class FocusModeScreenTest {
         composeRule.onNodeWithText(str(R.string.focus_mode_idle)).assertExists()
         composeRule.onNodeWithText(str(R.string.focus_mode_finish)).assertDoesNotExist()
     }
+
+    @Test
+    fun alFinalizar_noMuestraUnBloqueDeCeroMinutos() {
+        show(working.copy(phase = null, blockDuration = 0.seconds, savedSession = 20.minutes))
+
+        composeRule.onNodeWithText(str(R.string.focus_mode_block_minutes, 0)).assertDoesNotExist()
+    }
+
+    @Test
+    fun siLaSesionFueMuyCorta_avisaQueNoSeGuardo() {
+        show(working.copy(phase = null, blockDuration = 0.seconds, isSessionTooShort = true))
+
+        composeRule.onNodeWithText(str(R.string.timer_too_short)).assertExists()
+        composeRule.onNodeWithText(str(R.string.focus_mode_idle)).assertDoesNotExist()
+    }
 }
