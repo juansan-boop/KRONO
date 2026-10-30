@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.layout.Arrangement
@@ -21,29 +21,35 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import com.krono.core.domain.calendar.CalendarViewMode
 import com.krono.core.ui.icons.KronoIcons
 import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
 import com.krono.core.ui.theme.OnSurface
 import com.krono.core.ui.theme.OnSurfaceVariant
 import com.krono.core.ui.theme.PrimaryFixedDim
+import com.krono.core.ui.theme.SecondaryCyan
 import com.krono.feature.calendar.R
-import kotlinx.datetime.LocalDate
 
 /**
- * Encabezado de la vista mensual: navegación entre meses, botón "Hoy" y selector de vista.
+ * Encabezado del calendario, igual en las tres vistas: navegación al período anterior y
+ * siguiente con su título, botón "Hoy" y selector de vista.
  *
- * @param displayedMonth Cualquier fecha del mes mostrado.
- * @param onPreviousMonth Muestra el mes anterior.
- * @param onNextMonth Muestra el mes siguiente.
- * @param onToday Vuelve al mes y al día actuales.
+ * @param mode Vista activa; decide las descripciones de los botones de navegación.
+ * @param title Título de la vista, con su línea superior opcional.
+ * @param onPrevious Muestra el período anterior.
+ * @param onNext Muestra el período siguiente.
+ * @param onToday Vuelve al período y al día actuales.
+ * @param onSelectMode Cambia de vista.
  */
 @Composable
-internal fun CalendarMonthHeader(
-    displayedMonth: LocalDate,
-    onPreviousMonth: () -> Unit,
-    onNextMonth: () -> Unit,
+internal fun CalendarHeader(
+    mode: CalendarViewMode,
+    title: CalendarTitle,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onToday: () -> Unit,
+    onSelectMode: (CalendarViewMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -51,32 +57,40 @@ internal fun CalendarMonthHeader(
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            MonthStepButton(
+            PeriodStepButton(
                 icon = KronoIcons.ChevronLeft,
-                description = stringResource(R.string.calendar_previous_month),
-                onClick = onPreviousMonth,
+                description = previousPeriodDescription(mode),
+                onClick = onPrevious,
             )
-            Text(
-                text = monthTitle(displayedMonth),
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { heading() },
-                style = MaterialTheme.typography.titleMedium,
-                color = OnSurface,
-            )
-            MonthStepButton(
+            PeriodTitle(title = title, modifier = Modifier.weight(1f))
+            PeriodStepButton(
                 icon = KronoIcons.ChevronRight,
-                description = stringResource(R.string.calendar_next_month),
-                onClick = onNextMonth,
+                description = nextPeriodDescription(mode),
+                onClick = onNext,
             )
             TodayButton(onClick = onToday)
         }
-        CalendarViewSelector()
+        CalendarViewSelector(selectedMode = mode, onSelectMode = onSelectMode)
     }
 }
 
 @Composable
-private fun MonthStepButton(@DrawableRes icon: Int, description: String, onClick: () -> Unit) {
+private fun PeriodTitle(title: CalendarTitle, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        title.eyebrow?.let { eyebrow ->
+            Text(text = eyebrow, style = MaterialTheme.typography.labelMedium, color = SecondaryCyan)
+        }
+        Text(
+            text = title.title,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.titleMedium,
+            color = OnSurface,
+        )
+    }
+}
+
+@Composable
+private fun PeriodStepButton(@DrawableRes icon: Int, description: String, onClick: () -> Unit) {
     // Tamaño explícito: el IconButton de M3 mide 40dp y solo amplía la zona táctil por fuera.
     IconButton(onClick = onClick, modifier = Modifier.size(KronoSizes.minTouchTarget)) {
         Icon(

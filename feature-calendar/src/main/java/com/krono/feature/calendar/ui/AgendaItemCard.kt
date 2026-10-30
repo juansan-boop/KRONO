@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -35,8 +35,8 @@ import com.krono.core.ui.theme.PrimaryFixedDim
 import com.krono.core.ui.theme.SecondaryCyan
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.calendar.R
-import com.krono.feature.calendar.month.AgendaItemStatus
-import com.krono.feature.calendar.month.AgendaItemUi
+import com.krono.feature.calendar.AgendaItemStatus
+import com.krono.feature.calendar.AgendaItemUi
 
 /**
  * Tarjeta de una tarea en la agenda del día (F-16 CA-2): horario de inicio a fin con el punto de

@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background

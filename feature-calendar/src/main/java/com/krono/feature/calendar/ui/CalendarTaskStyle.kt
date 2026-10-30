@@ -1,4 +1,4 @@
-package com.krono.feature.calendar.month.ui
+package com.krono.feature.calendar.ui
 
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color

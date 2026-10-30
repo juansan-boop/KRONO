@@ -1,20 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Encabezado de la vista mensual (F-16) -->
+    <!-- Encabezado: título y navegación de cada vista (F-16) -->
     <string name="calendar_month_title">%1$s %2$d</string>
     <string name="calendar_previous_month">Mes anterior</string>
     <string name="calendar_next_month">Mes siguiente</string>
+    <string name="calendar_previous_week">Semana anterior</string>
+    <string name="calendar_next_week">Semana siguiente</string>
+    <string name="calendar_previous_day">Día anterior</string>
+    <string name="calendar_next_day">Día siguiente</string>
     <string name="calendar_today">Hoy</string>
     <string name="calendar_today_description">Ir a hoy</string>
+    <string name="calendar_week_eyebrow">Semana %d</string>
+    <string name="calendar_week_range_same_month">%1$d - %2$d de %3$s</string>
+    <string name="calendar_week_range_two_months">%1$d de %2$s - %3$d de %4$s</string>
+    <string name="calendar_day_eyebrow">%1$s · Semana %2$d</string>
+    <string name="calendar_day_title">%1$d de %2$s</string>
 
-    <!-- Selector de vista: solo la vista Mes existe por ahora -->
+    <!-- Selector de vista -->
     <string name="calendar_view_selector">Vista del calendario</string>
     <string name="calendar_view_month">Mes</string>
     <string name="calendar_view_week">Semana</string>
     <string name="calendar_view_day">Día</string>
-    <string name="calendar_view_coming_soon">Próximamente</string>
-    <string name="calendar_view_unavailable_description">%1$s, %2$s</string>
-    <string name="calendar_views_coming_soon_note">Las vistas Semana y Día llegarán pronto.</string>
+
+    <!-- Franja de días de las vistas Semana y Día -->
+    <string name="calendar_week_strip">Días de la semana</string>
 
     <!-- Rejilla del mes -->
     <string name="calendar_day_description">%1$s, %2$s</string>
@@ -39,6 +48,7 @@
     <string name="calendar_time">%1$02d:%2$02d</string>
     <string name="calendar_time_range">%1$s - %2$s</string>
     <string name="calendar_open_task">Abrir tarea</string>
+    <string name="calendar_now_marker">Ahora · %s</string>
 
     <!-- Estado, categoría y prioridad de una tarea de la agenda -->
     <string name="calendar_status_in_progress">En curso</string>

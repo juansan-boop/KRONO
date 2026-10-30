@@ -1,34 +1,39 @@
-package com.krono.feature.calendar.month
+package com.krono.feature.calendar
 
+import com.krono.core.domain.calendar.CalendarViewMode
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 
 /**
- * Estado inmutable de la vista mensual del calendario (F-16 CA-1 y CA-2).
+ * Estado inmutable del calendario en cualquiera de sus tres vistas (F-16 CA-1, CA-2 y CA-3).
  *
- * @property displayedMonth Cualquier fecha del mes mostrado; la pantalla solo usa su año y mes
- * para el título.
- * @property today Fecha actual, resaltada en la rejilla.
- * @property selectedDate Día cuya agenda se muestra debajo de la rejilla.
- * @property weeks Rejilla del mes: semanas completas de lunes a domingo, con días de los meses
- * vecinos.
+ * @property mode Vista activa: mes, semana o día.
+ * @property today Fecha actual, resaltada en la rejilla o la franja.
+ * @property selectedDate Día cuya agenda se muestra. Es el hilo común entre vistas: al cambiar de
+ * vista se conserva, y el mes o la semana mostrados son siempre los que lo contienen.
+ * @property weekNumber Número de semana ISO de [selectedDate] (lunes a domingo), para los títulos
+ * de Semana y Día.
+ * @property weeks En Mes, la rejilla de semanas completas con días de los meses vecinos; en
+ * Semana y Día, una sola semana de lunes a domingo (la franja de días).
  * @property agenda Estado de la agenda del día seleccionado: cargando, error o tareas.
  */
-data class CalendarMonthUiState(
-    val displayedMonth: LocalDate,
+data class CalendarUiState(
+    val mode: CalendarViewMode,
     val today: LocalDate,
     val selectedDate: LocalDate,
+    val weekNumber: Int,
     val weeks: List<List<CalendarDayUi>>,
     val agenda: DayAgendaState,
 )
 
 /**
- * Celda de un día de la rejilla mensual.
+ * Celda de un día de la rejilla mensual o de la franja semanal.
  *
  * @property date Fecha de la celda.
- * @property isInDisplayedMonth `false` para los días de los meses vecinos (se muestran atenuados).
+ * @property isInDisplayedPeriod `false` solo para los días de los meses vecinos de la rejilla
+ * mensual (se muestran atenuados); en Semana y Día siempre es `true`.
  * @property isToday Indica si es la fecha actual.
  * @property isSelected Indica si es el día cuya agenda se muestra.
  * @property taskCount Tareas del día, o `null` mientras no se conocen (cargando o error): así la
@@ -38,7 +43,7 @@ data class CalendarMonthUiState(
  */
 data class CalendarDayUi(
     val date: LocalDate,
-    val isInDisplayedMonth: Boolean,
+    val isInDisplayedPeriod: Boolean,
     val isToday: Boolean,
     val isSelected: Boolean,
     val taskCount: Int?,
@@ -62,9 +67,20 @@ sealed interface DayAgendaState {
      * Tareas del día en el orden del dominio (inicio y prioridad).
      *
      * @property items Tareas del día; vacía si el día no tiene ninguna.
+     * @property nowMarker Separador "Ahora" de la vista diaria, o `null` fuera de ella.
      */
-    data class Loaded(val items: List<AgendaItemUi>) : DayAgendaState
+    data class Loaded(val items: List<AgendaItemUi>, val nowMarker: NowMarker? = null) : DayAgendaState
 }
+
+/**
+ * Separador "Ahora · HH:mm" de la vista diaria (F-16 CA-3): marca dónde cae la hora actual dentro
+ * de la agenda de hoy.
+ *
+ * @property beforeIndex Posición en la lista de tareas delante de la que se dibuja: la de la
+ * primera tarea que aún no terminó, o el tamaño de la lista si todas terminaron.
+ * @property time Hora actual que muestra el separador.
+ */
+data class NowMarker(val beforeIndex: Int, val time: LocalDateTime)
 
 /**
  * Tarea de la agenda del día, con su horario derivado (D-14).
