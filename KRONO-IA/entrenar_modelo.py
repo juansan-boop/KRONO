@@ -24,16 +24,10 @@ Y tres conjuntos de variables, según lo que la app puede conocer:
   COMPLETO  +SUBCAT + fatiga (la app tendría que preguntarla)
 
 Salidas en ./resultados:
-  metricas.csv, metricas_por_categoria.csv, modelo_app.json y gráficas .png
+  metricas.csv, metricas_por_categoria.csv, metricas_piloto.csv, modelo_app.json y gráficas .png
 
 Uso (desde la carpeta KRONO-IA):
-    pip install pandas scikit-learn matplotlib
     python entrenar_modelo.py
-
-LIMITACIÓN (para el informe): los datos son sintéticos. El modelo puede
-"descubrir" la regla con que SCRIPT.PY los generó; esto valida el método,
-no el comportamiento real de los estudiantes. Para eso está la plantilla de
-datos piloto reales.
 """
 
 import json
@@ -218,32 +212,31 @@ def grafica_dispersion(real, predicciones, ruta):
     fig, ejes = plt.subplots(1, len(predicciones), figsize=(5 * len(predicciones), 4.5), sharey=True)
     tope = max(real.max(), *(p.max() for p in predicciones.values()))
     for eje, (nombre, pred) in zip(np.atleast_1d(ejes), predicciones.items()):
-        eje.scatter(real, pred, s=12, alpha=0.6, color="#2bb3c0")
-        eje.plot([0, tope], [0, tope], "--", color="gray", linewidth=1)
+        eje.scatter(real, pred, alpha=0.3, s=15, color="#8a63d2")
+        eje.plot([0, tope], [0, tope], "k--", lw=1)
         eje.set_title(nombre)
         eje.set_xlabel("Duración real (min)")
-    np.atleast_1d(ejes)[0].set_ylabel("Predicción (min)")
-    fig.suptitle("Real vs. predicho (la diagonal es la predicción perfecta)")
-    fig.tight_layout()
-    fig.savefig(ruta, dpi=150)
-    plt.close(fig)
+        eje.set_xlim(0, tope)
+        eje.set_ylim(0, tope)
+    ejes[0].set_ylabel("Predicción (min)")
+    plt.tight_layout()
+    plt.savefig(ruta, dpi=150)
+    plt.close()
 
 
 def grafica_importancia(modelo, columnas, ruta):
-    orden = np.argsort(modelo.feature_importances_)
-    plt.figure(figsize=(8, 5))
-    plt.barh(np.array(columnas)[orden], modelo.feature_importances_[orden], color="#d2638a")
-    plt.xlabel("Importancia")
-    plt.title("Bosque aleatorio (COMPLETO) · ¿Qué variables pesan más?")
+    imp = pd.Series(modelo.feature_importances_, index=columnas).sort_values()
+    plt.figure(figsize=(7, 4.5))
+    imp.plot(kind="barh", color="#2bb3c0")
+    plt.xlabel("Importancia de la variable (Gini)")
+    plt.title("H1 · Variables más informativas para predecir la duración")
     plt.tight_layout()
     plt.savefig(ruta, dpi=150)
     plt.close()
 
 
 def grafica_aprendizaje(test, pred_modelo, pred_hibrido, ruta):
-    """Error medio en minutos según cuántas tareas lleva medidas el usuario. En cada
-    tramo se comparan las mismas tareas, así que la diferencia entre barras es lo que
-    aporta el sesgo personal que aprende el agente (no la dificultad de las tareas)."""
+    """Error medio en minutos según cuántas tareas lleva medidas el usuario."""
     posicion = test.groupby("usuario_id").cumcount()
     real = test["duracion_real_min"].to_numpy()
     tramos = pd.cut(posicion, bins=[-1, 9, 19, 39, 1000], labels=["1-10", "11-20", "21-40", "41+"])
@@ -315,11 +308,42 @@ def main():
     grafica_aprendizaje(test, pred_m1_app, resultados["APP"]["H"], os.path.join(SALIDA, "aprendizaje_por_usuario.png"))
 
     pd.set_option("display.width", 140)
-    print("\n=== H1 · Evaluación en usuarios nuevos (historial_test.csv) ===\n")
+    print("\n=== H1 · Evaluación en usuarios nuevos (historial_test.csv, 1000 filas) ===\n")
     print(tabla.to_string(index=False))
     print(f"\nFactor global de subestimación (B1): x{factor:.2f}")
     print("\nError absoluto medio por categoría (min):\n")
     print(por_categoria.to_string())
+
+    # --- Evaluación adicional en datos piloto (200 filas) ---
+    ruta_piloto = os.path.join(CARPETA, "plantilla_datos_piloto_reales.csv")
+    if os.path.exists(ruta_piloto):
+        piloto = pd.read_csv(ruta_piloto)
+        real_p = piloto["duracion_real_min"].to_numpy(dtype=float)
+        pred_b0_p = b0_usuario(train, piloto)
+        pred_b2_p = b2_regla_app(piloto)
+
+        # H con conjunto APP
+        X_p_app = matriz(piloto, "APP", cols_app)
+        pred_m1_p_app = np.exp(m1_app.predict(X_p_app))
+        pred_h_p_app = hibrido(piloto, pred_m1_p_app)
+
+        # H con conjunto COMPLETO
+        pred_m1_comp, m1_comp, cols_comp = resultados["COMPLETO"]["M1"]
+        X_p_comp = matriz(piloto, "COMPLETO", cols_comp)
+        pred_m1_p_comp = np.exp(m1_comp.predict(X_p_comp))
+        pred_h_p_comp = hibrido(piloto, pred_m1_p_comp)
+
+        filas_piloto = [
+            metricas("B0 estimación usuario", "-", real_p, pred_b0_p),
+            metricas("B2 regla app (F-11)", "-", real_p, pred_b2_p),
+            metricas("H agente híbrido", "APP", real_p, pred_h_p_app),
+            metricas("H agente híbrido", "COMPLETO", real_p, pred_h_p_comp),
+        ]
+        tabla_piloto = pd.DataFrame(filas_piloto)
+        tabla_piloto.to_csv(os.path.join(SALIDA, "metricas_piloto.csv"), index=False)
+        print("\n=== H1 · Validación Piloto (plantilla_datos_piloto_reales.csv, 200 filas) ===\n")
+        print(tabla_piloto.to_string(index=False))
+
     print(f"\nResultados y gráficas en: {SALIDA}")
 
 

@@ -1,0 +1,5 @@
+estimador,variables,MAE_min,MAPE_pct,R2,aciertos_20pct,sesgo_medio_min
+B0 estimación usuario,-,21.1,26.7,0.215,35.5,-20.1
+B2 regla app (F-11),-,20.9,28.6,0.23,36.0,-9.4
+H agente híbrido,APP,11.2,15.8,0.745,69.0,-1.7
+H agente híbrido,COMPLETO,10.6,14.6,0.773,70.5,-1.1

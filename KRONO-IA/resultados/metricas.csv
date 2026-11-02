@@ -1,13 +1,13 @@
 estimador,variables,MAE_min,MAPE_pct,R2,aciertos_20pct,sesgo_medio_min
-B0 estimación usuario,-,32.9,36.2,-0.368,15.5,-32.5
-B1 factor global,-,17.0,19.7,0.56,56.0,-7.3
-B2 regla app (F-11),-,25.9,32.1,0.015,38.9,-7.1
-M1 regresión lineal,APP,15.5,17.5,0.61,62.9,-8.3
-M2 bosque aleatorio,APP,16.4,18.6,0.57,61.0,-8.2
-H agente híbrido,APP,14.9,17.8,0.646,64.6,-2.6
-M1 regresión lineal,+SUBCAT,14.7,16.5,0.646,63.9,-8.2
-M2 bosque aleatorio,+SUBCAT,15.6,17.5,0.602,61.9,-8.4
-H agente híbrido,+SUBCAT,14.0,16.6,0.686,66.9,-2.4
-M1 regresión lineal,COMPLETO,14.6,16.4,0.655,65.5,-8.1
-M2 bosque aleatorio,COMPLETO,15.2,17.2,0.626,63.1,-8.2
-H agente híbrido,COMPLETO,13.8,16.4,0.698,68.2,-2.3
+B0 estimación usuario,-,23.7,28.2,0.024,33.3,-22.4
+B1 factor global,-,16.2,20.5,0.494,55.4,-7.1
+B2 regla app (F-11),-,22.9,30.7,0.084,38.8,-8.5
+M1 regresión lineal,APP,13.3,16.9,0.656,65.7,-6.9
+M2 bosque aleatorio,APP,13.9,17.9,0.631,63.3,-6.5
+H agente híbrido,APP,12.8,17.1,0.694,66.3,-2.2
+M1 regresión lineal,+SUBCAT,12.5,15.7,0.69,68.6,-6.9
+M2 bosque aleatorio,+SUBCAT,13.0,16.6,0.669,65.2,-6.6
+H agente híbrido,+SUBCAT,11.9,15.8,0.729,70.5,-2.0
+M1 regresión lineal,COMPLETO,12.2,15.4,0.71,68.3,-6.3
+M2 bosque aleatorio,COMPLETO,12.7,16.3,0.694,65.3,-6.1
+H agente híbrido,COMPLETO,11.7,15.6,0.741,70.8,-1.8

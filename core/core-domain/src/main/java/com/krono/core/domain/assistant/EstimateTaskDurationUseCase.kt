@@ -151,14 +151,14 @@ class EstimateTaskDurationUseCase {
         private const val SECONDS_PER_MINUTE = 60.0
 
         // Constantes del Modelo H1 exportadas de modelo_app.json
-        const val INTERCEPT = 0.775001
-        const val COEF_LOG_ESTIMATE = 0.875659
-        const val COEF_DAYS_TO_DUE = -0.001004
-        const val COEF_PRIORITY = 0.002915
-        const val COEF_BLOCK_MORNING = -0.128620
-        const val COEF_BLOCK_AFTERNOON = -0.028626
-        const val COEF_BLOCK_NIGHT = 0.157246
-        const val GLOBAL_FACTOR_B1 = 1.475
+        const val INTERCEPT = 0.748545
+        const val COEF_LOG_ESTIMATE = 0.872979
+        const val COEF_DAYS_TO_DUE = -0.000405
+        const val COEF_PRIORITY = -0.000726
+        const val COEF_BLOCK_MORNING = -0.150017
+        const val COEF_BLOCK_AFTERNOON = -0.038374
+        const val COEF_BLOCK_NIGHT = 0.188390
+        const val GLOBAL_FACTOR_B1 = 1.28
         const val HYBRID_K = 2.0
         const val HYBRID_WINDOW = 15
     }
