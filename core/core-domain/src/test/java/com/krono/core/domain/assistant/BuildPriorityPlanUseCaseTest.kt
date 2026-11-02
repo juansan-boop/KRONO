@@ -143,6 +143,36 @@ class BuildPriorityPlanUseCaseTest {
     }
 
     @Test
+    fun conHistorialCalibrado_utilizaPrediccionHibridaParaLaDuracionDelPlan() {
+        val estimator = EstimateTaskDurationUseCase()
+        val customBuildPlan = BuildPriorityPlanUseCase(estimator)
+
+        val historyWithEstimates = (1..3).map {
+            task("h$it", dueIn = (-it * 24).hours, category = TaskCategory.ESTUDIO)
+                .copy(
+                    isCompleted = true,
+                    estimatedDuration = 30.minutes,
+                    actualDuration = 65.minutes,
+                )
+        }
+        val study = task("estudio", dueIn = 48.hours, category = TaskCategory.ESTUDIO)
+
+        val plan = customBuildPlan(historyWithEstimates + study, now)!!
+
+        val expectedHybridEstimate = estimator.predictHybrid(
+            category = TaskCategory.ESTUDIO,
+            tasks = historyWithEstimates,
+            priority = study.priority,
+            daysUntilDue = 2.0,
+            hourOfDay = now.hour,
+        )
+
+        assertEquals(EstimateSource.HISTORY, plan.recommended.estimateSource)
+        assertEquals(expectedHybridEstimate, plan.recommended.estimate)
+        assertTrue(plan.recommended.estimate > 30.minutes)
+    }
+
+    @Test
     fun laSecuenciaSeLimitaAlMaximoDelPlan() {
         val tasks = (1..8).map { task("$it", dueIn = (it * 10).hours) }
 

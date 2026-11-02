@@ -2,6 +2,7 @@ package com.krono.core.domain.assistant
 
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
+import com.krono.core.domain.task.TaskPriority
 import com.krono.core.domain.time.durationUntil
 import com.krono.core.domain.time.plus
 import kotlinx.datetime.LocalDateTime
@@ -48,7 +49,7 @@ class BuildPriorityPlanUseCase(
 
     /** Puntúa una tarea; el horario se asigna después, al encadenar el plan. */
     private fun rank(task: Task, history: List<Task>, now: LocalDateTime): PlannedTask {
-        val (estimate, source) = estimateFor(task, history)
+        val (estimate, source) = estimateFor(task, history, now)
         val timeUntilDue = task.dueDate?.let { now.durationUntil(it) }
         val result = PriorityScoring.score(task, timeUntilDue, estimate)
         return PlannedTask(
@@ -63,9 +64,29 @@ class BuildPriorityPlanUseCase(
         )
     }
 
-    private fun estimateFor(task: Task, history: List<Task>): Pair<Duration, EstimateSource> {
+    private fun estimateFor(task: Task, history: List<Task>, now: LocalDateTime): Pair<Duration, EstimateSource> {
         task.estimatedDuration?.takeIf { it.isPositive() }?.let { return it to EstimateSource.MANUAL }
-        estimateTaskDuration(task.category, history)?.let { return it to EstimateSource.HISTORY }
+        val hasEstimatedInHistory = history.any {
+            it.isCompleted &&
+                it.category == task.category &&
+                it.actualDuration > Duration.ZERO &&
+                it.estimatedDuration?.isPositive() == true
+        }
+        val suggested = if (hasEstimatedInHistory) {
+            val daysUntilDue = task.dueDate?.let {
+                (now.durationUntil(it).inWholeMinutes.toDouble() / 1440.0).coerceAtLeast(0.0)
+            } ?: 2.0
+            estimateTaskDuration.predictHybrid(
+                category = task.category,
+                tasks = history,
+                priority = task.priority,
+                daysUntilDue = daysUntilDue,
+                hourOfDay = now.hour,
+            ) ?: estimateTaskDuration(task.category, history)
+        } else {
+            estimateTaskDuration(task.category, history)
+        }
+        suggested?.let { return it to EstimateSource.HISTORY }
         return DEFAULT_ESTIMATE_MINUTES.minutes to EstimateSource.DEFAULT
     }
 

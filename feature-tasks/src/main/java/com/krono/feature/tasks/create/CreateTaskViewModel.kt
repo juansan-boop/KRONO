@@ -24,6 +24,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import java.util.UUID
 import javax.inject.Inject
@@ -92,6 +93,7 @@ class CreateTaskViewModel @Inject constructor(
                 dateTimeErrorRes = null,
             )
         }
+        refreshDurationSuggestion()
     }
 
     /**
@@ -104,6 +106,7 @@ class CreateTaskViewModel @Inject constructor(
                 dateTimeErrorRes = null,
             )
         }
+        refreshDurationSuggestion()
     }
 
     /**
@@ -111,6 +114,7 @@ class CreateTaskViewModel @Inject constructor(
      */
     fun onPrioritySelected(newPriority: TaskPriority) {
         _uiState.update { it.copy(priority = newPriority) }
+        refreshDurationSuggestion()
     }
 
     /**
@@ -232,7 +236,35 @@ class CreateTaskViewModel @Inject constructor(
 
     private fun refreshDurationSuggestion() {
         _uiState.update { current ->
-            current.copy(durationSuggestion = estimateTaskDuration(current.category, taskHistory))
+            val hasMeasuredEstimatedHistory = taskHistory.count {
+                it.isCompleted &&
+                    it.category == current.category &&
+                    it.actualDuration > Duration.ZERO &&
+                    it.estimatedDuration?.isPositive() == true
+            } >= 3
+
+            val suggestion = if (hasMeasuredEstimatedHistory) {
+                val now = currentDateTimeProvider()
+                val daysUntilDue = current.dueDate?.let { date ->
+                    val time = current.dueTime ?: LocalTime(23, 59)
+                    val dueDateTime = LocalDateTime(date, time)
+                    val diffMinutes = (dueDateTime.toInstant(TimeZone.UTC) - now.toInstant(TimeZone.UTC)).inWholeMinutes
+                    (diffMinutes.toDouble() / 1440.0).coerceAtLeast(0.0)
+                } ?: 2.0
+                val hourOfDay = current.dueTime?.hour ?: now.hour
+
+                estimateTaskDuration.predictHybrid(
+                    category = current.category,
+                    tasks = taskHistory,
+                    priority = current.priority,
+                    daysUntilDue = daysUntilDue,
+                    hourOfDay = hourOfDay,
+                ) ?: estimateTaskDuration(current.category, taskHistory)
+            } else {
+                estimateTaskDuration(current.category, taskHistory)
+            }
+
+            current.copy(durationSuggestion = suggestion)
         }
     }
 }
