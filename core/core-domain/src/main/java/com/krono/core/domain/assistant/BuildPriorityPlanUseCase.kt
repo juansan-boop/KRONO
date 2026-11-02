@@ -2,6 +2,8 @@ package com.krono.core.domain.assistant
 
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
+import com.krono.core.domain.time.durationUntil
+import com.krono.core.domain.time.plus
 import kotlinx.datetime.LocalDateTime
 import kotlin.math.roundToInt
 import kotlin.time.Duration
@@ -11,6 +13,10 @@ import kotlin.time.Duration.Companion.minutes
  * Arma el plan del asistente de prioridades (F-12 CA-1): puntúa las tareas pendientes con
  * [PriorityScoring], sugiere la primera para hacer ahora y encadena las siguientes en
  * bloques consecutivos desde [now].
+ *
+ * Una tarea que ya no cabe antes de su entrega ([PriorityFactor.CANNOT_FINISH_BY_DUE]) se
+ * considera infactible: se ordena después de todas las que sí caben, así que solo se
+ * recomienda "ahora" si no hay otra, y siempre con esa advertencia.
  *
  * La duración de cada bloque sale de la estimación manual de la tarea; si no hay, de la
  * estimación por historial (F-11); y si tampoco hay, de [DEFAULT_ESTIMATE_MINUTES].
@@ -119,9 +125,10 @@ class BuildPriorityPlanUseCase(
         private const val DUE_DATE_BONUS = 5
         private const val FULL_PERCENT = 100
 
-        /** Mayor puntuación primero; a igualdad, la entrega más cercana y luego la más corta. */
+        /** Las que caben primero; luego mayor puntuación; a igualdad, la entrega más cercana y luego la más corta. */
         private val planOrder: Comparator<PlannedTask> =
-            compareByDescending<PlannedTask> { it.score }
+            compareBy<PlannedTask> { PriorityFactor.CANNOT_FINISH_BY_DUE in it.factors }
+                .thenByDescending { it.score }
                 .thenBy(nullsLast(naturalOrder<LocalDateTime>())) { it.task.dueDate }
                 .thenBy { it.estimate }
                 .thenBy { it.task.title }

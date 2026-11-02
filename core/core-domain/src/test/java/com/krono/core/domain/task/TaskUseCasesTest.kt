@@ -7,6 +7,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Pruebas unitarias para los casos de uso de tareas en core-domain.
@@ -19,6 +21,7 @@ class TaskUseCasesTest {
     private lateinit var getTaskByIdUseCase: GetTaskByIdUseCase
     private lateinit var upsertTaskUseCase: UpsertTaskUseCase
     private lateinit var deleteTaskUseCase: DeleteTaskUseCase
+    private lateinit var updateTaskFieldsUseCase: UpdateTaskFieldsUseCase
 
     @Before
     fun setUp() {
@@ -28,6 +31,7 @@ class TaskUseCasesTest {
         getTaskByIdUseCase = GetTaskByIdUseCase(fakeRepository)
         upsertTaskUseCase = UpsertTaskUseCase(fakeRepository)
         deleteTaskUseCase = DeleteTaskUseCase(fakeRepository)
+        updateTaskFieldsUseCase = UpdateTaskFieldsUseCase(fakeRepository)
     }
 
     @Test
@@ -37,7 +41,7 @@ class TaskUseCasesTest {
         fakeRepository.givenTasks(task1, task2)
 
         observeTasksUseCase().test {
-            val items = awaitItem()
+            val items = (awaitItem() as KronoResult.Success).data
             assertEquals(2, items.size)
             assertEquals("Tarea 1", items[0].title)
             assertEquals("Tarea 2", items[1].title)
@@ -51,12 +55,23 @@ class TaskUseCasesTest {
         fakeRepository.givenTasks(task)
 
         observeTaskByIdUseCase("1").test {
-            assertEquals("Tarea 1", awaitItem()?.title)
+            assertEquals("Tarea 1", (awaitItem() as KronoResult.Success).data?.title)
             cancelAndIgnoreRemainingEvents()
         }
 
         observeTaskByIdUseCase("inexistente").test {
-            assertEquals(null, awaitItem())
+            assertEquals(KronoResult.Success(null), awaitItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun observeTasks_cuandoElListenerFalla_emiteErrorEnVezDeListaVacia() = runTest {
+        val listenerError = TaskError.StorageError("Permiso denegado")
+        fakeRepository.observeFailure = listenerError
+
+        observeTasksUseCase().test {
+            assertEquals(KronoResult.Error(listenerError), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -131,5 +146,48 @@ class TaskUseCasesTest {
         assertTrue(result is KronoResult.Error)
         assertTrue((result as KronoResult.Error).throwable is TaskError.ValidationError)
         assertEquals(0, fakeRepository.deleteCalls)
+    }
+
+    @Test
+    fun updateTaskFields_conCamposDelFormulario_noAlteraLosDemasCampos() = runTest {
+        val stored = Task(id = "t1", title = "Original", actualDuration = 30.minutes, isCompleted = true)
+        fakeRepository.givenTasks(stored)
+        val staleEdit = stored.copy(title = "Editada", actualDuration = Duration.ZERO, isCompleted = false)
+
+        val result = updateTaskFieldsUseCase(staleEdit, TaskField.EDIT_FORM)
+
+        assertEquals(KronoResult.Success(Unit), result)
+        val updated = fakeRepository.storedTask("t1")
+        assertEquals("Editada", updated?.title)
+        assertEquals(30.minutes, updated?.actualDuration)
+        assertTrue(updated?.isCompleted == true)
+    }
+
+    @Test
+    fun updateTaskFields_conTituloEnBlanco_devuelveValidationErrorSinEscribir() = runTest {
+        fakeRepository.givenTasks(Task(id = "t1", title = "Original"))
+
+        val result = updateTaskFieldsUseCase(Task(id = "t1", title = "  "), setOf(TaskField.TITLE))
+
+        assertTrue((result as KronoResult.Error).throwable is TaskError.ValidationError)
+        assertEquals(0, fakeRepository.updateFieldsCalls)
+    }
+
+    @Test
+    fun updateTaskFields_sinCampos_devuelveValidationErrorSinEscribir() = runTest {
+        val result = updateTaskFieldsUseCase(Task(id = "t1", title = "Tarea"), emptySet())
+
+        assertTrue((result as KronoResult.Error).throwable is TaskError.ValidationError)
+        assertEquals(0, fakeRepository.updateFieldsCalls)
+    }
+
+    @Test
+    fun updateTaskFields_sinTocarElTitulo_permiteTituloEnBlancoDelSnapshot() = runTest {
+        fakeRepository.givenTasks(Task(id = "t1", title = "Original"))
+
+        val result = updateTaskFieldsUseCase(Task(id = "t1", title = "", isCompleted = true), setOf(TaskField.IS_COMPLETED))
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertEquals("Original", fakeRepository.storedTask("t1")?.title)
     }
 }

@@ -8,11 +8,15 @@ import com.krono.core.domain.assistant.FakePriorityExplanationGenerator
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.task.TaskPriority
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -73,6 +77,23 @@ class PriorityAssistantViewModelTest {
     }
 
     @Test
+    fun cuandoElListenerFalla_muestraErrorYAlRefrescarReabreLaObservacion() = runTest {
+        repository.givenTasks(task("informe", dueHour = 18))
+        repository.observeFailure = TaskError.StorageError("Permiso denegado")
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.hasError)
+
+        repository.observeFailure = null
+        viewModel.onRefresh()
+        advanceUntilIdle()
+
+        assertFalse(viewModel.uiState.value.hasError)
+        assertEquals("informe", viewModel.uiState.value.plan?.recommended?.task?.id)
+        assertEquals(2, repository.observeTasksSubscriptions)
+    }
+
+    @Test
     fun siLaIaFalla_usaLaExplicacionDePlantilla() = runTest {
         generator.failure = AssistantError.Unavailable()
         repository.givenTasks(task("informe", dueHour = 18))
@@ -80,6 +101,63 @@ class PriorityAssistantViewModelTest {
         advanceUntilIdle()
 
         assertEquals("informe", viewModel.uiState.value.plan?.recommended?.task?.id)
+        assertEquals(ExplanationState.Fallback, viewModel.uiState.value.explanation)
+    }
+
+    @Test
+    fun mientrasLaIaTarda_muestraLaRecomendacionYLaSecuenciaYLuegoReemplazaElMotivo() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        generator.gate = gate
+        repository.givenTasks(
+            task("informe", dueHour = 18, priority = TaskPriority.ALTA),
+            task("lectura", dueHour = 23, priority = TaskPriority.BAJA, dueDay = 25),
+        )
+        val viewModel = createViewModel()
+        runCurrent()
+
+        val waiting = viewModel.uiState.value
+        assertFalse(waiting.isLoading)
+        assertEquals("informe", waiting.plan?.recommended?.task?.id)
+        assertEquals(listOf("lectura"), waiting.plan?.sequence?.map { it.task.id })
+        assertEquals(ExplanationState.Loading, waiting.explanation)
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        val answered = viewModel.uiState.value
+        assertEquals(waiting.plan, answered.plan)
+        assertEquals(ExplanationState.Generated("Empieza por el informe."), answered.explanation)
+    }
+
+    @Test
+    fun siLaIaNuncaResponde_trasElTopeDeEsperaPasaALaPlantilla() = runTest {
+        generator.gate = CompletableDeferred()
+        repository.givenTasks(task("informe", dueHour = 18))
+        val viewModel = createViewModel()
+        runCurrent()
+        assertEquals(ExplanationState.Loading, viewModel.uiState.value.explanation)
+
+        advanceTimeBy(PriorityAssistantViewModel.EXPLANATION_TIMEOUT_MILLIS + 1)
+        runCurrent()
+
+        assertEquals(ExplanationState.Fallback, viewModel.uiState.value.explanation)
+        assertEquals("informe", viewModel.uiState.value.plan?.recommended?.task?.id)
+    }
+
+    @Test
+    fun siLaIaFallaTrasLaEspera_conservaElPlanYPasaALaPlantilla() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        generator.gate = gate
+        generator.failure = AssistantError.Unavailable()
+        repository.givenTasks(task("informe", dueHour = 18))
+        val viewModel = createViewModel()
+        runCurrent()
+        val waiting = viewModel.uiState.value.plan
+
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        assertEquals(waiting, viewModel.uiState.value.plan)
         assertEquals(ExplanationState.Fallback, viewModel.uiState.value.explanation)
     }
 

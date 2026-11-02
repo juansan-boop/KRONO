@@ -55,8 +55,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.krono.core.ui.icons.KronoIcons
@@ -103,7 +101,7 @@ fun SecurityZoneRoute(
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                SecurityZoneEvent.DataResetSuccess -> { /* El estado local expone successMessage */ }
+                SecurityZoneEvent.DataResetSuccess -> { /* El estado local expone isResetSuccessful */ }
                 SecurityZoneEvent.AccountDeleted -> onAccountDeleted()
                 SecurityZoneEvent.NavigateBack -> onBackClick()
             }
@@ -145,6 +143,8 @@ fun SecurityZoneScreen(
     onConfirmDeleteAccount: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val errorText = state.error?.let { securityErrorText(it, state.selectedAction) }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -193,70 +193,34 @@ fun SecurityZoneScreen(
                 )
             }
 
-            // Banner de error si ocurre un fallo
-            AnimatedVisibility(
-                visible = state.errorMessage != null,
-                enter = fadeIn(),
-                exit = fadeOut(),
-            ) {
-                state.errorMessage?.let { errorMsg ->
-                    Surface(
-                        shape = RoundedCornerShape(KronoSpacing.sm),
-                        color = ErrorColor.copy(alpha = 0.15f),
-                        border = BorderStroke(KronoGlass.borderWidth, ErrorColor.copy(alpha = 0.40f)),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(KronoSpacing.md),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
-                        ) {
-                            Icon(
-                                painter = painterResource(KronoIcons.Error),
-                                contentDescription = null,
-                                tint = ErrorColor,
-                                modifier = Modifier.size(KronoSizes.iconMedium),
-                            )
-                            Text(
-                                text = errorMsg,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OnSurface,
-                            )
-                        }
-                    }
-                }
-            }
-
             // Banner de éxito si los datos fueron restablecidos (CA-1)
             AnimatedVisibility(
-                visible = state.successMessage != null,
+                visible = state.isResetSuccessful,
                 enter = fadeIn(),
                 exit = fadeOut(),
             ) {
-                state.successMessage?.let { successMsg ->
-                    Surface(
-                        shape = RoundedCornerShape(KronoSpacing.sm),
-                        color = SecondaryCyan.copy(alpha = 0.15f),
-                        border = BorderStroke(KronoGlass.borderWidth, SecondaryCyan.copy(alpha = 0.40f)),
-                        modifier = Modifier.fillMaxWidth(),
+                Surface(
+                    shape = RoundedCornerShape(KronoSpacing.sm),
+                    color = SecondaryCyan.copy(alpha = 0.15f),
+                    border = BorderStroke(KronoGlass.borderWidth, SecondaryCyan.copy(alpha = 0.40f)),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(KronoSpacing.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
                     ) {
-                        Row(
-                            modifier = Modifier.padding(KronoSpacing.md),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
-                        ) {
-                            Icon(
-                                painter = painterResource(KronoIcons.CheckCircle),
-                                contentDescription = null,
-                                tint = SecondaryCyan,
-                                modifier = Modifier.size(KronoSizes.iconMedium),
-                            )
-                            Text(
-                                text = successMsg,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = OnSurface,
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(KronoIcons.CheckCircle),
+                            contentDescription = null,
+                            tint = SecondaryCyan,
+                            modifier = Modifier.size(KronoSizes.iconMedium),
+                        )
+                        Text(
+                            text = stringResource(R.string.security_dialog_reset_success),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OnSurface,
+                        )
                     }
                 }
             }
@@ -275,6 +239,7 @@ fun SecurityZoneScreen(
         if (state.showResetConfirmationDialog) {
             ResetDataConfirmationDialog(
                 isResetting = state.isResettingData,
+                errorText = errorText,
                 onDismiss = onDismissResetDialog,
                 onConfirm = onConfirmResetData,
             )
@@ -284,7 +249,8 @@ fun SecurityZoneScreen(
         if (state.showDeleteAccountDialog) {
             DeleteAccountConfirmationDialog(
                 password = state.reauthPassword,
-                passwordError = state.reauthPasswordError,
+                isPasswordEmpty = state.isReauthPasswordEmpty,
+                errorText = errorText,
                 isPasswordVisible = state.isPasswordVisible,
                 isDeleting = state.isDeletingAccount,
                 onPasswordChange = onReauthPasswordChange,
@@ -391,7 +357,7 @@ private fun SecurityZoneHeroSection(
             style = MaterialTheme.typography.bodySmall,
             color = OnSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.widthIn(max = 320.dp),
+            modifier = Modifier.widthIn(max = KronoSizes.supportingTextMaxWidth),
         )
     }
 }
@@ -476,7 +442,7 @@ private fun SecurityOptionCard(
             Box(
                 modifier = Modifier
                     .padding(top = KronoSpacing.xs / 2)
-                    .size(KronoSizes.iconMedium - 4.dp)
+                    .size(KronoSizes.radioIndicator)
                     .clip(CircleShape)
                     .border(
                         KronoGlass.borderWidth * 2,
@@ -488,7 +454,7 @@ private fun SecurityOptionCard(
                 if (isSelected) {
                     Box(
                         modifier = Modifier
-                            .size(KronoSizes.iconSmall - 6.dp)
+                            .size(KronoSizes.radioIndicatorDot)
                             .clip(CircleShape)
                             .background(accentColor),
                     )
@@ -604,15 +570,12 @@ private fun SecurityZoneFooterActions(
 @Composable
 private fun ResetDataConfirmationDialog(
     isResetting: Boolean,
+    errorText: String?,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = { if (!isResetting) onDismiss() },
-        properties = DialogProperties(
-            dismissOnBackPress = !isResetting,
-            dismissOnClickOutside = !isResetting,
-        ),
+        onDismissRequest = onDismiss,
         title = {
             Text(
                 text = stringResource(R.string.security_dialog_reset_title),
@@ -622,11 +585,14 @@ private fun ResetDataConfirmationDialog(
             )
         },
         text = {
-            Text(
-                text = stringResource(R.string.security_dialog_reset_message),
-                style = MaterialTheme.typography.bodyMedium,
-                color = OnSurfaceVariant,
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(KronoSpacing.md)) {
+                Text(
+                    text = stringResource(R.string.security_dialog_reset_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant,
+                )
+                errorText?.let { SecurityErrorBanner(text = it) }
+            }
         },
         confirmButton = {
             Button(
@@ -655,7 +621,6 @@ private fun ResetDataConfirmationDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                enabled = !isResetting,
                 modifier = Modifier.heightIn(min = KronoSizes.minTouchTarget),
             ) {
                 Text(
@@ -675,7 +640,8 @@ private fun ResetDataConfirmationDialog(
 @Composable
 private fun DeleteAccountConfirmationDialog(
     password: String,
-    passwordError: String?,
+    isPasswordEmpty: Boolean,
+    errorText: String?,
     isPasswordVisible: Boolean,
     isDeleting: Boolean,
     onPasswordChange: (String) -> Unit,
@@ -684,11 +650,7 @@ private fun DeleteAccountConfirmationDialog(
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
-        onDismissRequest = { if (!isDeleting) onDismiss() },
-        properties = DialogProperties(
-            dismissOnBackPress = !isDeleting,
-            dismissOnClickOutside = !isDeleting,
-        ),
+        onDismissRequest = onDismiss,
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -738,7 +700,7 @@ private fun DeleteAccountConfirmationDialog(
                             .heightIn(min = KronoSizes.controlHeight),
                         singleLine = true,
                         enabled = !isDeleting,
-                        isError = passwordError != null,
+                        isError = isPasswordEmpty || errorText != null,
                         visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -787,15 +749,17 @@ private fun DeleteAccountConfirmationDialog(
                         shape = RoundedCornerShape(KronoSpacing.sm),
                     )
 
-                    if (passwordError != null) {
+                    if (isPasswordEmpty) {
                         Text(
-                            text = passwordError,
+                            text = stringResource(R.string.security_dialog_delete_reauth_error_empty),
                             style = MaterialTheme.typography.bodySmall,
                             color = ErrorColor,
                             modifier = Modifier.padding(start = KronoSpacing.xs),
                         )
                     }
                 }
+
+                errorText?.let { SecurityErrorBanner(text = it) }
             }
         },
         confirmButton = {
@@ -825,7 +789,6 @@ private fun DeleteAccountConfirmationDialog(
         dismissButton = {
             TextButton(
                 onClick = onDismiss,
-                enabled = !isDeleting,
                 modifier = Modifier.heightIn(min = KronoSizes.minTouchTarget),
             ) {
                 Text(
@@ -854,6 +817,58 @@ private fun SecurityZoneScreenPreview() {
             onReauthPasswordChange = {},
             onTogglePasswordVisibility = {},
             onConfirmDeleteAccount = {},
+        )
+    }
+}
+
+/**
+ * Banner de error mostrado dentro de los diálogos de confirmación, donde el usuario sí lo ve.
+ */
+@Composable
+private fun SecurityErrorBanner(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = RoundedCornerShape(KronoSpacing.sm),
+        color = ErrorColor.copy(alpha = 0.15f),
+        border = BorderStroke(KronoGlass.borderWidth, ErrorColor.copy(alpha = 0.40f)),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(KronoSpacing.md),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
+        ) {
+            Icon(
+                painter = painterResource(KronoIcons.Error),
+                contentDescription = null,
+                tint = ErrorColor,
+                modifier = Modifier.size(KronoSizes.iconMedium),
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurface,
+            )
+        }
+    }
+}
+
+/**
+ * Traduce un [SecurityZoneError] al copy en español de `strings.xml`, según la [action] en curso.
+ */
+@Composable
+private fun securityErrorText(error: SecurityZoneError, action: SecurityActionType): String {
+    val isReset = action == SecurityActionType.RESET_DATA
+    return when (error) {
+        SecurityZoneError.WrongPassword -> stringResource(R.string.security_error_wrong_password)
+        SecurityZoneError.NetworkUnavailable -> stringResource(
+            if (isReset) R.string.security_error_network_reset else R.string.security_error_network_delete,
+        )
+        SecurityZoneError.Timeout -> stringResource(R.string.security_error_timeout)
+        SecurityZoneError.Unexpected -> stringResource(
+            if (isReset) R.string.security_error_generic_reset else R.string.security_error_generic_delete,
         )
     }
 }

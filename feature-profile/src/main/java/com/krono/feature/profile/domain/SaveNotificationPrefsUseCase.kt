@@ -33,22 +33,24 @@ open class SaveNotificationPrefsUseCase @Inject constructor(
      *
      * @param prefs Objeto [NotificationPrefs] con las configuraciones a persistir.
      * @return [KronoResult.Success] si se guardaron correctamente, o [KronoResult.Error]
-     * con [IllegalArgumentException] si la configuración no cumple con las restricciones mínimas.
+     * con [InvalidReminderMinutesException] si los minutos de anticipación no son mayores que cero.
      */
     open suspend operator fun invoke(prefs: NotificationPrefs): KronoResult<Unit> {
         if (prefs.deadlineReminderMinutes <= 0) {
-            return KronoResult.Error(IllegalArgumentException("Los minutos de anticipación deben ser mayores a 0"))
+            return KronoResult.Error(InvalidReminderMinutesException())
         }
         localStore.saveNotificationPrefs(prefs)
-        try {
+        syncRemoteBestEffort(OPERATION_SAVE_PREFS) {
             remoteDataSource.saveNotificationPrefs(
                 userId = localStore.activeUserId,
                 prefs = prefs,
             )
-        } catch (_: Throwable) {
-            // Sincronización remota tolerante a fallos
         }
         return KronoResult.Success(Unit)
+    }
+
+    private companion object {
+        const val OPERATION_SAVE_PREFS = "guardar preferencias de notificación"
     }
 }
 

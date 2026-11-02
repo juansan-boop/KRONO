@@ -10,6 +10,8 @@ import com.krono.feature.profile.data.NoOpAuthRepository
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
 import com.krono.feature.profile.data.ProfileRemoteDataSource
+import com.krono.feature.profile.domain.syncRemoteBestEffort
+import com.krono.feature.profile.ui.ProfileLog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -196,12 +198,14 @@ class SettingsViewModel @Inject constructor(
 
     private fun syncSettingsToggles() {
         viewModelScope.launch {
-            remoteDataSource.saveSettingsToggles(
-                userId = localStore.activeUserId,
-                dynamicBreaks = localStore.dynamicBreaksEnabled.value,
-                silenceNotifications = localStore.silenceInternalNotificationsEnabled.value,
-                priorityAlerts = localStore.priorityAlertsEnabled.value,
-            )
+            syncRemoteBestEffort(OPERATION_SYNC_TOGGLES) {
+                remoteDataSource.saveSettingsToggles(
+                    userId = localStore.activeUserId,
+                    dynamicBreaks = localStore.dynamicBreaksEnabled.value,
+                    silenceNotifications = localStore.silenceInternalNotificationsEnabled.value,
+                    priorityAlerts = localStore.priorityAlertsEnabled.value,
+                )
+            }
         }
     }
 
@@ -213,7 +217,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showLogoutConfirmationDialog = true,
-                logoutErrorMessage = null,
+                logoutError = null,
             )
         }
     }
@@ -227,7 +231,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 showLogoutConfirmationDialog = false,
-                logoutErrorMessage = null,
+                logoutError = null,
             )
         }
     }
@@ -246,7 +250,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 isLoggingOut = true,
-                logoutErrorMessage = null,
+                logoutError = null,
             )
         }
 
@@ -262,21 +266,25 @@ class SettingsViewModel @Inject constructor(
                     _events.send(SettingsEvent.LoggedOut)
                 }
                 is KronoResult.Error -> {
-                    val fallbackMessage = "No fue posible cerrar la sesión. Intenta de nuevo."
-                    val errorMessage = when (val throwable = result.throwable) {
-                        is AuthError.NoConnection -> "No hay conexión con el servidor."
-                        is AuthError.TooManyRequests -> "Demasiados intentos. Espera unos momentos."
-                        else -> throwable.message?.takeIf { it.isNotBlank() } ?: fallbackMessage
-                    }
+                    val error = result.throwable.toLogoutError()
                     _uiState.update {
                         it.copy(
                             isLoggingOut = false,
-                            logoutErrorMessage = errorMessage,
+                            logoutError = error,
                         )
                     }
                 }
                 KronoResult.Loading -> Unit
             }
+        }
+    }
+
+    private fun Throwable.toLogoutError(): LogoutError = when (this) {
+        is AuthError.NoConnection -> LogoutError.NO_CONNECTION
+        is AuthError.TooManyRequests -> LogoutError.TOO_MANY_REQUESTS
+        else -> {
+            ProfileLog.failure(OPERATION_LOGOUT, this)
+            LogoutError.UNEXPECTED
         }
     }
 
@@ -287,6 +295,11 @@ class SettingsViewModel @Inject constructor(
             .mapNotNull { it.firstOrNull()?.uppercaseChar() }
             .joinToString("")
             .ifEmpty { "K" }
+
+    private companion object {
+        const val OPERATION_LOGOUT = "cerrar sesión"
+        const val OPERATION_SYNC_TOGGLES = "guardar ajustes"
+    }
 
     private data class ProfileIdentity(
         val name: String,

@@ -4,52 +4,37 @@ import com.krono.core.domain.task.Task
 import kotlinx.datetime.LocalDate
 
 /**
- * Utilidades puras para clasificar y agrupar tareas por temporalidad (F-03 CA-1).
+ * Utilidades puras para agrupar tareas por temporalidad (F-03 CA-1).
+ *
+ * Cada tarea cae en exactamente un grupo:
+ * - "Para Hoy": vence hoy (hecha o no) o está vencida y sigue pendiente, porque pide atención hoy.
+ * - "Completadas": completada con fecha límite de un día anterior; es historial y no debe inflar
+ *   "Para Hoy" ni el avance del día.
+ * - "Esta Semana": vence después de hoy o no tiene fecha límite.
  */
 object TaskTimeClassifier {
 
     /**
-     * Determina si una tarea corresponde a la sección "Para Hoy".
-     * Incluye tareas cuya fecha límite es hoy o anterior (pendientes que vencen hoy o están vencidas).
+     * Indica si la tarea va en "Para Hoy": vence hoy, o venció antes y no está completada.
      */
     fun isToday(task: Task, today: LocalDate): Boolean {
-        val dueDate = task.dueDate ?: return false
-        return dueDate.date <= today
+        val dueDate = task.dueDate?.date ?: return false
+        return dueDate == today || (dueDate < today && !task.isCompleted)
     }
 
     /**
-     * Determina si una tarea corresponde a la sección "Esta Semana".
-     * Incluye tareas para días posteriores a hoy o sin fecha límite programada.
+     * Indica si la tarea va en "Completadas": completada y con fecha límite anterior a hoy.
+     */
+    fun isCompletedEarlier(task: Task, today: LocalDate): Boolean {
+        val dueDate = task.dueDate?.date ?: return false
+        return dueDate < today && task.isCompleted
+    }
+
+    /**
+     * Indica si la tarea va en "Esta Semana": vence después de hoy o no tiene fecha límite.
      */
     fun isThisWeek(task: Task, today: LocalDate): Boolean {
-        val dueDate = task.dueDate ?: return true
-        return dueDate.date > today
+        val dueDate = task.dueDate?.date ?: return true
+        return dueDate > today
     }
-}
-
-/**
- * Calculador del porcentaje de Enfoque Diario (F-03 CA-3).
- */
-object DailyFocusCalculator {
-
-    /**
-     * Calcula el porcentaje de completitud de las tareas de hoy (0 a 100).
-     *
-     * @param todayTasks Lista de tareas clasificadas para hoy.
-     * @return Porcentaje entero redondeado. Si no hay tareas de hoy, devuelve 0.
-     */
-    fun calculatePercentage(todayTasks: List<Task>): Int {
-        if (todayTasks.isEmpty()) return 0
-        val completedCount = todayTasks.count { it.isCompleted }
-        return ((completedCount.toDouble() / todayTasks.size) * 100).toInt()
-    }
-
-    /**
-     * Retorna el conteo de tareas de hoy que aún están pendientes de completar.
-     *
-     * @param todayTasks Lista de tareas de hoy.
-     * @return Número de tareas no completadas.
-     */
-    fun countPending(todayTasks: List<Task>): Int =
-        todayTasks.count { !it.isCompleted }
 }

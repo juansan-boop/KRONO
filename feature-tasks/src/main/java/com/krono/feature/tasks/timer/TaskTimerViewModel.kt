@@ -12,6 +12,7 @@ import com.krono.core.domain.timer.PauseTimerUseCase
 import com.krono.core.domain.timer.ResumeTimerUseCase
 import com.krono.core.domain.timer.StartTimerUseCase
 import com.krono.core.domain.timer.TimerError
+import com.krono.feature.tasks.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,6 +34,9 @@ import kotlin.time.Duration.Companion.seconds
  * El tiempo mostrado se recalcula cada segundo desde las marcas de tiempo del cronómetro
  * guardado, nunca sumando ticks: si la app pasa a segundo plano o se cierra, al volver el
  * tiempo es el correcto (CA-3).
+ *
+ * Solo hay una acción en curso a la vez (iniciar, pausar, reanudar o finalizar): los toques que
+ * llegan mientras otra sigue guardándose se ignoran, para no escribir ni sumar tiempo dos veces.
  *
  * Regla dura de arquitectura: este ViewModel nunca importa `androidx.compose.*`.
  */
@@ -86,16 +90,26 @@ class TaskTimerViewModel @Inject constructor(
     /** Reanuda el cronómetro (CA-1). */
     fun onResume() = runAction { resumeTimer() }
 
-    /** Finaliza el cronómetro y guarda la sesión en la tarea (CA-1, CA-2). */
+    /**
+     * Finaliza el cronómetro y guarda la sesión en la tarea (CA-1, CA-2). Si la tarea ya no
+     * existía, la sesión se conserva sin sumarse y el estado lo indica para avisar al usuario.
+     * Los toques repetidos mientras se guarda se ignoran.
+     */
     fun onFinish() {
-        if (_uiState.value.status == TimerStatus.IDLE) return
-        _uiState.update { it.copy(isBusy = true) }
+        if (_uiState.value.status == TimerStatus.IDLE || !tryMarkBusy()) return
         viewModelScope.launch {
             when (val result = finishTimer()) {
                 is KronoResult.Success -> _uiState.update {
-                    it.copy(isBusy = false, savedSession = result.data.duration)
+                    val tooShort = result.data.discardedAsTooShort
+                    it.copy(
+                        isBusy = false,
+                        // Una sesión descartada no se guardó: no se confirma como guardada.
+                        savedSession = result.data.session.duration.takeUnless { tooShort },
+                        isSavedSessionWithoutTask = !result.data.addedToTask && !tooShort,
+                        isSessionTooShort = tooShort,
+                    )
                 }
-                is KronoResult.Error -> showError(result.throwable)
+                is KronoResult.Error -> showActionError()
                 KronoResult.Loading -> Unit
             }
         }
@@ -103,13 +117,21 @@ class TaskTimerViewModel @Inject constructor(
 
     /** Limpia el mensaje de error ya mostrado. */
     fun onErrorShown() {
-        _uiState.update { it.copy(errorMessage = null) }
+        _uiState.update { it.copy(errorMessageRes = null) }
     }
 
     private fun observeTask(taskId: String) {
         viewModelScope.launch {
-            observeTaskById(taskId).collect { task ->
-                _uiState.update { it.copy(isLoading = false, task = task, isTaskNotFound = task == null) }
+            observeTaskById(taskId).collect { result ->
+                when (result) {
+                    is KronoResult.Success -> _uiState.update {
+                        it.copy(isLoading = false, task = result.data, isTaskNotFound = result.data == null)
+                    }
+                    is KronoResult.Error -> _uiState.update {
+                        it.copy(isLoading = false, errorMessageRes = R.string.timer_error_load)
+                    }
+                    KronoResult.Loading -> Unit
+                }
             }
         }
     }
@@ -117,7 +139,7 @@ class TaskTimerViewModel @Inject constructor(
     private fun observeTimer(taskId: String) {
         viewModelScope.launch {
             observeActiveTimer()
-                .catch { showError(it) }
+                .catch { _uiState.update { it.copy(errorMessageRes = R.string.timer_error_load) } }
                 .collect { timer -> onTimerChanged(timer?.takeIf { it.taskId == taskId }) }
         }
     }
@@ -136,6 +158,8 @@ class TaskTimerViewModel @Inject constructor(
                 elapsed = timer?.elapsedAt(clock.now()) ?: Duration.ZERO,
                 // Al empezar una sesión nueva, el resumen de la anterior ya no aplica.
                 savedSession = if (timer != null) null else it.savedSession,
+                isSavedSessionWithoutTask = timer == null && it.isSavedSessionWithoutTask,
+                isSessionTooShort = timer == null && it.isSessionTooShort,
             )
         }
         if (timer != null && timer.isRunning) tickJob = startTicking(timer)
@@ -149,8 +173,7 @@ class TaskTimerViewModel @Inject constructor(
     }
 
     private fun runAction(action: suspend () -> KronoResult<Unit>) {
-        if (taskId.isNullOrBlank()) return
-        _uiState.update { it.copy(isBusy = true) }
+        if (taskId.isNullOrBlank() || !tryMarkBusy()) return
         viewModelScope.launch {
             when (val result = action()) {
                 is KronoResult.Success -> _uiState.update { it.copy(isBusy = false) }
@@ -160,16 +183,31 @@ class TaskTimerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Marca la pantalla como ocupada si no lo estaba, de forma atómica y antes de lanzar la
+     * corrutina: devuelve `false` si ya había una acción en curso. Los botones se deshabilitan con
+     * [TaskTimerUiState.isBusy], pero varios toques pueden llegar antes de que la pantalla se
+     * recomponga, y cada uno lanzaría otra escritura (QA vio el tiempo sumado dos y tres veces).
+     */
+    private fun tryMarkBusy(): Boolean {
+        while (true) {
+            val current = _uiState.value
+            if (current.isBusy) return false
+            if (_uiState.compareAndSet(current, current.copy(isBusy = true))) return true
+        }
+    }
+
     private fun handleActionError(error: Throwable) {
         if (error is TimerError.AnotherTimerActive) {
             _uiState.update { it.copy(isBusy = false, isConfirmingSwitch = true) }
         } else {
-            showError(error)
+            showActionError()
         }
     }
 
-    private fun showError(error: Throwable) {
-        _uiState.update { it.copy(isBusy = false, errorMessage = error.message) }
+    /** Muestra un mensaje genérico: el detalle técnico del error no es útil para el usuario. */
+    private fun showActionError() {
+        _uiState.update { it.copy(isBusy = false, errorMessageRes = R.string.timer_error_generic) }
     }
 
     /** Constantes de navegación y de refresco. */

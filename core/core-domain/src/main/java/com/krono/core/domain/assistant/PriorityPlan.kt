@@ -10,6 +10,13 @@ import kotlin.time.Duration
  * verificables de la tarea, la base de la explicación que se muestra al usuario.
  */
 enum class PriorityFactor {
+    /**
+     * Advertencia: la entrega aún no vence, pero la estimación es mayor que el tiempo que
+     * queda, así que ya no alcanza a terminarla a tiempo si empieza ahora. Va primero para
+     * que la explicación de plantilla la diga antes que los demás motivos.
+     */
+    CANNOT_FINISH_BY_DUE,
+
     /** La fecha de entrega ya pasó. */
     OVERDUE,
 

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Encabezado: título y navegación de cada vista (F-16) -->
+    <string name="calendar_month_title">%1$s %2$d</string>
+    <string name="calendar_previous_month">Mes anterior</string>
+    <string name="calendar_next_month">Mes siguiente</string>
+    <string name="calendar_previous_week">Semana anterior</string>
+    <string name="calendar_next_week">Semana siguiente</string>
+    <string name="calendar_previous_day">Día anterior</string>
+    <string name="calendar_next_day">Día siguiente</string>
+    <string name="calendar_today">Hoy</string>
+    <string name="calendar_today_description">Ir a hoy</string>
+    <string name="calendar_week_eyebrow">Semana %d</string>
+    <string name="calendar_week_range_same_month">%1$d - %2$d de %3$s</string>
+    <string name="calendar_week_range_two_months">%1$d %2$s - %3$d %4$s</string>
+    <string name="calendar_week_range_two_months_description">%1$d de %2$s - %3$d de %4$s</string>
+    <string name="calendar_day_eyebrow">%1$s · Semana %2$d</string>
+    <string name="calendar_day_title">%1$d de %2$s</string>
+
+    <!-- Selector de vista -->
+    <string name="calendar_view_selector">Vista del calendario</string>
+    <string name="calendar_view_month">Mes</string>
+    <string name="calendar_view_week">Semana</string>
+    <string name="calendar_view_day">Día</string>
+
+    <!-- Franja de días de las vistas Semana y Día -->
+    <string name="calendar_week_strip">Días de la semana</string>
+
+    <!-- Rejilla del mes -->
+    <string name="calendar_day_description">%1$s, %2$s</string>
+    <string name="calendar_day_no_tasks">sin tareas</string>
+    <plurals name="calendar_day_tasks">
+        <item quantity="one">%d tarea</item>
+        <item quantity="many">%d tareas</item>
+        <item quantity="other">%d tareas</item>
+    </plurals>
+    <string name="calendar_day_today_state">Hoy</string>
+
+    <!-- Agenda del día seleccionado -->
+    <string name="calendar_agenda_title">Agenda</string>
+    <string name="calendar_agenda_day_chip">%1$s %2$d</string>
+    <plurals name="calendar_agenda_count">
+        <item quantity="one">%d tarea</item>
+        <item quantity="many">%d tareas</item>
+        <item quantity="other">%d tareas</item>
+    </plurals>
+    <string name="calendar_agenda_empty">No hay tareas para este día</string>
+    <string name="calendar_agenda_loading">Cargando tus tareas</string>
+    <string name="calendar_time">%1$02d:%2$02d</string>
+    <string name="calendar_time_range">%1$s - %2$s</string>
+    <string name="calendar_open_task">Abrir tarea</string>
+    <string name="calendar_now_marker">Ahora · %s</string>
+
+    <!-- Estado, categoría y prioridad de una tarea de la agenda -->
+    <string name="calendar_status_in_progress">En curso</string>
+    <string name="calendar_status_completed">Completada</string>
+    <string name="calendar_category_study">Estudio</string>
+    <string name="calendar_category_work">Trabajo</string>
+    <string name="calendar_category_personal">Personal</string>
+    <string name="calendar_priority_high">Prioridad alta</string>
+    <string name="calendar_priority_medium">Prioridad media</string>
+    <string name="calendar_priority_low">Prioridad baja</string>
+
+    <!-- Error de carga -->
+    <string name="calendar_load_error_title">No pudimos cargar tu calendario</string>
+    <string name="calendar_load_error_body">Hubo un problema al leer tus tareas. Inténtalo de nuevo en un momento.</string>
+    <string name="calendar_retry">Reintentar</string>
+</resources>

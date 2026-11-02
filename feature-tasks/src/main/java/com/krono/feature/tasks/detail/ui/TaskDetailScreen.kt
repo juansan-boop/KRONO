@@ -67,6 +67,7 @@ import com.krono.feature.tasks.detail.TaskDetailUiState
 import com.krono.feature.tasks.detail.TaskDetailViewModel
 import com.krono.feature.tasks.ui.ConfirmDeleteTaskDialog
 import com.krono.feature.tasks.ui.TaskDateFormatter
+import com.krono.feature.tasks.ui.TasksLoadErrorCard
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -119,6 +120,7 @@ fun TaskDetailRoute(
         onConfirmAddStep = viewModel::onAddSubtask,
         onStartFocus = viewModel::onStartFocusClicked,
         onStartTimer = onStartTimer?.let { open -> fun() { state.task?.id?.let(open) } },
+        onRetryLoad = viewModel::onRetryLoad,
         snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
@@ -141,6 +143,7 @@ fun TaskDetailRoute(
  * @param onConfirmDelete Callback para confirmar la eliminación de la tarea (F-07).
  * @param onPostpone Callback para posponer la tarea para mañana (F-07).
  * @param onStartTimer Abre el cronómetro de la tarea (F-08); sin él no se muestra el botón.
+ * @param onRetryLoad Reabre la lectura de la tarea cuando falló.
  * @param snackbarHostState Estado para mensajes temporales.
  */
 @Composable
@@ -159,6 +162,7 @@ fun TaskDetailScreen(
     onConfirmDelete: (() -> Unit)? = null,
     onPostpone: (() -> Unit)? = null,
     onStartTimer: (() -> Unit)? = null,
+    onRetryLoad: () -> Unit = {},
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val context = LocalContext.current
@@ -259,6 +263,16 @@ fun TaskDetailScreen(
                             color = OnSurfaceVariant,
                         )
                     }
+                }
+
+                state.hasLoadError -> {
+                    TasksLoadErrorCard(
+                        title = stringResource(R.string.task_load_error_title),
+                        onRetry = onRetryLoad,
+                        modifier = Modifier
+                            .widthIn(max = KronoSizes.formMaxWidth)
+                            .padding(KronoSpacing.lg),
+                    )
                 }
 
                 state.isTaskNotFound || state.task == null -> {

@@ -124,6 +124,11 @@ object TaskModule {
     fun provideUpsertTaskUseCase(repository: com.krono.core.domain.task.TaskRepository) =
         com.krono.core.domain.task.UpsertTaskUseCase(repository)
 
+    /** Caso de uso para actualizar solo algunos campos de una tarea. */
+    @Provides
+    fun provideUpdateTaskFieldsUseCase(repository: com.krono.core.domain.task.TaskRepository) =
+        com.krono.core.domain.task.UpdateTaskFieldsUseCase(repository)
+
     /** Caso de uso para eliminar tareas. */
     @Provides
     fun provideDeleteTaskUseCase(repository: com.krono.core.domain.task.TaskRepository) =

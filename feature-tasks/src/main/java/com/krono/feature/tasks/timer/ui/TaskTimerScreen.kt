@@ -74,8 +74,9 @@ fun TaskTimerRoute(
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.errorMessage) {
-        state.errorMessage?.let {
+    val errorMessage = state.errorMessageRes?.let { stringResource(it) }
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.onErrorShown()
         }
@@ -135,7 +136,11 @@ fun TaskTimerScreen(
                 BackRow(onBack)
                 when {
                     state.isLoading -> CircularProgressIndicator(color = PrimaryFixedDim)
-                    state.task == null -> NotFoundMessage()
+                    state.task == null -> {
+                        NotFoundMessage()
+                        // La tarea pudo borrarse justo al finalizar: el aviso de la sesión sigue visible.
+                        SessionOutcomeMessage(state.savedSession, state.isSavedSessionWithoutTask, state.isSessionTooShort)
+                    }
                     else -> TimerContent(state, state.task, onStart, onPause, onResume, onFinish)
                 }
             }
@@ -168,7 +173,7 @@ private fun TimerContent(
         onFinish = onFinish,
         modifier = Modifier.fillMaxWidth(),
     )
-    state.savedSession?.let { SavedSessionMessage(it) }
+    SessionOutcomeMessage(state.savedSession, state.isSavedSessionWithoutTask, state.isSessionTooShort)
     Text(
         text = stringResource(R.string.timer_background_hint),
         style = MaterialTheme.typography.bodySmall,
@@ -262,10 +267,21 @@ private fun TaskCard(task: Task) {
     }
 }
 
+/**
+ * Resultado de finalizar: confirma la sesión guardada, avisa si el tiempo se guardó sin sumarse a
+ * ninguna tarea (ya no existe) o si la sesión fue demasiado corta y se descartó. No muestra nada
+ * si no hay resultado que informar.
+ */
 @Composable
-private fun SavedSessionMessage(duration: Duration) {
+private fun SessionOutcomeMessage(savedSession: Duration?, withoutTask: Boolean, tooShort: Boolean) {
+    val text = when {
+        tooShort -> stringResource(R.string.timer_too_short)
+        savedSession == null -> return
+        withoutTask -> stringResource(R.string.timer_saved_without_task, formatClock(savedSession))
+        else -> stringResource(R.string.timer_saved, formatClock(savedSession))
+    }
     Text(
-        text = stringResource(R.string.timer_saved, formatClock(duration)),
+        text = text,
         style = MaterialTheme.typography.bodyLarge,
         color = SecondaryCyan,
         textAlign = TextAlign.Center,

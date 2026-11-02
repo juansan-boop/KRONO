@@ -104,4 +104,5 @@ private fun PriorityFactor.reasonRes(): Int = when (this) {
     PriorityFactor.DUE_SOON -> R.string.assistant_reason_due_soon
     PriorityFactor.HIGH_PRIORITY -> R.string.assistant_reason_high_priority
     PriorityFactor.TIGHT_SCHEDULE -> R.string.assistant_reason_tight_schedule
+    PriorityFactor.CANNOT_FINISH_BY_DUE -> R.string.assistant_reason_cannot_finish
 }

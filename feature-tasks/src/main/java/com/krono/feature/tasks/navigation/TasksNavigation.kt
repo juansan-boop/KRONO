@@ -12,6 +12,9 @@ import com.krono.feature.tasks.detail.TaskDetailViewModel.Companion.TASK_ID_NAV_
 import com.krono.feature.tasks.detail.ui.TaskDetailRoute
 import com.krono.feature.tasks.edit.EditTaskViewModel.Companion.TASK_ID_NAV_ARG as EDIT_TASK_ID_NAV_ARG
 import com.krono.feature.tasks.edit.ui.EditTaskRoute
+import com.krono.feature.tasks.focus.ui.FocusTemplatesRoute
+import com.krono.feature.tasks.focusmode.FocusModeViewModel.Companion.TASK_ID_NAV_ARG as FOCUS_MODE_TASK_ID_NAV_ARG
+import com.krono.feature.tasks.focusmode.ui.FocusModeRoute
 import com.krono.feature.tasks.timer.TaskTimerViewModel.Companion.TASK_ID_NAV_ARG as TIMER_TASK_ID_NAV_ARG
 import com.krono.feature.tasks.timer.ui.TaskTimerRoute
 import com.krono.feature.tasks.ui.TasksRoute
@@ -55,6 +58,16 @@ const val TASK_TIMER_ROUTE_BASE = "tareas/cronometro"
  * Ruta canónica con argumento del cronómetro de una tarea (F-08).
  */
 const val TASK_TIMER_ROUTE = "$TASK_TIMER_ROUTE_BASE/{$TIMER_TASK_ID_NAV_ARG}"
+
+/**
+ * Ruta base del modo enfoque de una tarea (F-09).
+ */
+const val FOCUS_MODE_ROUTE_BASE = "tareas/enfoque"
+
+/**
+ * Ruta canónica con argumento del modo enfoque de una tarea (F-09).
+ */
+const val FOCUS_MODE_ROUTE = "$FOCUS_MODE_ROUTE_BASE/{$FOCUS_MODE_TASK_ID_NAV_ARG}"
 
 /**
  * Ruta canónica del asistente de prioridades (F-12).
@@ -221,5 +234,57 @@ fun NavGraphBuilder.taskTimerScreen(
         ),
     ) {
         TaskTimerRoute(onBack = onBack)
+    }
+}
+
+/**
+ * Navega hacia el modo enfoque de la tarea [taskId] con la plantilla activa (F-09). Si ya hay un
+ * enfoque en curso para esa tarea, lo retoma sin reiniciarlo.
+ */
+fun NavController.navigateToFocusMode(taskId: String, navOptions: NavOptions? = null) {
+    navigate("$FOCUS_MODE_ROUTE_BASE/$taskId", navOptions)
+}
+
+/**
+ * Registra el destino del modo enfoque de una tarea (F-09) en el grafo de navegación.
+ *
+ * @param onBack Callback invocado para regresar; el enfoque sigue corriendo.
+ */
+fun NavGraphBuilder.focusModeScreen(
+    onBack: () -> Unit,
+) {
+    composable(
+        route = FOCUS_MODE_ROUTE,
+        arguments = listOf(
+            navArgument(FOCUS_MODE_TASK_ID_NAV_ARG) { type = NavType.StringType },
+        ),
+    ) {
+        FocusModeRoute(onBack = onBack)
+    }
+}
+
+/**
+ * Ruta canónica de la gestión de plantillas de enfoque (F-10). Vive fuera de las pestañas: se abre
+ * desde Ajustes, y ese acceso lo cablea `app` porque `feature-profile` no puede importar este módulo.
+ */
+const val FOCUS_TEMPLATES_ROUTE = "ajustes/plantillas-enfoque"
+
+/**
+ * Navega hacia la gestión de plantillas de enfoque (F-10).
+ */
+fun NavController.navigateToFocusTemplates(navOptions: NavOptions? = null) {
+    navigate(FOCUS_TEMPLATES_ROUTE, navOptions)
+}
+
+/**
+ * Registra el destino de la gestión de plantillas de enfoque (F-10) en el grafo de navegación.
+ *
+ * @param onBack Callback invocado para regresar a la pantalla anterior.
+ */
+fun NavGraphBuilder.focusTemplatesScreen(
+    onBack: () -> Unit,
+) {
+    composable(route = FOCUS_TEMPLATES_ROUTE) {
+        FocusTemplatesRoute(onBack = onBack)
     }
 }

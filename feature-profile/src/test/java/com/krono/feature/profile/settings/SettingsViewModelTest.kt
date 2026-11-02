@@ -84,7 +84,7 @@ class SettingsViewModelTest {
         assertTrue(state.priorityAlertsEnabled)
         assertFalse(state.showLogoutConfirmationDialog)
         assertFalse(state.isLoggingOut)
-        assertNull(state.logoutErrorMessage)
+        assertNull(state.logoutError)
     }
 
     @Test
@@ -118,7 +118,7 @@ class SettingsViewModelTest {
 
         val state = vm.uiState.value
         assertTrue(state.showLogoutConfirmationDialog)
-        assertNull(state.logoutErrorMessage)
+        assertNull(state.logoutError)
     }
 
     @Test
@@ -130,7 +130,7 @@ class SettingsViewModelTest {
 
         vm.onDismissLogoutDialog()
         assertFalse(vm.uiState.value.showLogoutConfirmationDialog)
-        assertNull(vm.uiState.value.logoutErrorMessage)
+        assertNull(vm.uiState.value.logoutError)
     }
 
     @Test
@@ -171,7 +171,7 @@ class SettingsViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isLoggingOut)
         assertFalse(state.showLogoutConfirmationDialog)
-        assertNull(state.logoutErrorMessage)
+        assertNull(state.logoutError)
     }
 
     @Test
@@ -186,9 +186,33 @@ class SettingsViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isLoggingOut)
         assertTrue(state.showLogoutConfirmationDialog)
-        assertEquals("No hay conexión con el servidor.", state.logoutErrorMessage)
+        assertEquals(LogoutError.NO_CONNECTION, state.logoutError)
     }
 
+
+    @Test
+    fun confirmarCierreDeSesionConDemasiadosIntentosExponeErrorTipado() = runTest {
+        authRepository.failure = AuthError.TooManyRequests
+        val vm = createViewModel()
+        vm.onRequestLogout()
+
+        vm.onConfirmLogout()
+        advanceUntilIdle()
+
+        assertEquals(LogoutError.TOO_MANY_REQUESTS, vm.uiState.value.logoutError)
+    }
+
+    @Test
+    fun confirmarCierreDeSesionNoExponeElMensajeCrudoDeLaExcepcion() = runTest {
+        authRepository.failure = RuntimeException("An internal error has occurred")
+        val vm = createViewModel()
+        vm.onRequestLogout()
+
+        vm.onConfirmLogout()
+        advanceUntilIdle()
+
+        assertEquals(LogoutError.UNEXPECTED, vm.uiState.value.logoutError)
+    }
     @Test
     fun confirmarCierreDeSesionConErrorInesperadoExponeMensajeGenerico() = runTest {
         authRepository.failure = RuntimeException("")
@@ -201,7 +225,7 @@ class SettingsViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isLoggingOut)
         assertTrue(state.showLogoutConfirmationDialog)
-        assertEquals("No fue posible cerrar la sesión. Intenta de nuevo.", state.logoutErrorMessage)
+        assertEquals(LogoutError.UNEXPECTED, state.logoutError)
     }
 
     @Test

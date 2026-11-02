@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
@@ -48,9 +47,11 @@ class CreateTaskViewModel @Inject constructor(
     }
 
     private val _uiState = MutableStateFlow(CreateTaskUiState())
+    /** Estado observable de la pantalla. */
     val uiState: StateFlow<CreateTaskUiState> = _uiState.asStateFlow()
 
     private val _events = MutableSharedFlow<CreateTaskEvent>()
+    /** Eventos de una sola vez (navegación y mensajes). */
     val events: SharedFlow<CreateTaskEvent> = _events.asSharedFlow()
 
     /** Historial de tareas del usuario, base de la sugerencia de duración (F-11). */
@@ -135,9 +136,12 @@ class CreateTaskViewModel @Inject constructor(
 
     /**
      * Valida el formulario y persiste la tarea si cumple todos los criterios (CA-1, CA-2, CA-3, CA-4).
+     * Mientras hay un guardado en curso las llamadas se ignoran: cada guardado genera un
+     * identificador nuevo, así que un doble toque duplicaría la tarea.
      */
     fun saveTask() {
         val currentState = _uiState.value
+        if (currentState.isSaving) return
         val now = currentDateTimeProvider()
 
         var hasError = false
@@ -192,8 +196,9 @@ class CreateTaskViewModel @Inject constructor(
             isCompleted = false,
         )
 
+        // Se marca antes de lanzar la corrutina para que un segundo toque ya lo vea.
+        _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            _uiState.update { it.copy(isSaving = true) }
             when (val result = upsertTaskUseCase(newTask)) {
                 is KronoResult.Success -> {
                     _uiState.update { it.copy(isSaving = false) }
@@ -218,12 +223,10 @@ class CreateTaskViewModel @Inject constructor(
     // leer las tareas no se muestra como error en el formulario.
     private fun observeTaskHistory() {
         viewModelScope.launch {
-            observeTasksUseCase()
-                .catch { taskHistory = emptyList() }
-                .collect { tasks ->
-                    taskHistory = tasks
-                    refreshDurationSuggestion()
-                }
+            observeTasksUseCase().collect { result ->
+                taskHistory = (result as? KronoResult.Success)?.data.orEmpty()
+                refreshDurationSuggestion()
+            }
         }
     }
 

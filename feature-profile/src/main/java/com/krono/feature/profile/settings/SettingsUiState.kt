@@ -22,7 +22,7 @@ package com.krono.feature.profile.settings
  * @property appVersionText Identificador de build y versión del sistema.
  * @property showLogoutConfirmationDialog Controla la visibilidad del diálogo oficial de cierre de sesión.
  * @property isLoggingOut Indica si la operación de cierre de sesión está en proceso.
- * @property logoutErrorMessage Mensaje de error si la invocación de cierre de sesión falla.
+ * @property logoutError Causa tipada del fallo de cierre de sesión (la UI la traduce a copy), o `null` si no hay.
  */
 data class SettingsUiState(
     val userName: String = "Usuario",
@@ -40,5 +40,21 @@ data class SettingsUiState(
     val appVersionText: String = "KRONO Cyber Productivity // Build 2.4.12",
     val showLogoutConfirmationDialog: Boolean = false,
     val isLoggingOut: Boolean = false,
-    val logoutErrorMessage: String? = null,
+    val logoutError: LogoutError? = null,
 )
+
+/**
+ * Causa de un fallo al cerrar la sesión, mostrada dentro del diálogo de confirmación.
+ *
+ * La UI la traduce a copy en `strings.xml`; el ViewModel no expone el mensaje crudo de la excepción.
+ */
+enum class LogoutError {
+    /** No hay conexión con el servidor. */
+    NO_CONNECTION,
+
+    /** El servidor limitó los intentos; hay que esperar antes de reintentar. */
+    TOO_MANY_REQUESTS,
+
+    /** Error no previsto; el detalle técnico solo se escribe en logcat. */
+    UNEXPECTED,
+}

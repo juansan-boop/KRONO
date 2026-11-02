@@ -81,8 +81,14 @@ internal fun TimerControls(
     }
 }
 
+/**
+ * Botón circular principal de los controles (iniciar, pausar o reanudar), compartido por el
+ * cronómetro (F-08) y el modo enfoque (F-09).
+ *
+ * @param descriptionRes descripción para lectores de pantalla, porque el botón solo muestra un ícono.
+ */
 @Composable
-private fun MainButton(
+internal fun MainButton(
     @DrawableRes iconRes: Int,
     @StringRes descriptionRes: Int,
     enabled: Boolean,

@@ -148,7 +148,15 @@ private fun ExplanationBox(recommended: PlannedTask, explanation: ExplanationSta
         verticalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
     ) {
         when (explanation) {
-            ExplanationState.Loading -> LoadingExplanation()
+            // Mientras Gemini responde (hasta 20 s) ya se muestra el motivo de plantilla.
+            ExplanationState.Loading -> {
+                Text(
+                    text = templateExplanation(recommended.factors),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = OnSurface,
+                )
+                LoadingExplanation()
+            }
             is ExplanationState.Generated -> ExplanationText(
                 text = explanation.text,
                 caption = stringResource(R.string.assistant_explanation_ai),

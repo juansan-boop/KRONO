@@ -10,6 +10,7 @@ Ver `CLAUDE.md` para el contexto completo del proyecto (equipo, sistema de dise�
 - `CLAUDE.md` — contexto que usa Claude Code al trabajar en el repo (arquitectura, sistema de diseño, convenciones).
 - `CONTRIBUTING.md` — estrategia de ramas y Conventional Commits.
 - `design/` — export de Google Stitch (referencia visual por pantalla).
+- `firestore.rules` — reglas de seguridad de Cloud Firestore; cómo publicarlas en [`docs/firestore-rules.md`](docs/firestore-rules.md).
 
 ## Estructura del proyecto
 

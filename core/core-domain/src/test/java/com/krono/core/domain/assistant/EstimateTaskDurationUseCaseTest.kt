@@ -1,8 +1,13 @@
 package com.krono.core.domain.assistant
 
+import com.krono.core.common.KronoResult
+import com.krono.core.domain.task.DeleteTaskUseCase
+import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDateTime
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -150,6 +155,25 @@ class EstimateTaskDurationUseCaseTest {
 
         // La adaptación online por sesgo personal incrementa la predicción
         assertTrue(predConHistorial > predSinHistorial)
+    }
+
+    @Test
+    fun unaTareaEliminada_dejaDeContarParaLaEstimacion() = runTest {
+        // F-07 CA-4: la estimación lee el historial de las tareas que existen, así que el tiempo
+        // de una tarea borrada (y sus sesiones) deja de contar aunque las sesiones sigan guardadas.
+        val repository = FakeTaskRepository().apply {
+            givenTasks(
+                completed("1", TaskCategory.ESTUDIO, 30.minutes, day = 1),
+                completed("2", TaskCategory.ESTUDIO, 30.minutes, day = 2),
+                completed("borrada", TaskCategory.ESTUDIO, 300.minutes, day = 3),
+                completed("4", TaskCategory.ESTUDIO, 30.minutes, day = 4),
+            )
+        }
+
+        DeleteTaskUseCase(repository)("borrada")
+        val history = (repository.observeTasks().first() as KronoResult.Success).data
+
+        assertEquals(30.minutes, estimate(TaskCategory.ESTUDIO, history))
     }
 
     private fun completed(id: String, category: TaskCategory, actual: Duration, day: Int) = Task(

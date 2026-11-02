@@ -11,6 +11,8 @@ import kotlin.time.Duration.Companion.hours
  * margen de tiempo) para que el orden sea determinista, explicable y funcione sin conexión.
  *
  * Puntuación = puntos de urgencia + puntos de prioridad + bonificación por margen ajustado.
+ * Una tarea que ya no cabe antes de su entrega recibe la advertencia
+ * [PriorityFactor.CANNOT_FINISH_BY_DUE] en lugar de la bonificación por margen ajustado.
  * La urgencia pesa más que la prioridad para reducir entregas extemporáneas, una de las
  * métricas de éxito del producto.
  */
@@ -52,7 +54,10 @@ object PriorityScoring {
         val factors = mutableSetOf<PriorityFactor>()
         dueFactor(timeUntilDue)?.let(factors::add)
         if (task.priority == TaskPriority.ALTA) factors += PriorityFactor.HIGH_PRIORITY
-        if (isTight(timeUntilDue, estimate)) factors += PriorityFactor.TIGHT_SCHEDULE
+        when {
+            cannotFinishByDue(timeUntilDue, estimate) -> factors += PriorityFactor.CANNOT_FINISH_BY_DUE
+            isTight(timeUntilDue, estimate) -> factors += PriorityFactor.TIGHT_SCHEDULE
+        }
 
         val score = urgencyPoints(factors) + priorityPoints(task.priority) +
             if (PriorityFactor.TIGHT_SCHEDULE in factors) TIGHT_SCHEDULE_POINTS else 0
@@ -81,6 +86,10 @@ object PriorityScoring {
         TaskPriority.MEDIA -> MEDIUM_PRIORITY_POINTS
         TaskPriority.BAJA -> LOW_PRIORITY_POINTS
     }
+
+    // Una tarea vencida no es "no cabe": ya cuenta como OVERDUE, que es más grave.
+    private fun cannotFinishByDue(timeUntilDue: Duration?, estimate: Duration): Boolean =
+        timeUntilDue != null && timeUntilDue.isPositive() && estimate > timeUntilDue
 
     // Una tarea vencida ya no tiene margen que cuidar: cuenta como OVERDUE, no como ajustada.
     private fun isTight(timeUntilDue: Duration?, estimate: Duration): Boolean =

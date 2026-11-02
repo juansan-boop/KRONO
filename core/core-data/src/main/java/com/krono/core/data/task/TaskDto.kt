@@ -2,6 +2,7 @@ package com.krono.core.data.task
 
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
+import com.krono.core.domain.task.TaskField
 import com.krono.core.domain.task.TaskPriority
 import kotlinx.datetime.LocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
@@ -51,6 +52,15 @@ data class TaskDto(
         FIELD_SUBTASKS to subtasks,
     )
 
+    /**
+     * Serializa solo los [fields] indicados, para una escritura parcial que no pise el resto del
+     * documento (F-05 CA-2).
+     */
+    fun toPartialMap(fields: Set<TaskField>): Map<String, Any?> {
+        val keys = fields.map(::documentKey).toSet()
+        return toMap().filterKeys { it in keys }
+    }
+
     companion object {
         const val FIELD_ID = "id"
         const val FIELD_TITLE = "title"
@@ -62,6 +72,18 @@ data class TaskDto(
         const val FIELD_IS_COMPLETED = "isCompleted"
         const val FIELD_NOTE = "note"
         const val FIELD_SUBTASKS = "subtasks"
+
+        /** Nombre en el documento de Firestore del campo de dominio [field]. */
+        fun documentKey(field: TaskField): String = when (field) {
+            TaskField.TITLE -> FIELD_TITLE
+            TaskField.CATEGORY -> FIELD_CATEGORY
+            TaskField.PRIORITY -> FIELD_PRIORITY
+            TaskField.DUE_DATE -> FIELD_DUE_DATE
+            TaskField.ESTIMATED_DURATION -> FIELD_ESTIMATED_DURATION_MILLIS
+            TaskField.IS_COMPLETED -> FIELD_IS_COMPLETED
+            TaskField.NOTE -> FIELD_NOTE
+            TaskField.SUBTASKS -> FIELD_SUBTASKS
+        }
 
         /** Crea un [TaskDto] a partir del modelo de dominio [Task]. */
         fun fromDomain(task: Task): TaskDto = TaskDto(

@@ -7,6 +7,7 @@ import com.krono.core.domain.auth.ObserveSessionUseCase
 import com.krono.feature.profile.data.NoOpAuthRepository
 import com.krono.feature.profile.data.ProfileLocalStore
 import com.krono.feature.profile.domain.UpdateProfileUseCase
+import com.krono.feature.profile.ui.toProfileSaveError
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -115,8 +116,8 @@ class EditProfileViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 name = newName,
-                nameError = if (newName.isNotBlank()) null else current.nameError,
-                errorMessage = null,
+                isNameMissing = current.isNameMissing && newName.isBlank(),
+                saveError = null,
             )
         }
     }
@@ -130,7 +131,7 @@ class EditProfileViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 role = newRole,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -144,7 +145,7 @@ class EditProfileViewModel @Inject constructor(
         _uiState.update { current ->
             current.copy(
                 avatarUri = uri,
-                errorMessage = null,
+                saveError = null,
             )
         }
     }
@@ -172,7 +173,7 @@ class EditProfileViewModel @Inject constructor(
 
         // Validación de campo obligatorio
         if (trimmedName.isBlank()) {
-            _uiState.update { it.copy(nameError = "El nombre completo es obligatorio") }
+            _uiState.update { it.copy(isNameMissing = true) }
             return
         }
 
@@ -181,8 +182,8 @@ class EditProfileViewModel @Inject constructor(
                 isSaving = true,
                 name = trimmedName,
                 role = trimmedRole,
-                nameError = null,
-                errorMessage = null,
+                isNameMissing = false,
+                saveError = null,
             )
         }
 
@@ -198,11 +199,11 @@ class EditProfileViewModel @Inject constructor(
                     _events.send(EditProfileEvent.ProfileSaved)
                 }
                 is KronoResult.Error -> {
-                    val message = result.throwable.message ?: "Ocurrió un error al guardar los cambios"
+                    val error = result.throwable.toProfileSaveError(OPERATION_SAVE_PROFILE)
                     _uiState.update {
                         it.copy(
                             isSaving = false,
-                            errorMessage = message,
+                            saveError = error,
                         )
                     }
                 }
@@ -211,5 +212,9 @@ class EditProfileViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val OPERATION_SAVE_PROFILE = "guardar perfil"
     }
 }

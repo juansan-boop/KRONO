@@ -14,9 +14,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -73,12 +73,16 @@ class PriorityAssistantViewModel @Inject constructor(
 
     private fun observeTasks() {
         viewModelScope.launch {
-            observeTasksUseCase()
-                .catch { _uiState.update { it.copy(isLoading = false, hasError = true) } }
-                .collect { tasks ->
-                    latestTasks = tasks
-                    updatePlan(tasks)
+            observeTasksUseCase().collect { result ->
+                when (result) {
+                    is KronoResult.Success -> {
+                        latestTasks = result.data
+                        updatePlan(result.data)
+                    }
+                    is KronoResult.Error -> _uiState.update { it.copy(isLoading = false, hasError = true) }
+                    KronoResult.Loading -> Unit
                 }
+            }
         }
     }
 
@@ -100,9 +104,10 @@ class PriorityAssistantViewModel @Inject constructor(
         explanationJob?.cancel()
         _uiState.update { it.copy(explanation = ExplanationState.Loading) }
         explanationJob = viewModelScope.launch {
-            val explanation = when (val result = explainPriority(plan)) {
+            val result = withTimeoutOrNull(EXPLANATION_TIMEOUT_MILLIS) { explainPriority(plan) }
+            val explanation = when (result) {
                 is KronoResult.Success -> ExplanationState.Generated(result.data)
-                is KronoResult.Error, KronoResult.Loading -> ExplanationState.Fallback
+                is KronoResult.Error, KronoResult.Loading, null -> ExplanationState.Fallback
             }
             _uiState.update { it.copy(explanation = explanation) }
         }
@@ -111,6 +116,15 @@ class PriorityAssistantViewModel @Inject constructor(
     private fun cancelExplanation() {
         explanationJob?.cancel()
         explainedRecommendation = null
+    }
+
+    /** Constantes del asistente. */
+    companion object {
+        /**
+         * Tope de la espera de la explicación de la IA: pasado este tiempo la pantalla deja de
+         * mostrar "Redactando…" y usa el texto de plantilla (F-12 CA-2).
+         */
+        const val EXPLANATION_TIMEOUT_MILLIS = 10_000L
     }
 
     /** Identifica una recomendación: si no cambia, la explicación anterior sigue siendo válida. */

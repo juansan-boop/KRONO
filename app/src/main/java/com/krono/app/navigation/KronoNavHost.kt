@@ -24,6 +24,8 @@ import com.krono.app.R
 import com.krono.core.ui.theme.DeepMidnight
 import com.krono.feature.auth.navigation.AUTH_GRAPH_ROUTE
 import com.krono.feature.auth.navigation.authGraph
+import com.krono.feature.calendar.month.ui.CalendarRoute
+import com.krono.feature.dashboard.ui.DashboardRoute
 import com.krono.feature.profile.navigation.SettingsRoute
 import com.krono.feature.profile.navigation.editProfileScreen
 import com.krono.feature.profile.navigation.navigateToEditProfile
@@ -33,8 +35,11 @@ import com.krono.feature.profile.navigation.notificationPreferencesScreen
 import com.krono.feature.profile.navigation.securityZoneScreen
 import com.krono.feature.tasks.navigation.createTaskScreen
 import com.krono.feature.tasks.navigation.editTaskScreen
+import com.krono.feature.tasks.navigation.focusModeScreen
+import com.krono.feature.tasks.navigation.focusTemplatesScreen
 import com.krono.feature.tasks.navigation.navigateToCreateTask
 import com.krono.feature.tasks.navigation.navigateToEditTask
+import com.krono.feature.tasks.navigation.navigateToFocusMode
 import com.krono.feature.tasks.navigation.navigateToPriorityAssistant
 import com.krono.feature.tasks.navigation.navigateToTaskDetail
 import com.krono.feature.tasks.navigation.navigateToTaskTimer
@@ -73,6 +78,16 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
                 onLoggedOut = alCerrarSesion,
             )
         },
+        inicio = {
+            DashboardRoute(
+                onStartFocus = { taskId -> alIniciarEnfoqueDesdeInicio(navController, taskId) },
+                onSeeAll = { navController.navegarAPestana(KronoDestination.Tareas) },
+                onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) },
+            )
+        },
+        calendario = {
+            CalendarRoute(onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) })
+        },
         tareas = {
             TasksRoute(
                 onAddTask = { navController.navigateToCreateTask() },
@@ -94,7 +109,10 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
  * @param destinoInicial ruta de arranque: [AUTH_GRAPH_ROUTE] o [RUTA_GRAFO_PRINCIPAL].
  * @param grafoAuth añade el grafo de auth; recibe el callback que se invoca al autenticarse.
  * @param ajustes contenido de la pestaña Ajustes; recibe el callback que se invoca al cerrar sesión.
+ * @param inicio contenido de la pestaña Inicio (F-13); por defecto una sección provisional para las pruebas.
  * @param tareas contenido de la pestaña Tareas (F-03).
+ * @param calendario contenido de la pestaña Calendario (F-16). Tocar una tarea de su agenda abre el
+ * detalle de tareas desde `app`, sin que `feature-calendar` importe `feature-tasks`.
  */
 @Composable
 fun KronoShell(
@@ -102,7 +120,9 @@ fun KronoShell(
     destinoInicial: String,
     grafoAuth: NavGraphBuilder.(alAutenticarse: () -> Unit) -> Unit,
     ajustes: @Composable (alCerrarSesion: () -> Unit) -> Unit,
+    inicio: @Composable () -> Unit = { SeccionProvisional(R.string.seccion_inicio) },
     tareas: @Composable () -> Unit = { TasksRoute(onAddTask = {}) },
+    calendario: @Composable () -> Unit = { CalendarRoute(onOpenTask = {}) },
 ) {
     val entradaActual by navController.currentBackStackEntryAsState()
     val seleccionado = entradaActual?.destination.pestanaSeleccionada()
@@ -126,12 +146,15 @@ fun KronoShell(
             grafoAuth { navController.irAlFlujoPrincipal() }
             grafoPrincipal(
                 ajustes = { ajustes { navController.volverAAutenticacion() } },
+                inicio = inicio,
                 tareas = tareas,
+                calendario = calendario,
                 alVolverDeCrearTarea = { navController.popBackStack() },
                 alVolverDeEditarTarea = { navController.popBackStack() },
                 alVolverDeDetalleTarea = { navController.popBackStack() },
                 alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
-                alIniciarEnfoqueDesdeDetalle = { /* Navegación a F-09 */ },
+                alIniciarEnfoqueDesdeDetalle = { taskId -> navController.navigateToFocusMode(taskId) },
+                alVolverDeEnfoque = { navController.popBackStack() },
                 alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
                 alVolverDeCronometro = { navController.popBackStack() },
                 alVolverDeAsistente = { navController.popBackStack() },
@@ -139,6 +162,7 @@ fun KronoShell(
                 alVolverDeEditarPerfil = { navController.popBackStack() },
                 alVolverDeZonaSeguridad = { navController.popBackStack() },
                 alVolverDeNotificaciones = { navController.popBackStack() },
+                alVolverDePlantillasEnfoque = { navController.popBackStack() },
                 alEliminarCuenta = { navController.volverAAutenticacion() },
             )
         }
@@ -148,12 +172,15 @@ fun KronoShell(
 /** Añade el flujo principal: una pantalla por pestaña de la barra inferior. */
 private fun NavGraphBuilder.grafoPrincipal(
     ajustes: @Composable () -> Unit,
+    inicio: @Composable () -> Unit,
     tareas: @Composable () -> Unit,
+    calendario: @Composable () -> Unit,
     alVolverDeCrearTarea: () -> Unit = {},
     alVolverDeEditarTarea: () -> Unit = {},
     alVolverDeDetalleTarea: () -> Unit = {},
     alEditarDesdeDetalle: (String) -> Unit = {},
     alIniciarEnfoqueDesdeDetalle: (String) -> Unit = {},
+    alVolverDeEnfoque: () -> Unit = {},
     alAbrirCronometro: (String) -> Unit = {},
     alVolverDeCronometro: () -> Unit = {},
     alVolverDeAsistente: () -> Unit = {},
@@ -161,12 +188,11 @@ private fun NavGraphBuilder.grafoPrincipal(
     alVolverDeEditarPerfil: () -> Unit = {},
     alVolverDeZonaSeguridad: () -> Unit = {},
     alVolverDeNotificaciones: () -> Unit = {},
+    alVolverDePlantillasEnfoque: () -> Unit = {},
     alEliminarCuenta: () -> Unit = {},
 ) {
     navigation(startDestination = KronoDestination.Inicial.route, route = RUTA_GRAFO_PRINCIPAL) {
-        // Cada pantalla provisional se reemplaza por el grafo que exponga su feature
-        // (dashboard, tasks, calendar, profile) cuando se implemente.
-        composable(KronoDestination.Inicio.route) { SeccionProvisional(R.string.seccion_inicio) }
+        composable(KronoDestination.Inicio.route) { inicio() }
         composable(KronoDestination.Tareas.route) { tareas() }
         createTaskScreen(onBack = alVolverDeCrearTarea)
         taskDetailScreen(
@@ -176,12 +202,13 @@ private fun NavGraphBuilder.grafoPrincipal(
             onStartTimer = alAbrirCronometro,
         )
         taskTimerScreen(onBack = alVolverDeCronometro)
+        focusModeScreen(onBack = alVolverDeEnfoque)
         editTaskScreen(onBack = alVolverDeEditarTarea)
         priorityAssistantScreen(
             onBack = alVolverDeAsistente,
             onOpenTask = alAbrirTareaDesdeAsistente,
         )
-        composable(KronoDestination.Calendario.route) { SeccionProvisional(R.string.seccion_calendario) }
+        composable(KronoDestination.Calendario.route) { calendario() }
         composable(KronoDestination.Ajustes.route) { ajustes() }
         editProfileScreen(
             onBackClick = alVolverDeEditarPerfil,
@@ -191,6 +218,7 @@ private fun NavGraphBuilder.grafoPrincipal(
             onBackClick = alVolverDeZonaSeguridad,
             onAccountDeleted = alEliminarCuenta,
         )
+        focusTemplatesScreen(onBack = alVolverDePlantillasEnfoque)
         notificationPreferencesScreen(
             onBackClick = alVolverDeNotificaciones,
         )
@@ -223,5 +251,18 @@ fun NavController.irAlFlujoPrincipal() {
 fun NavController.volverAAutenticacion() {
     navigate(AUTH_GRAPH_ROUTE) {
         popUpTo(RUTA_GRAFO_PRINCIPAL) { inclusive = true }
+    }
+}
+
+/**
+ * Arranca el modo enfoque desde el botón "Iniciar" del inicio (F-13 CA-2) sobre la tarea prioritaria
+ * de hoy, con la plantilla activa (F-10). Sin tareas pendientes lleva a la lista de tareas para que
+ * el usuario cree o elija una.
+ */
+private fun alIniciarEnfoqueDesdeInicio(navController: NavController, taskId: String?) {
+    if (taskId != null) {
+        navController.navigateToFocusMode(taskId)
+    } else {
+        navController.navegarAPestana(KronoDestination.Tareas)
     }
 }

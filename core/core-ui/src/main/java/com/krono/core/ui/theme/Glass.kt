@@ -29,6 +29,12 @@ object KronoGlass {
 
     /** Opacidad del color de la parte inferior del degradado. */
     val bottomLayerAlpha: Float = 0.4f
+
+    /** Opacidad del borde de las tarjetas y botones de error. */
+    val errorBorderAlpha: Float = 0.4f
+
+    /** Borde de error: el rojo de la paleta con [errorBorderAlpha], para tarjetas de error y su botón. */
+    val errorBorderColor: Color = ErrorColor.copy(alpha = errorBorderAlpha)
 }
 
 /**

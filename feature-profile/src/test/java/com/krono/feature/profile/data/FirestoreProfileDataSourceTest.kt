@@ -144,14 +144,25 @@ class FirestoreProfileDataSourceTest {
     }
 
     @Test
-    fun deleteAccount_sinSesionActiva_retornaExitoOErrorControladoSinCrash() = runTest {
+    fun deleteAccount_sinSesionActiva_retornaErrorYNoLanza() = runTest {
         val dataSource = FirestoreProfileDataSource(
             firestoreProvider = { null },
             authProvider = { null },
         )
 
-        val result = dataSource.deleteAccount("password123")
-        assertTrue(result is KronoResult.Success)
+        val result = dataSource.deleteAccount("user-123")
+        assertTrue(result is KronoResult.Error)
+    }
+
+    @Test
+    fun reauthenticate_sinSesionActiva_retornaErrorParaNoBorrarNada() = runTest {
+        val dataSource = FirestoreProfileDataSource(
+            firestoreProvider = { null },
+            authProvider = { null },
+        )
+
+        val result = dataSource.reauthenticate("password123")
+        assertTrue(result is KronoResult.Error)
     }
 
     @Test

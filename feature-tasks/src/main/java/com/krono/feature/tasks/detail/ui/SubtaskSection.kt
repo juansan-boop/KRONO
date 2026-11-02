@@ -42,6 +42,7 @@ import com.krono.core.ui.theme.OnSurfaceVariant
 import com.krono.core.ui.theme.Outline
 import com.krono.core.ui.theme.OutlineVariant
 import com.krono.core.ui.theme.PrimaryFixedDim
+import com.krono.core.ui.theme.OnPrimaryMagenta
 import com.krono.core.ui.theme.PrimaryMagenta
 import com.krono.core.ui.theme.SurfaceContainerHigh
 import com.krono.core.ui.theme.glassSurface
@@ -196,7 +197,7 @@ private fun SubtaskItemRow(
                     Icon(
                         painter = painterResource(R.drawable.ic_check),
                         contentDescription = cdAction,
-                        tint = Color.White,
+                        tint = OnPrimaryMagenta,
                         modifier = Modifier.size(KronoSizes.iconSmall),
                     )
                 }

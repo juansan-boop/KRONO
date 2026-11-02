@@ -3,25 +3,42 @@ package com.krono.core.data.task
 import app.cash.turbine.test
 import com.krono.core.common.KronoResult
 import com.krono.core.data.auth.FakeAuthRemoteDataSource
+import com.krono.core.data.timer.ActiveTimerDto
+import com.krono.core.data.timer.FakeTimerRemoteDataSource
 import com.krono.core.domain.auth.User
 import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.task.TaskPriority
+import com.krono.core.domain.timer.ActiveTimer
+import com.google.firebase.firestore.FirebaseFirestoreException
+import com.krono.core.domain.task.TaskField
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.datetime.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Pruebas unitarias para [FirestoreTaskRepository] (F-02 CA-1, CA-2, CA-3).
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class FirestoreTaskRepositoryTest {
 
+    private lateinit var fakeTimerDataSource: FakeTimerRemoteDataSource
     private lateinit var fakeTaskDataSource: FakeTaskRemoteDataSource
     private lateinit var fakeAuthDataSource: FakeAuthRemoteDataSource
     private lateinit var repository: FirestoreTaskRepository
@@ -30,9 +47,10 @@ class FirestoreTaskRepositoryTest {
 
     @Before
     fun setUp() {
-        fakeTaskDataSource = FakeTaskRemoteDataSource()
+        fakeTimerDataSource = FakeTimerRemoteDataSource()
+        fakeTaskDataSource = FakeTaskRemoteDataSource(fakeTimerDataSource)
         fakeAuthDataSource = FakeAuthRemoteDataSource()
-        repository = FirestoreTaskRepository(fakeTaskDataSource, fakeAuthDataSource)
+        repository = FirestoreTaskRepository(fakeTaskDataSource, fakeAuthDataSource, fakeTimerDataSource)
     }
 
     @Test
@@ -47,7 +65,7 @@ class FirestoreTaskRepositoryTest {
         fakeTaskDataSource.givenTask(testUser.id, taskDto)
 
         repository.observeTasks().test {
-            val list = awaitItem()
+            val list = (awaitItem() as KronoResult.Success).data
             assertEquals(1, list.size)
             assertEquals("Estudiar Cálculo", list[0].title)
             assertEquals(TaskCategory.ESTUDIO, list[0].category)
@@ -60,7 +78,7 @@ class FirestoreTaskRepositoryTest {
         fakeAuthDataSource.user.value = null
 
         repository.observeTasks().test {
-            val list = awaitItem()
+            val list = (awaitItem() as KronoResult.Success).data
             assertTrue(list.isEmpty())
             cancelAndIgnoreRemainingEvents()
         }
@@ -73,7 +91,7 @@ class FirestoreTaskRepositoryTest {
         fakeTaskDataSource.givenTask(testUser.id, taskDto)
 
         repository.observeTaskById("t1").test {
-            val task = awaitItem()
+            val task = (awaitItem() as KronoResult.Success).data
             assertEquals("Pagar matrícula", task?.title)
             cancelAndIgnoreRemainingEvents()
         }
@@ -84,7 +102,7 @@ class FirestoreTaskRepositoryTest {
         fakeAuthDataSource.user.value = testUser
 
         repository.observeTaskById("inexistente").test {
-            assertNull(awaitItem())
+            assertEquals(KronoResult.Success(null), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -177,5 +195,211 @@ class FirestoreTaskRepositoryTest {
         assertTrue(result is KronoResult.Error)
         val error = (result as KronoResult.Error).throwable
         assertTrue(error is TaskError.StorageError)
+    }
+
+    @Test
+    fun upsertTask_sinConfirmacionDelServidor_devuelveSuccessYDejaLaTareaEnLaCacheLocal() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.serverConfirmation = CompletableDeferred()
+
+        val result = backgroundScope.async { repository.upsertTask(Task(id = "t1", title = "Sin red")) }
+        advanceTimeBy(OFFLINE_WAIT)
+        runCurrent()
+
+        assertTrue(result.isCompleted)
+        assertEquals(KronoResult.Success(Unit), result.await())
+        assertEquals("Sin red", fakeTaskDataSource.storedTask(testUser.id, "t1")?.title)
+    }
+
+    @Test
+    fun upsertTask_conConfirmacionRapida_noEsperaElTiempoLimite() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        val confirmation = CompletableDeferred<Unit>()
+        fakeTaskDataSource.serverConfirmation = confirmation
+
+        val result = backgroundScope.async { repository.upsertTask(Task(id = "t1", title = "Con red")) }
+        advanceTimeBy(FAST_CONFIRMATION)
+        confirmation.complete(Unit)
+        advanceTimeBy(FAST_CONFIRMATION)
+
+        assertTrue(result.isCompleted)
+        assertEquals(KronoResult.Success(Unit), result.await())
+    }
+
+    @Test
+    fun deleteTask_sinConfirmacionDelServidor_devuelveSuccess() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Por borrar"))
+        fakeTaskDataSource.serverConfirmation = CompletableDeferred()
+
+        val result = backgroundScope.async { repository.deleteTask("t1") }
+        advanceTimeBy(OFFLINE_WAIT)
+        runCurrent()
+
+        assertTrue(result.isCompleted)
+        assertEquals(KronoResult.Success(Unit), result.await())
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+    }
+
+    @Test
+    fun updateTaskFields_conSnapshotViejo_noPisaElTiempoRealNiLasSubtareas() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        val subtask = SubtaskDto(id = "s1", taskId = "t1", title = "Paso").toMap()
+        fakeTaskDataSource.givenTask(
+            testUser.id,
+            TaskDto(
+                id = "t1",
+                title = "Original",
+                actualDurationMillis = 30.minutes.inWholeMilliseconds,
+                isCompleted = true,
+                subtasks = listOf(subtask),
+            ),
+        )
+        val staleSnapshot = Task(id = "t1", title = "Editada", actualDuration = Duration.ZERO)
+
+        val result = repository.updateTaskFields(staleSnapshot, TaskField.EDIT_FORM)
+
+        assertEquals(KronoResult.Success(Unit), result)
+        val stored = fakeTaskDataSource.storedTask(testUser.id, "t1")
+        assertEquals("Editada", stored?.title)
+        assertEquals(30.minutes.inWholeMilliseconds, stored?.actualDurationMillis)
+        assertTrue(stored?.isCompleted == true)
+        assertEquals(1, stored?.subtasks?.size)
+        assertFalse(fakeTaskDataSource.lastUpdatedFields.containsKey(TaskDto.FIELD_ACTUAL_DURATION_MILLIS))
+    }
+
+    @Test
+    fun updateTaskFields_sinConfirmacionDelServidor_devuelveSuccess() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Original"))
+        fakeTaskDataSource.serverConfirmation = CompletableDeferred()
+
+        val result = backgroundScope.async {
+            repository.updateTaskFields(Task(id = "t1", title = "Editada"), TaskField.EDIT_FORM)
+        }
+        advanceTimeBy(OFFLINE_WAIT)
+        runCurrent()
+
+        assertTrue(result.isCompleted)
+        assertEquals(KronoResult.Success(Unit), result.await())
+    }
+
+    @Test
+    fun updateTaskFields_sinSesion_retornaErrorUnauthenticatedUser() = runTest {
+        fakeAuthDataSource.user.value = null
+
+        val result = repository.updateTaskFields(Task(id = "t1", title = "Editada"), TaskField.EDIT_FORM)
+
+        assertEquals(KronoResult.Error(TaskError.UnauthenticatedUser), result)
+    }
+
+    @Test
+    fun updateTaskFields_conErrorLocal_retornaError() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.failure = permissionDenied()
+
+        val result = repository.updateTaskFields(Task(id = "t1", title = "Editada"), TaskField.EDIT_FORM)
+
+        assertTrue((result as KronoResult.Error).throwable is TaskError.StorageError)
+    }
+
+    @Test
+    fun observeTasks_cuandoElListenerFalla_emiteErrorEnVezDeListaVacia() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.listenerFailure = permissionDenied()
+
+        repository.observeTasks().test {
+            val error = (awaitItem() as KronoResult.Error).throwable
+            assertTrue(error is TaskError.StorageError)
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun observeTasks_alVolverARecolectarTrasUnFallo_reabreElListener() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Recuperada"))
+        fakeTaskDataSource.listenerFailure = permissionDenied()
+        repository.observeTasks().test {
+            awaitItem()
+            awaitComplete()
+        }
+
+        fakeTaskDataSource.listenerFailure = null
+        repository.observeTasks().test {
+            val list = (awaitItem() as KronoResult.Success).data
+            assertEquals("Recuperada", list.single().title)
+            cancelAndIgnoreRemainingEvents()
+        }
+        assertEquals(2, fakeTaskDataSource.tasksListenerCount)
+    }
+
+    @Test
+    fun observeTaskById_cuandoElListenerFalla_emiteErrorEnVezDeNulo() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Existe"))
+        fakeTaskDataSource.listenerFailure = permissionDenied()
+
+        repository.observeTaskById("t1").test {
+            val error = (awaitItem() as KronoResult.Error).throwable
+            assertTrue(error is TaskError.StorageError)
+            awaitComplete()
+        }
+    }
+
+    @Test
+    fun deleteTask_conElCronometroActivoEnEsaTarea_loDescartaJuntoConLaTarea() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Midiendo"))
+        fakeTimerDataSource.givenActiveTimer(testUser.id, activeTimerFor("t1"))
+
+        val result = repository.deleteTask("t1")
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+        assertNull(fakeTimerDataSource.timers[testUser.id])
+    }
+
+    @Test
+    fun deleteTask_conElCronometroActivoEnOtraTarea_loConserva() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Sin cronómetro"))
+        fakeTimerDataSource.givenActiveTimer(testUser.id, activeTimerFor("otra"))
+
+        repository.deleteTask("t1")
+
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+        assertEquals("otra", fakeTimerDataSource.timers[testUser.id]?.get(ActiveTimerDto.FIELD_TASK_ID))
+    }
+
+    @Test
+    fun deleteTask_siNoSePuedeLeerElCronometro_igualEliminaLaTarea() = runTest {
+        fakeAuthDataSource.user.value = testUser
+        fakeTaskDataSource.givenTask(testUser.id, TaskDto(id = "t1", title = "Por borrar"))
+        fakeTimerDataSource.givenActiveTimer(testUser.id, activeTimerFor("t1"))
+        fakeTimerDataSource.readFailure = FirebaseFirestoreException("Sin red", FirebaseFirestoreException.Code.UNAVAILABLE)
+
+        val result = repository.deleteTask("t1")
+
+        assertEquals(KronoResult.Success(Unit), result)
+        assertNull(fakeTaskDataSource.storedTask(testUser.id, "t1"))
+    }
+
+    private fun activeTimerFor(taskId: String): Map<String, Any?> {
+        val start = Instant.parse("2026-10-22T14:00:00Z")
+        return ActiveTimerDto.toMap(ActiveTimer(taskId, start, start, Duration.ZERO))
+    }
+
+    private fun permissionDenied() = FirebaseFirestoreException(
+        "Permiso denegado",
+        FirebaseFirestoreException.Code.PERMISSION_DENIED,
+    )
+
+    private companion object {
+        /** Retardo muy inferior a cualquier tiempo límite razonable de confirmación. */
+        val FAST_CONFIRMATION = 1.seconds / 10
+
+        /** Espera sin red muy superior a cualquier tiempo límite razonable de confirmación. */
+        val OFFLINE_WAIT = 1.minutes
     }
 }

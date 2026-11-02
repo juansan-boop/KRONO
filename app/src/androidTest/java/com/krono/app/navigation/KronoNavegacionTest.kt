@@ -55,7 +55,10 @@ class KronoNavegacionTest {
         }
     }
 
-    private fun mostrar(inicio: String) {
+    private fun mostrar(
+        inicio: String,
+        calendario: @Composable () -> Unit = { SeccionProvisional(R.string.seccion_calendario) },
+    ) {
         composeRule.setContent {
             KronoTheme {
                 val controlador = rememberNavController()
@@ -66,6 +69,7 @@ class KronoNavegacionTest {
                     grafoAuth = grafoAuthFalso(),
                     ajustes = { alCerrarSesion -> AjustesDePrueba(alCerrarSesion) },
                     tareas = { SeccionProvisional(R.string.seccion_tareas) },
+                    calendario = calendario,
                 )
             }
         }
@@ -142,6 +146,26 @@ class KronoNavegacionTest {
     }
 
     @Test
+    fun alVolverACalendarioSeConservaSuEstado() {
+        mostrar(RUTA_GRAFO_PRINCIPAL, calendario = { CalendarioDePrueba() })
+        tocarPestana(R.string.nav_calendario)
+        composeRule.onNodeWithText("$TEXTO_CALENDARIO 0").performClick()
+        composeRule.onNodeWithText("$TEXTO_CALENDARIO 1").assertIsDisplayed()
+
+        tocarPestana(R.string.nav_tareas)
+        tocarPestana(R.string.nav_calendario)
+
+        composeRule.onNodeWithText("$TEXTO_CALENDARIO 1").assertIsDisplayed()
+    }
+
+    /** Sustituye a la vista mensual (que necesita Hilt) con un estado guardable propio. */
+    @Composable
+    private fun CalendarioDePrueba() {
+        var meses by rememberSaveable { mutableIntStateOf(0) }
+        Button(onClick = { meses++ }) { Text("$TEXTO_CALENDARIO $meses") }
+    }
+
+    @Test
     fun sinSesionSeMuestraElLoginSinBarraInferior() {
         mostrar(AUTH_GRAPH_ROUTE)
 
@@ -208,5 +232,6 @@ class KronoNavegacionTest {
         const val RUTA_LOGIN_FALSA = "auth/login-falso"
         const val TEXTO_LOGIN_FALSO = "LOGIN_FALSO"
         const val TEXTO_CONTADOR = "Contador"
+        const val TEXTO_CALENDARIO = "Mes"
     }
 }

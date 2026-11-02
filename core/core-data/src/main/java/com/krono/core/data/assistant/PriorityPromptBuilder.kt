@@ -71,6 +71,8 @@ class PriorityPromptBuilder @Inject constructor() {
         PriorityFactor.DUE_SOON -> "vence en los próximos días"
         PriorityFactor.HIGH_PRIORITY -> "el usuario la marcó como prioridad alta"
         PriorityFactor.TIGHT_SCHEDULE -> "la estimación ocupa buena parte del margen que queda"
+        PriorityFactor.CANNOT_FINISH_BY_DUE ->
+            "ya no alcanza a terminarse antes de la entrega: la estimación es mayor que el tiempo que queda"
     }
 
     private companion object {

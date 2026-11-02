@@ -7,7 +7,8 @@ import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
-import com.krono.core.domain.task.UpsertTaskUseCase
+import com.krono.core.domain.task.TaskError
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -25,6 +26,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -45,7 +47,7 @@ class TasksViewModelTest {
         fakeRepository = FakeTaskRepository()
         viewModel = TasksViewModel(
             observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
-            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            updateTaskFieldsUseCase = UpdateTaskFieldsUseCase(fakeRepository),
             deleteTaskUseCase = DeleteTaskUseCase(fakeRepository),
         ).apply {
             currentDateProvider = { fixedToday }
@@ -262,7 +264,8 @@ class TasksViewModelTest {
             viewModel.onConfirmDeleteTask()
             advanceUntilIdle()
 
-            val stateAfterDelete = awaitItem()
+            // La lista y el diálogo llegan por flujos distintos: se valida el estado final.
+            val stateAfterDelete = expectMostRecentItem()
             assertNull(stateAfterDelete.taskPendingDelete)
             assertTrue(stateAfterDelete.isEmpty)
 
@@ -330,6 +333,147 @@ class TasksViewModelTest {
             // fixedToday = 2026-10-15 -> mañana = 2026-10-16 23:59
             assertEquals(LocalDateTime(2026, 10, 16, 23, 59), updated.dueDate)
 
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun cuandoElListenerFalla_muestraErrorDeCargaEnVezDeEstadoVacio() = runTest {
+        fakeRepository.observeFailure = TaskError.StorageError("Permiso denegado")
+
+        viewModel.uiState.test {
+            awaitItem() // Loading
+            val state = awaitItem()
+            assertFalse(state.isLoading)
+            assertTrue(state.hasLoadError)
+            assertFalse(state.showEmptyState)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun alReintentarTrasUnFallo_reabreLaObservacionYMuestraLasTareas() = runTest {
+        fakeRepository.observeFailure = TaskError.StorageError("Permiso denegado")
+        val task = Task(id = "t1", title = "Recuperada", dueDate = LocalDateTime(2026, 10, 15, 18, 0))
+        fakeRepository.givenTasks(task)
+
+        viewModel.uiState.test {
+            awaitItem() // Loading
+            assertTrue(awaitItem().hasLoadError)
+
+            fakeRepository.observeFailure = null
+            viewModel.onRetryLoad()
+            advanceUntilIdle()
+
+            val recovered = expectMostRecentItem()
+            assertFalse(recovered.hasLoadError)
+            assertEquals(listOf(task), recovered.todayTasks)
+            assertEquals(2, fakeRepository.observeTasksSubscriptions)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun alConmutarCompletitudConSnapshotViejo_noPisaElTiempoRealRegistrado() = runTest {
+        val stale = Task(id = "t1", title = "Con cronómetro", actualDuration = Duration.ZERO)
+        fakeRepository.givenTasks(stale.copy(actualDuration = 30.minutes))
+
+        viewModel.onToggleTaskCompletion(stale)
+        advanceUntilIdle()
+
+        val stored = fakeRepository.storedTask("t1")
+        assertTrue(stored?.isCompleted == true)
+        assertEquals(30.minutes, stored?.actualDuration)
+    }
+
+    @Test
+    fun alPosponerConSnapshotViejo_noPisaElTiempoRealRegistrado() = runTest {
+        val stale = Task(id = "t1", title = "Posponer", dueDate = LocalDateTime(2026, 10, 15, 18, 0))
+        fakeRepository.givenTasks(stale.copy(actualDuration = 30.minutes))
+
+        viewModel.onPostponeTaskToTomorrow(stale)
+        advanceUntilIdle()
+
+        val stored = fakeRepository.storedTask("t1")
+        assertEquals(LocalDateTime(2026, 10, 16, 18, 0), stored?.dueDate)
+        assertEquals(30.minutes, stored?.actualDuration)
+    }
+
+    @Test
+    fun alConfirmarEliminacionDosVeces_soloEliminaUnaVez() = runTest {
+        val task = Task(id = "t1", title = "Doble toque")
+        fakeRepository.givenTasks(task)
+        viewModel.onRequestDeleteTask(task)
+
+        viewModel.onConfirmDeleteTask()
+        viewModel.onConfirmDeleteTask()
+        advanceUntilIdle()
+
+        assertEquals(1, fakeRepository.deleteCalls)
+    }
+
+    private fun diaDeDemostracion(): List<Task> = listOf(
+        Task(id = "hoy-hecha", title = "Hoy hecha", category = TaskCategory.ESTUDIO, isCompleted = true, dueDate = LocalDateTime(2026, 10, 15, 9, 0)),
+        Task(id = "hoy-pend-1", title = "Hoy pendiente 1", category = TaskCategory.TRABAJO, dueDate = LocalDateTime(2026, 10, 15, 20, 0)),
+        Task(id = "hoy-pend-2", title = "Hoy pendiente 2", category = TaskCategory.PERSONAL, dueDate = LocalDateTime(2026, 10, 15, 21, 0)),
+        Task(id = "pasada-hecha-1", title = "Pasada hecha 1", category = TaskCategory.ESTUDIO, isCompleted = true, dueDate = LocalDateTime(2026, 10, 10, 9, 0)),
+        Task(id = "pasada-hecha-2", title = "Pasada hecha 2", category = TaskCategory.TRABAJO, isCompleted = true, dueDate = LocalDateTime(2026, 10, 14, 9, 0)),
+        Task(id = "vencida", title = "Vencida pendiente", category = TaskCategory.ESTUDIO, dueDate = LocalDateTime(2026, 10, 13, 9, 0)),
+        Task(id = "futura", title = "Futura", category = TaskCategory.ESTUDIO, dueDate = LocalDateTime(2026, 10, 17, 9, 0)),
+    )
+
+    @Test
+    fun lasCompletadasDeDiasAnteriores_noInflanParaHoy_yVanAlGrupoDeCompletadas() = runTest {
+        fakeRepository.givenTasks(*diaDeDemostracion().toTypedArray())
+
+        viewModel.uiState.test {
+            awaitItem()
+            val state = awaitItem()
+            assertEquals(setOf("hoy-hecha", "hoy-pend-1", "hoy-pend-2", "vencida"), state.todayTasks.map { it.id }.toSet())
+            assertEquals(listOf("futura"), state.thisWeekTasks.map { it.id })
+            assertEquals(setOf("pasada-hecha-1", "pasada-hecha-2"), state.completedEarlierTasks.map { it.id }.toSet())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun lasVencidasPendientes_quedanEnParaHoyAntesQueLasDeHoy() = runTest {
+        fakeRepository.givenTasks(*diaDeDemostracion().toTypedArray())
+
+        viewModel.uiState.test {
+            awaitItem()
+            val state = awaitItem()
+            assertEquals("vencida", state.todayTasks.first().id)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun enfoqueDiario_usaElMismoCalculoQueInicio_ignorandoVencidasYCompletadasPasadas() = runTest {
+        fakeRepository.givenTasks(*diaDeDemostracion().toTypedArray())
+
+        viewModel.uiState.test {
+            awaitItem()
+            val state = awaitItem()
+            // Hoy vencen 3 tareas, 1 completada: 33 % y 2 pendientes, igual que el resumen de Inicio.
+            assertEquals(33, state.dailyFocusPercentage)
+            assertEquals(2, state.dailyPendingCount)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun enfoqueDiario_noCambiaAlFiltrarPorCategoria() = runTest {
+        fakeRepository.givenTasks(*diaDeDemostracion().toTypedArray())
+
+        viewModel.uiState.test {
+            awaitItem()
+            val todas = awaitItem()
+            viewModel.onSelectCategory(TaskCategoryFilter.PERSONAL)
+            val personal = awaitItem()
+            assertEquals(todas.dailyFocusPercentage, personal.dailyFocusPercentage)
+            assertEquals(todas.dailyPendingCount, personal.dailyPendingCount)
+            assertEquals(listOf("hoy-pend-2"), personal.todayTasks.map { it.id })
             cancelAndIgnoreRemainingEvents()
         }
     }

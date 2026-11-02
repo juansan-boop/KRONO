@@ -47,4 +47,22 @@ object KronoSizes {
 
     /** Diámetro del botón principal de iniciar o pausar el cronómetro (F-08). */
     val timerMainButton = 72.dp
+
+    /** Ancho máximo del texto de apoyo centrado bajo un encabezado, para que no se estire. */
+    val supportingTextMaxWidth = 320.dp
+
+    /** Diámetro del indicador circular de una opción seleccionable (estilo radio). */
+    val radioIndicator = 20.dp
+
+    /** Diámetro del punto interior del indicador de radio cuando la opción está seleccionada. */
+    val radioIndicatorDot = 10.dp
+
+    /** Diámetro del punto que indica tareas bajo un día de la rejilla del calendario (F-16). */
+    val calendarDayDot = 4.dp
+
+    /** Diámetro mínimo del círculo que resalta el número de hoy o del día seleccionado (F-16). */
+    val calendarDayBadge = 32.dp
+
+    /** Diámetro del punto de categoría junto al horario de una tarea de la agenda (F-16). */
+    val calendarCategoryDot = 8.dp
 }

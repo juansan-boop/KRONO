@@ -4,7 +4,9 @@ import app.cash.turbine.test
 import com.krono.core.common.KronoResult
 import com.krono.feature.profile.MainDispatcherRule
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.domain.BlankRoleException
 import com.krono.feature.profile.domain.UpdateProfileUseCase
+import com.krono.feature.profile.ui.ProfileSaveError
 
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -102,8 +104,8 @@ class EditProfileViewModelTest {
         assertNull(state.avatarUri)
         assertFalse(state.isSaving)
         assertFalse(state.isSuccess)
-        assertNull(state.nameError)
-        assertNull(state.errorMessage)
+        assertFalse(state.isNameMissing)
+        assertNull(state.saveError)
         assertTrue(state.canSave)
     }
 
@@ -118,8 +120,8 @@ class EditProfileViewModelTest {
         assertEquals("Carlos Sánchez", state.name)
         assertEquals("CS", state.userInitials)
         assertEquals("Profesional Técnico", state.role)
-        assertNull(state.nameError)
-        assertNull(state.errorMessage)
+        assertFalse(state.isNameMissing)
+        assertNull(state.saveError)
     }
 
     @Test
@@ -130,8 +132,7 @@ class EditProfileViewModelTest {
         vm.onSave()
 
         val state = vm.uiState.value
-        assertNotNull(state.nameError)
-        assertEquals("El nombre completo es obligatorio", state.nameError)
+        assertTrue(state.isNameMissing)
         assertFalse(state.isSaving)
         assertEquals(0, updateProfileUseCase.callCount)
     }
@@ -142,10 +143,10 @@ class EditProfileViewModelTest {
 
         vm.onNameChange("")
         vm.onSave()
-        assertNotNull(vm.uiState.value.nameError)
+        assertTrue(vm.uiState.value.isNameMissing)
 
         vm.onNameChange("Juan Sora")
-        assertNull(vm.uiState.value.nameError)
+        assertFalse(vm.uiState.value.isNameMissing)
     }
 
     @Test
@@ -199,7 +200,7 @@ class EditProfileViewModelTest {
     }
 
     @Test
-    fun fallaEnPersistenciaDesactivaIsSavingYExponeMensajeDeError() = runTest {
+    fun fallaEnPersistenciaDesactivaIsSavingYExponeErrorTipadoSinTextoTecnico() = runTest {
         updateProfileUseCase.failure = RuntimeException("Error en Firestore de prueba")
         val vm = createViewModel()
 
@@ -210,12 +211,37 @@ class EditProfileViewModelTest {
             val state = vm.uiState.value
             assertFalse(state.isSaving)
             assertFalse(state.isSuccess)
-            assertEquals("Error en Firestore de prueba", state.errorMessage)
+            assertEquals(ProfileSaveError.UNEXPECTED, state.saveError)
 
             expectNoEvents()
         }
     }
 
+
+    @Test
+    fun fallaDeValidacionDelCasoDeUsoExponeErrorDeDatosInvalidos() = runTest {
+        updateProfileUseCase.failure = BlankRoleException()
+        val vm = createViewModel()
+
+        vm.onSave()
+        advanceUntilIdle()
+
+        assertEquals(ProfileSaveError.INVALID_DATA, vm.uiState.value.saveError)
+        assertFalse(vm.uiState.value.isSaving)
+    }
+
+    @Test
+    fun editarUnCampoDespuesDeUnErrorLimpiaElErrorDeGuardado() = runTest {
+        updateProfileUseCase.failure = RuntimeException("x")
+        val vm = createViewModel()
+        vm.onSave()
+        advanceUntilIdle()
+        assertNotNull(vm.uiState.value.saveError)
+
+        vm.onNameChange("Otro Nombre")
+
+        assertNull(vm.uiState.value.saveError)
+    }
     @Test
     fun cancelarEmiteEventoNavigateBackSinModificarDatos() = runTest {
         val vm = createViewModel()
