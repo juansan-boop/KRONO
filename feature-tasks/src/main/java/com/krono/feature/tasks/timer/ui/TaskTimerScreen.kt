@@ -162,7 +162,7 @@ private fun TimerContent(
     onFinish: () -> Unit,
 ) {
     StatusChip(state.status)
-    TaskCard(task)
+    TaskCard(task, targetDuration = state.targetDuration)
     TimerRing(elapsed = state.elapsed, estimateProgress = state.estimateProgress)
     TimerControls(
         status = state.status,
@@ -237,7 +237,7 @@ private fun StatusChip(status: TimerStatus) {
 }
 
 @Composable
-private fun TaskCard(task: Task) {
+private fun TaskCard(task: Task, targetDuration: Duration? = task.estimatedDuration) {
     val context = LocalContext.current
     Column(
         modifier = Modifier
@@ -252,7 +252,7 @@ private fun TaskCard(task: Task) {
             fontWeight = FontWeight.Bold,
             color = OnSurface,
         )
-        TaskDateFormatter.formatEstimatedDuration(context, task.estimatedDuration)?.let { estimate ->
+        TaskDateFormatter.formatEstimatedDuration(context, targetDuration)?.let { estimate ->
             Text(
                 text = stringResource(R.string.timer_estimate, estimate),
                 style = MaterialTheme.typography.bodyMedium,

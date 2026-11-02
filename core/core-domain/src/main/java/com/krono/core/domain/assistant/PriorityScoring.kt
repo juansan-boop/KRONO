@@ -1,16 +1,19 @@
 package com.krono.core.domain.assistant
 
 import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Heurística local del asistente de prioridades (F-12, D-5 opción híbrida): puntúa cada
  * tarea pendiente con datos verificables (urgencia de la entrega, prioridad asignada y
  * margen de tiempo) para que el orden sea determinista, explicable y funcione sin conexión.
  *
- * Puntuación = puntos de urgencia + puntos de prioridad + bonificación por margen ajustado.
+ * Puntuación = puntos de urgencia + puntos de prioridad + bonificación por margen ajustado
+ * + adaptaciones contextuales circadiana, de fatiga y de subtareas (H2).
  * Una tarea que ya no cabe antes de su entrega recibe la advertencia
  * [PriorityFactor.CANNOT_FINISH_BY_DUE] en lugar de la bonificación por margen ajustado.
  * La urgencia pesa más que la prioridad para reducir entregas extemporáneas, una de las
@@ -50,7 +53,22 @@ object PriorityScoring {
      *
      * @param timeUntilDue tiempo hasta la entrega (negativo si venció) o `null` sin fecha.
      */
-    fun score(task: Task, timeUntilDue: Duration?, estimate: Duration): Result {
+    fun score(task: Task, timeUntilDue: Duration?, estimate: Duration): Result =
+        score(task, timeUntilDue, estimate, hourOfDay = 14, dailyWorkedMinutes = 0L)
+
+    /**
+     * Sobrecarga enriquecida que evalúa contexto circadiano, fatiga por cronómetro y subtareas (H2).
+     *
+     * @param hourOfDay hora del día para evaluar ritmo circadiano (0..23).
+     * @param dailyWorkedMinutes minutos de trabajo acumulados en el cronómetro hoy.
+     */
+    fun score(
+        task: Task,
+        timeUntilDue: Duration?,
+        estimate: Duration,
+        hourOfDay: Int = 14,
+        dailyWorkedMinutes: Long = 0L,
+    ): Result {
         val factors = mutableSetOf<PriorityFactor>()
         dueFactor(timeUntilDue)?.let(factors::add)
         if (task.priority == TaskPriority.ALTA) factors += PriorityFactor.HIGH_PRIORITY
@@ -59,8 +77,42 @@ object PriorityScoring {
             isTight(timeUntilDue, estimate) -> factors += PriorityFactor.TIGHT_SCHEDULE
         }
 
-        val score = urgencyPoints(factors) + priorityPoints(task.priority) +
+        var score = urgencyPoints(factors) + priorityPoints(task.priority) +
             if (PriorityFactor.TIGHT_SCHEDULE in factors) TIGHT_SCHEDULE_POINTS else 0
+
+        val isUrgent = PriorityFactor.OVERDUE in factors || PriorityFactor.DUE_VERY_SOON in factors
+
+        // 1. Afinidad Circadiana y Carga Cognitiva
+        val isHighCognitiveLoad = task.category == TaskCategory.ESTUDIO ||
+            task.category == TaskCategory.TRABAJO ||
+            task.subtasks.count { !it.isDone } >= 2
+
+        if (hourOfDay in 6..11) {
+            if (isHighCognitiveLoad && task.dueDate != null) {
+                score += 2
+            }
+        } else if (hourOfDay >= 19 || hourOfDay < 6) {
+            if (!isUrgent) {
+                val isLightOrShort = estimate <= 35.minutes || task.category == TaskCategory.PERSONAL
+                val isLongHeavy = estimate >= 60.minutes && (task.category == TaskCategory.ESTUDIO || task.category == TaskCategory.TRABAJO)
+                if (isLightOrShort) {
+                    score += 2
+                } else if (isLongHeavy) {
+                    score -= 1
+                }
+            }
+        }
+
+        // 2. Fatiga Acumulada por Cronómetro (dailyWorkedMinutes)
+        if (dailyWorkedMinutes >= 90L && !isUrgent && estimate <= 30.minutes) {
+            score += 1
+        }
+
+        // 3. Progreso de Subtareas (Efecto Zeigarnik / continuidad)
+        if (task.subtasks.isNotEmpty() && task.subtasks.any { it.isDone } && task.subtasks.any { !it.isDone }) {
+            score += 1
+        }
+
         return Result(score, factors)
     }
 

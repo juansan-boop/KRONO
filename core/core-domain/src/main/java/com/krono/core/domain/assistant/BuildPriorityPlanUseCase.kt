@@ -13,14 +13,16 @@ import kotlin.time.Duration.Companion.minutes
 /**
  * Arma el plan del asistente de prioridades (F-12 CA-1): puntúa las tareas pendientes con
  * [PriorityScoring], sugiere la primera para hacer ahora y encadena las siguientes en
- * bloques consecutivos desde [now].
+ * bloques consecutivos desde [now] considerando ritmo circadiano, fatiga acumulada en
+ * cronómetro y calibración del modelo híbrido H1.
  *
  * Una tarea que ya no cabe antes de su entrega ([PriorityFactor.CANNOT_FINISH_BY_DUE]) se
  * considera infactible: se ordena después de todas las que sí caben, así que solo se
  * recomienda "ahora" si no hay otra, y siempre con esa advertencia.
  *
- * La duración de cada bloque sale de la estimación manual de la tarea; si no hay, de la
- * estimación por historial (F-11); y si tampoco hay, de [DEFAULT_ESTIMATE_MINUTES].
+ * La duración de cada bloque sale de la estimación manual de la tarea (calibrada por H1 si
+ * hay historial de subestimación); si no hay, de la estimación por historial (F-11); y si
+ * tampoco hay, de [DEFAULT_ESTIMATE_MINUTES].
  */
 class BuildPriorityPlanUseCase(
     private val estimateTaskDuration: EstimateTaskDurationUseCase,
@@ -32,40 +34,87 @@ class BuildPriorityPlanUseCase(
      * @return el plan, o `null` si no hay tareas pendientes.
      */
     operator fun invoke(tasks: List<Task>, now: LocalDateTime): PriorityPlan? {
-        val ranked = tasks
-            .filterNot { it.isCompleted }
-            .map { rank(it, tasks, now) }
-            .sortedWith(planOrder)
-        if (ranked.isEmpty()) return null
+        val pending = tasks.filterNot { it.isCompleted }
+        if (pending.isEmpty()) return null
 
-        val scheduled = scheduleFrom(now, ranked.take(MAX_PLANNED_TASKS))
+        val baseDailyWorkedMinutes = tasks
+            .filter { it.actualDuration > Duration.ZERO && it.dueDate?.date == now.date }
+            .sumOf { it.actualDuration.inWholeMinutes }
+
+        val initialRanked = pending
+            .map { rank(it, tasks, now, baseDailyWorkedMinutes) }
+            .sortedWith(planOrder)
+
+        val scheduled = scheduleDynamic(
+            pendingTasks = pending,
+            history = tasks,
+            now = now,
+            baseWorkedMinutes = baseDailyWorkedMinutes,
+        )
+
         return PriorityPlan(
             recommended = scheduled.first(),
             sequence = scheduled.drop(1),
-            confidencePercent = confidenceOf(ranked),
+            confidencePercent = confidenceOf(initialRanked),
             categoryBalance = balanceOf(scheduled),
         )
     }
 
-    /** Puntúa una tarea; el horario se asigna después, al encadenar el plan. */
-    private fun rank(task: Task, history: List<Task>, now: LocalDateTime): PlannedTask {
-        val (estimate, source) = estimateFor(task, history, now)
-        val timeUntilDue = task.dueDate?.let { now.durationUntil(it) }
-        val result = PriorityScoring.score(task, timeUntilDue, estimate)
+    /** Puntúa una tarea en un momento y nivel de fatiga específicos; el bloque se asigna dinámicamente. */
+    private fun rank(
+        task: Task,
+        history: List<Task>,
+        at: LocalDateTime,
+        dailyWorkedMinutes: Long,
+    ): PlannedTask {
+        val (estimate, source) = estimateFor(task, history, at)
+        val timeUntilDue = task.dueDate?.let { at.durationUntil(it) }
+        val result = PriorityScoring.score(
+            task = task,
+            timeUntilDue = timeUntilDue,
+            estimate = estimate,
+            hourOfDay = at.hour,
+            dailyWorkedMinutes = dailyWorkedMinutes,
+        )
         return PlannedTask(
             task = task,
             score = result.score,
             factors = result.factors,
             estimate = estimate,
             estimateSource = source,
-            start = now,
-            end = now,
+            start = at,
+            end = at,
             timeUntilDue = timeUntilDue,
         )
     }
 
     private fun estimateFor(task: Task, history: List<Task>, now: LocalDateTime): Pair<Duration, EstimateSource> {
-        task.estimatedDuration?.takeIf { it.isPositive() }?.let { return it to EstimateSource.MANUAL }
+        if (task.estimatedDuration != null && task.estimatedDuration.isPositive()) {
+            val hasCalibratedHistory = history.count {
+                it.isCompleted &&
+                    it.category == task.category &&
+                    it.actualDuration > Duration.ZERO &&
+                    it.estimatedDuration?.isPositive() == true
+            } >= EstimateTaskDurationUseCase.MIN_SAMPLE_SIZE
+
+            if (hasCalibratedHistory) {
+                val daysUntilDue = task.dueDate?.let {
+                    (now.durationUntil(it).inWholeMinutes.toDouble() / 1440.0).coerceAtLeast(0.0)
+                } ?: 2.0
+                val calibrated = estimateTaskDuration.predictHybrid(
+                    category = task.category,
+                    tasks = history,
+                    baseEstimate = task.estimatedDuration,
+                    priority = task.priority,
+                    daysUntilDue = daysUntilDue,
+                    hourOfDay = now.hour,
+                ) ?: task.estimatedDuration
+                return calibrated to EstimateSource.MANUAL
+            } else {
+                return task.estimatedDuration to EstimateSource.MANUAL
+            }
+        }
+
         val hasEstimatedInHistory = history.any {
             it.isCompleted &&
                 it.category == task.category &&
@@ -90,12 +139,37 @@ class BuildPriorityPlanUseCase(
         return DEFAULT_ESTIMATE_MINUTES.minutes to EstimateSource.DEFAULT
     }
 
-    private fun scheduleFrom(now: LocalDateTime, tasks: List<PlannedTask>): List<PlannedTask> {
+    /**
+     * Secuenciación dinámica H2: encadena bloques seleccionando en cada paso la tarea pendiente
+     * que maximiza la afinidad contextual y urgencia según la hora y la fatiga acumulada.
+     */
+    private fun scheduleDynamic(
+        pendingTasks: List<Task>,
+        history: List<Task>,
+        now: LocalDateTime,
+        baseWorkedMinutes: Long,
+    ): List<PlannedTask> {
+        val remaining = pendingTasks.toMutableList()
+        val scheduled = mutableListOf<PlannedTask>()
         var cursor = now
-        return tasks.map { planned ->
-            val end = cursor + planned.estimate
-            planned.copy(start = cursor, end = end).also { cursor = end }
+        var currentWorkedMinutes = baseWorkedMinutes
+
+        while (remaining.isNotEmpty() && scheduled.size < MAX_PLANNED_TASKS) {
+            val rankedCandidates = remaining
+                .map { rank(it, history, cursor, currentWorkedMinutes) }
+                .sortedWith(planOrder)
+
+            val chosen = rankedCandidates.first()
+            val end = cursor + chosen.estimate
+            val planned = chosen.copy(start = cursor, end = end)
+            scheduled += planned
+
+            remaining.removeIf { it.id == chosen.task.id }
+            cursor = end
+            currentWorkedMinutes += chosen.estimate.inWholeMinutes
         }
+
+        return scheduled
     }
 
     /**

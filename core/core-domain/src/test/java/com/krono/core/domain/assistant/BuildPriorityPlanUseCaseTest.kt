@@ -173,6 +173,63 @@ class BuildPriorityPlanUseCaseTest {
     }
 
     @Test
+    fun enHorarioDeManana_priorizaTareaDeEstudioSobrePersonalAIgualUrgencia() {
+        val morning = LocalDateTime(2026, 10, 22, 9, 0)
+        val study = task("estudio", dueIn = null, category = TaskCategory.ESTUDIO, priority = TaskPriority.MEDIA)
+            .copy(dueDate = morning + 24.hours)
+        val personal = task("personal", dueIn = null, category = TaskCategory.PERSONAL, priority = TaskPriority.MEDIA)
+            .copy(dueDate = morning + 24.hours)
+
+        val plan = buildPlan(listOf(personal, study), morning)!!
+
+        assertEquals("estudio", plan.recommended.task.id)
+    }
+
+    @Test
+    fun enHorarioNocturnoYConFatigaDeCronometro_prefiereTareaCortaEjecutable() {
+        val night = LocalDateTime(2026, 10, 22, 21, 0)
+        val historyToday = task("h-hoy", dueIn = null, category = TaskCategory.TRABAJO).copy(
+            isCompleted = true,
+            actualDuration = 120.minutes,
+            dueDate = night,
+        )
+        val longStudy = task("pesada", dueIn = null, category = TaskCategory.ESTUDIO, estimate = 60.minutes)
+            .copy(dueDate = night + 48.hours)
+        val shortPersonal = task("ligera", dueIn = null, category = TaskCategory.PERSONAL, estimate = 20.minutes)
+            .copy(dueDate = night + 48.hours)
+
+        val plan = buildPlan(listOf(historyToday, longStudy, shortPersonal), night)!!
+
+        assertEquals("ligera", plan.recommended.task.id)
+    }
+
+    @Test
+    fun conEstimacionManualYHistorialDeSubestimacion_corrigeDuracionDelBloqueConH1() {
+        val estimator = EstimateTaskDurationUseCase()
+        val customBuildPlan = BuildPriorityPlanUseCase(estimator)
+
+        val history = (1..3).map {
+            task("h$it", dueIn = (-it * 24).hours, category = TaskCategory.TRABAJO)
+                .copy(
+                    isCompleted = true,
+                    estimatedDuration = 30.minutes,
+                    actualDuration = 60.minutes,
+                )
+        }
+        val taskToPlan = task(
+            "nueva",
+            dueIn = 24.hours,
+            category = TaskCategory.TRABAJO,
+            estimate = 30.minutes,
+        )
+
+        val plan = customBuildPlan(history + taskToPlan, now)!!
+
+        assertEquals(EstimateSource.MANUAL, plan.recommended.estimateSource)
+        assertTrue(plan.recommended.estimate > 30.minutes)
+    }
+
+    @Test
     fun laSecuenciaSeLimitaAlMaximoDelPlan() {
         val tasks = (1..8).map { task("$it", dueIn = (it * 10).hours) }
 

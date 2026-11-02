@@ -4,7 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.assistant.EstimateTaskDurationUseCase
 import com.krono.core.domain.task.ObserveTaskByIdUseCase
+import com.krono.core.domain.task.ObserveTasksUseCase
+import com.krono.core.domain.task.Task
 import com.krono.core.domain.timer.ActiveTimer
 import com.krono.core.domain.timer.FinishTimerUseCase
 import com.krono.core.domain.timer.ObserveActiveTimerUseCase
@@ -35,8 +38,8 @@ import kotlin.time.Duration.Companion.seconds
  * guardado, nunca sumando ticks: si la app pasa a segundo plano o se cierra, al volver el
  * tiempo es el correcto (CA-3).
  *
- * Solo hay una acción en curso a la vez (iniciar, pausar, reanudar o finalizar): los toques que
- * llegan mientras otra sigue guardándose se ignoran, para no escribir ni sumar tiempo dos veces.
+ * Si la tarea no tiene estimación manual, se apoya en [EstimateTaskDurationUseCase.predictHybrid]
+ * con el historial de tareas para proveer una meta inteligente de duración (F-11).
  *
  * Regla dura de arquitectura: este ViewModel nunca importa `androidx.compose.*`.
  */
@@ -50,6 +53,8 @@ class TaskTimerViewModel @Inject constructor(
     private val resumeTimer: ResumeTimerUseCase,
     private val finishTimer: FinishTimerUseCase,
     private val clock: Clock,
+    private val observeTasks: ObserveTasksUseCase? = null,
+    private val estimateTaskDuration: EstimateTaskDurationUseCase = EstimateTaskDurationUseCase(),
 ) : ViewModel() {
 
     private val taskId: String? = savedStateHandle.get<String>(TASK_ID_NAV_ARG)
@@ -60,6 +65,7 @@ class TaskTimerViewModel @Inject constructor(
     val uiState: StateFlow<TaskTimerUiState> = _uiState.asStateFlow()
 
     private var tickJob: Job? = null
+    private var taskHistory: List<Task> = emptyList()
 
     init {
         if (taskId.isNullOrBlank()) {
@@ -67,6 +73,17 @@ class TaskTimerViewModel @Inject constructor(
         } else {
             observeTask(taskId)
             observeTimer(taskId)
+            observeHistory()
+        }
+    }
+
+    private fun observeHistory() {
+        val useCase = observeTasks ?: return
+        viewModelScope.launch {
+            useCase().collect { result ->
+                taskHistory = (result as? KronoResult.Success)?.data.orEmpty()
+                recalculateSuggestedDuration()
+            }
         }
     }
 
@@ -124,8 +141,11 @@ class TaskTimerViewModel @Inject constructor(
         viewModelScope.launch {
             observeTaskById(taskId).collect { result ->
                 when (result) {
-                    is KronoResult.Success -> _uiState.update {
-                        it.copy(isLoading = false, task = result.data, isTaskNotFound = result.data == null)
+                    is KronoResult.Success -> {
+                        _uiState.update {
+                            it.copy(isLoading = false, task = result.data, isTaskNotFound = result.data == null)
+                        }
+                        recalculateSuggestedDuration()
                     }
                     is KronoResult.Error -> _uiState.update {
                         it.copy(isLoading = false, errorMessageRes = R.string.timer_error_load)
@@ -134,6 +154,22 @@ class TaskTimerViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun recalculateSuggestedDuration() {
+        val currentTask = _uiState.value.task ?: return
+        val manualEst = currentTask.estimatedDuration
+        if (manualEst != null && manualEst.isPositive()) {
+            _uiState.update { it.copy(suggestedDuration = null) }
+            return
+        }
+        val suggested = estimateTaskDuration.predictHybrid(
+            category = currentTask.category,
+            tasks = taskHistory,
+            priority = currentTask.priority,
+        ) ?: estimateTaskDuration(currentTask.category, taskHistory)
+
+        _uiState.update { it.copy(suggestedDuration = suggested) }
     }
 
     private fun observeTimer(taskId: String) {
