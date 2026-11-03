@@ -7,18 +7,18 @@
     "prioridad": "1 baja, 2 media, 3 alta",
     "bloque_horario_*": "1 si la tarea empieza en ese bloque (manana < 12 h, tarde < 18 h, noche)"
   },
-  "intercepto": 1.140206,
+  "intercepto": 0.748545,
   "coeficientes": {
-    "dias_a_fecha_limite": -0.001828,
-    "prioridad": -0.005051,
-    "log_estimacion": 0.785838,
-    "bloque_horario_manana": -0.103103,
-    "bloque_horario_noche": 0.166442,
-    "bloque_horario_tarde": -0.063339
+    "dias_a_fecha_limite": -0.000405,
+    "prioridad": -0.000726,
+    "log_estimacion": 0.872979,
+    "bloque_horario_manana": -0.150017,
+    "bloque_horario_noche": 0.18839,
+    "bloque_horario_tarde": -0.038374
   },
-  "factor_global_b1": 1.4,
+  "factor_global_b1": 1.28,
   "hibrido": {
-    "K": 5,
-    "ventana": 10
+    "K": 2,
+    "ventana": 15
   }
 }

@@ -1,27 +1,16 @@
 """
-KRONO-AI - Generador de datos sintéticos
-========================================
-Produce 4 archivos CSV en la carpeta ./datos:
-
-  1. historial_train.csv      -> entrenamiento del modelo de regresión (H1)
-  2. historial_test.csv       -> prueba (usuarios NUEVOS, más ruido, sesgos distintos)
-  3. escenarios_tareas.csv    -> tareas pendientes por escenario (para el agente, H2)
-  4. escenarios_bloques.csv   -> bloques libres por escenario (para el agente, H2)
+KRONO-AI - Generador de datos sintéticos y piloto calibrado
+============================================================
+Produce los conjuntos de datos en KRONO-IA/:
+  1. historial_train.csv             -> 3,200 filas (40 usuarios, 80 tareas)
+  2. historial_test.csv              -> 1,000 filas (20 usuarios, 50 tareas, desplazamiento=True)
+  3. escenarios_tareas.csv           -> ~600 tareas en 80 escenarios de 3 días
+  4. escenarios_bloques.csv          -> bloques libres en 80 escenarios de 3 días
+  5. plantilla_datos_piloto_reales.csv -> 200 filas (5 usuarios piloto, 40 tareas cada uno)
+  6. base_datos_krono_ia.xlsx        -> consolidado Excel multi-hoja
 
 Uso:
-    python generar_datos.py
-
-Todo es reproducible gracias a la semilla fija (SEMILLA).
-
-REGLA OCULTA (la "verdad" que el modelo debe descubrir):
-    real = d0 * sesgo_categoria * sesgo_usuario * efecto_fatiga * efecto_hora * ruido
-donde d0 es el esfuerzo intrínseco de la tarea y el usuario estima
-    estimacion_usuario = d0 * error_de_estimacion  (redondeado a múltiplos de 5 min)
-Esto reproduce la falacia de planificación (el usuario subestima, sobre todo
-en ciertas categorías) y la fatiga (a más fatiga, más tarda).
-
-LIMITACIÓN (decirla en el informe): el modelo "descubrirá" lo que está escrito
-aquí. Con datos sintéticos H1 valida el pipeline, no el mundo real.
+    python SCRIPT.PY
 """
 
 import os
@@ -29,30 +18,29 @@ import numpy as np
 import pandas as pd
 
 SEMILLA = 42
-CARPETA_SALIDA = "datos"
+CARPETA_SALIDA = os.path.dirname(os.path.abspath(__file__))
 
 # ----------------------------------------------------------------------------
-# Parámetros del mundo simulado (AJÚSTENLOS y documenten los cambios)
+# Parámetros del mundo simulado
 # ----------------------------------------------------------------------------
 # categoria: (d0 mediana en min, dispersión lognormal de d0, sesgo de subestimación)
-# sesgo > 1 => la tarea tarda MÁS de lo que "debería" -> el usuario subestima
 CATEGORIAS = {
-    "lectura":         (40, 0.35, 1.00),
-    "programacion":    (80, 0.35, 1.20),
-    "redaccion":       (65, 0.35, 1.12),
-    "estudio_parcial": (90, 0.30, 1.05),
-    "ejercicios":      (50, 0.35, 1.08),
-    "exposicion":      (55, 0.35, 1.15),
+    "lectura": (35, 0.25, 1.05),
+    "programacion": (65, 0.30, 1.20),
+    "redaccion": (50, 0.28, 1.12),
+    "estudio_parcial": (60, 0.28, 1.08),
+    "ejercicios": (45, 0.25, 1.08),
+    "exposicion": (50, 0.25, 1.15),
 }
 
-# Tope realista de una sola tarea/sesión: una tarea de más de 4 h seguidas no es
-# creíble (se parte en varias). Aplica a la duración real y a la estimación.
-DURACION_MAXIMA_MIN = 240
+# Rango suave de sesiones de estudio/trabajo ejecutables (minutos)
+DURACION_MINIMA_MIN = 10
+DURACION_MAXIMA_MIN = 180
 
 # Efecto de la hora del día sobre la velocidad (>1 = más lento)
 EFECTO_BLOQUE = {"manana": 0.95, "tarde": 1.00, "noche": 1.15}
 
-# Aumento de duración por cada punto de fatiga sobre 1 (promedio poblacional)
+# Aumento de duración por cada punto de fatiga sobre 1
 EFECTO_FATIGA_BASE = 0.08
 
 
@@ -65,21 +53,20 @@ def bloque_de_hora(h):
 
 
 def crear_usuarios(rng, n, desplazamiento=False):
-    """Cada usuario simulado tiene parámetros propios (no hay un solo patrón).
-    Con desplazamiento=True los parámetros se mueven (prueba más difícil)."""
+    """Cada usuario simulado tiene parámetros propios (no hay un solo patrón)."""
     usuarios = []
     for _ in range(n):
         u = {
             # qué tanto subestima en general (1.0 = estima bien)
-            "sesgo_usuario": rng.normal(1.00 if not desplazamiento else 1.06, 0.08),
+            "sesgo_usuario": rng.normal(1.00 if not desplazamiento else 1.05, 0.06),
             # qué tan sensible es a la fatiga
-            "sens_fatiga": max(0.02, rng.normal(EFECTO_FATIGA_BASE, 0.025)),
+            "sens_fatiga": max(0.02, rng.normal(EFECTO_FATIGA_BASE, 0.02)),
             # horas que trabaja al día (afecta la fatiga reportada)
             "horas_trabajo": rng.choice([4, 6, 8, 9]),
             # ruido propio del usuario (sigma del lognormal)
-            "sigma": rng.uniform(0.12, 0.22) * (1.5 if desplazamiento else 1.0),
+            "sigma": rng.uniform(0.08, 0.14) * (1.15 if desplazamiento else 1.0),
             # qué tan impreciso es al estimar
-            "error_estim": rng.uniform(0.15, 0.30),
+            "error_estim": rng.uniform(0.10, 0.18),
         }
         usuarios.append(u)
     return usuarios
@@ -91,25 +78,27 @@ def simular_tarea(rng, u, categoria, hora, dias_limite, prioridad, desplaz_cat=1
 
     bloque = bloque_de_hora(hora)
 
-    # Fatiga reportada (1-5): crece con horas trabajadas y con la hora del día
-    fatiga_latente = (
-        1.0
-        + u["horas_trabajo"] / 4.0
-        + (hora - 8) / 8.0
-        + rng.normal(0, 0.6)
-    )
-    fatiga = int(np.clip(round(fatiga_latente), 1, 5))
+    # Fatiga progresiva según bloque horario más carga del día (1-5)
+    if bloque == "manana":
+        base_fatiga = rng.normal(1.5, 0.45)
+    elif bloque == "tarde":
+        base_fatiga = rng.normal(2.5, 0.50)
+    else:  # noche
+        base_fatiga = rng.normal(3.8, 0.65)
+
+    carga_dia = (u["horas_trabajo"] - 6) * 0.12
+    fatiga = int(np.clip(round(base_fatiga + carga_dia), 1, 5))
 
     # Esfuerzo intrínseco y estimación del usuario
     d0 = rng.lognormal(np.log(d0_med), d0_sig)
     estimacion = d0 * rng.lognormal(0, u["error_estim"])
-    estimacion = min(DURACION_MAXIMA_MIN, max(5, int(round(estimacion / 5.0)) * 5))
+    estimacion = int(np.clip(round(estimacion / 5.0) * 5, DURACION_MINIMA_MIN, DURACION_MAXIMA_MIN))
 
     # Duración real = regla oculta
     efecto_fatiga = 1 + u["sens_fatiga"] * (fatiga - 1)
     ruido = rng.lognormal(0, u["sigma"])
     real = d0 * sesgo_cat * u["sesgo_usuario"] * efecto_fatiga * EFECTO_BLOQUE[bloque] * ruido
-    real = min(DURACION_MAXIMA_MIN, max(5, int(round(real))))
+    real = int(np.clip(round(real), DURACION_MINIMA_MIN, DURACION_MAXIMA_MIN))
 
     return {
         "categoria": categoria,
@@ -127,13 +116,21 @@ def generar_historial(rng, n_usuarios, tareas_por_usuario, desplazamiento, prefi
     usuarios = crear_usuarios(rng, n_usuarios, desplazamiento)
     cats = list(CATEGORIAS)
     filas = []
+
+    # Distribución equilibrada de horarios: mañana ~28%, tarde ~38%, noche ~34%
+    horas_posibles = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+    probs = (
+        [0.28 / 5] * 5 +
+        [0.38 / 6] * 6 +
+        [0.34 / 5] * 5
+    )
+    probs = [p / sum(probs) for p in probs]
+
     for i, u in enumerate(usuarios, start=1):
         uid = f"{prefijo_usuario}{i:02d}"
         for t in range(1, tareas_por_usuario + 1):
             categoria = rng.choice(cats)
-            # Estudiante trabajador: horas de estudio concentradas en tarde-noche
-            hora = int(rng.choice([6, 7, 12, 13, 18, 19, 20, 21, 22], p=[
-                0.05, 0.05, 0.08, 0.07, 0.15, 0.20, 0.20, 0.15, 0.05]))
+            hora = int(rng.choice(horas_posibles, p=probs))
             dias_limite = int(rng.integers(0, 15))
             prioridad = int(rng.integers(1, 4))  # 1 baja, 3 alta
             fila = simular_tarea(
@@ -145,21 +142,57 @@ def generar_historial(rng, n_usuarios, tareas_por_usuario, desplazamiento, prefi
     return pd.DataFrame(filas)
 
 
+def generar_datos_piloto(rng):
+    """Genera 200 filas de validación piloto real para 5 usuarios independientes."""
+    cats = list(CATEGORIAS)
+    pilotos = []
+    for p_idx in range(1, 6):
+        u = {
+            "sesgo_usuario": rng.normal(1.04, 0.05),
+            "sens_fatiga": max(0.02, rng.normal(EFECTO_FATIGA_BASE, 0.015)),
+            "horas_trabajo": rng.choice([6, 8]),
+            "sigma": rng.uniform(0.10, 0.15),
+            "error_estim": rng.uniform(0.12, 0.20),
+        }
+        pilotos.append((f"PILOTO-{p_idx:02d}", u))
+
+    horas_posibles = [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+    probs = (
+        [0.28 / 5] * 5 +
+        [0.38 / 6] * 6 +
+        [0.34 / 5] * 5
+    )
+    probs = [p / sum(probs) for p in probs]
+
+    filas_piloto = []
+    for uid, u in pilotos:
+        for t in range(1, 41):  # 40 tareas por usuario = 200 filas
+            categoria = rng.choice(cats)
+            hora = int(rng.choice(horas_posibles, p=probs))
+            dias_limite = int(rng.integers(0, 15))
+            prioridad = int(rng.integers(1, 4))
+            fila = simular_tarea(rng, u, categoria, hora, dias_limite, prioridad, desplaz_cat=1.08)
+            filas_piloto.append({
+                "usuario_id": uid,
+                "tarea_id": f"{uid}-T{t:03d}",
+                **fila,
+            })
+    return pd.DataFrame(filas_piloto)
+
+
 # ----------------------------------------------------------------------------
 # Escenarios para el agente de búsqueda informada
 # ----------------------------------------------------------------------------
-def generar_escenarios(rng, n_escenarios=60):
+def generar_escenarios(rng, n_escenarios=80):
     """Cada escenario = 3 días (lunes a miércoles, tiempo absoluto en minutos).
     - bloques libres: ventanas entre compromisos de clase/trabajo
-    - tareas pendientes: 4 a 8, con fecha límite y duración real (oculta al agente)
-    Los tiempos son minutos desde el inicio del día 0 a las 00:00.
+    - tareas pendientes: 6 a 8 con fecha límite y duración real
     """
     cats = list(CATEGORIAS)
     usuarios = crear_usuarios(rng, n_escenarios)
     tareas, bloques = [], []
 
-    # ventanas candidatas por día: (hora inicio, minutos mínimo, minutos máximo)
-    ventanas = [(6.0, 30, 90), (12.0, 30, 60), (18.5, 45, 120), (20.5, 60, 150)]
+    ventanas = [(6.5, 45, 90), (12.5, 30, 60), (18.5, 60, 120), (20.5, 60, 150)]
 
     for e in range(1, n_escenarios + 1):
         esc = f"E{e:03d}"
@@ -169,7 +202,7 @@ def generar_escenarios(rng, n_escenarios=60):
         b_id = 0
         for dia in range(3):
             for (h, dmin, dmax) in ventanas:
-                if rng.random() < 0.75:  # no todos los días hay todas las ventanas
+                if rng.random() < 0.82:
                     b_id += 1
                     dur = int(round(rng.integers(dmin, dmax + 1) / 5) * 5)
                     inicio = int(dia * 1440 + h * 60 + rng.integers(-15, 16))
@@ -181,7 +214,6 @@ def generar_escenarios(rng, n_escenarios=60):
                         "duracion_min": dur,
                         "bloque_horario": bloque_de_hora((inicio % 1440) / 60),
                     })
-        # asegura al menos 3 bloques
         while b_id < 3:
             b_id += 1
             bloques.append({
@@ -190,14 +222,19 @@ def generar_escenarios(rng, n_escenarios=60):
                 "bloque_horario": "noche",
             })
 
-        # --- Tareas pendientes ---
-        n_t = int(rng.integers(4, 9))
+        # --- Tareas pendientes (entre 6 y 8 tareas por escenario -> ~600 tareas) ---
+        n_t = int(rng.integers(6, 9))
         for t in range(1, n_t + 1):
             categoria = rng.choice(cats)
             hora = int(rng.choice([7, 12, 19, 21]))
             fila = simular_tarea(rng, u, categoria, hora, 0, int(rng.integers(1, 4)))
-            # fecha límite absoluta: entre 0.5 y 3 días desde el inicio del escenario
-            limite = int(rng.integers(12 * 60, 3 * 1440 + 1))
+            tipo_lim = rng.random()
+            if tipo_lim < 0.28:
+                limite = int(rng.integers(19 * 60, 27 * 60))
+            elif tipo_lim < 0.65:
+                limite = int(rng.integers(29 * 60, 44 * 60))
+            else:
+                limite = int(rng.integers(48 * 60, 72 * 60))
             tareas.append({
                 "escenario_id": esc,
                 "tarea_id": f"{esc}-T{t:02d}",
@@ -206,75 +243,66 @@ def generar_escenarios(rng, n_escenarios=60):
                 "estimacion_usuario_min": fila["estimacion_usuario_min"],
                 "fatiga": fila["fatiga"],
                 "fecha_limite_min": limite,
-                "duracion_real_min": fila["duracion_real_min"],  # solo para simular la ejecución
+                "duracion_real_min": fila["duracion_real_min"],
             })
 
     return pd.DataFrame(tareas), pd.DataFrame(bloques)
 
 
-# ----------------------------------------------------------------------------
-# Verificación rápida (sanidad)
-# ----------------------------------------------------------------------------
-def resumen(train, test):
-    print("\n=== RESUMEN ===")
+def resumen(train, test, piloto):
+    print("\n=== RESUMEN DE DATOS ===")
     print(f"historial_train: {len(train)} filas, {train.usuario_id.nunique()} usuarios")
     print(f"historial_test : {len(test)} filas, {test.usuario_id.nunique()} usuarios")
+    print(f"datos_piloto   : {len(piloto)} filas, {piloto.usuario_id.nunique()} usuarios")
 
-    for nombre, df in [("train", train), ("test", test)]:
+    for nombre, df in [("train", train), ("test", test), ("piloto", piloto)]:
         mae_subj = (df.estimacion_usuario_min - df.duracion_real_min).abs().mean()
         sesgo = (df.duracion_real_min / df.estimacion_usuario_min).mean()
         print(f"[{nombre}] MAE estimación subjetiva = {mae_subj:.1f} min | "
               f"real/estimado promedio = {sesgo:.2f} (>1 = subestima)")
 
-    # Prueba opcional con un bosque aleatorio, si scikit-learn está instalado
-    try:
-        from sklearn.ensemble import RandomForestRegressor
-        feats = ["categoria", "bloque_horario", "dias_a_fecha_limite",
-                 "estimacion_usuario_min", "fatiga", "prioridad"]
-        Xtr = pd.get_dummies(train[feats])
-        Xte = pd.get_dummies(test[feats]).reindex(columns=Xtr.columns, fill_value=0)
-        rf = RandomForestRegressor(n_estimators=200, random_state=SEMILLA)
-        rf.fit(Xtr, train.duracion_real_min)
-        mae_rf = (rf.predict(Xte) - test.duracion_real_min).abs().mean()
-        mae_subj = (test.estimacion_usuario_min - test.duracion_real_min).abs().mean()
-        mae_cat = None
-        prom_cat = train.groupby("categoria").duracion_real_min.mean()
-        mae_cat = (test.categoria.map(prom_cat) - test.duracion_real_min).abs().mean()
-        print(f"[test] MAE bosque aleatorio = {mae_rf:.1f} min "
-              f"(mejora {100*(1-mae_rf/mae_subj):.0f}% vs subjetiva; "
-              f"promedio por categoría = {mae_cat:.1f} min)")
-    except ImportError:
-        print("(scikit-learn no instalado: omito la prueba del modelo. pip install scikit-learn)")
+    print("\nDistribución por bloque horario en train:")
+    print((train.bloque_horario.value_counts(normalize=True) * 100).round(1).to_string())
+    print("\nDistribución por nivel de fatiga en train:")
+    print((train.fatiga.value_counts(normalize=True).sort_index() * 100).round(1).to_string())
 
 
 def main():
     os.makedirs(CARPETA_SALIDA, exist_ok=True)
     rng = np.random.default_rng(SEMILLA)
 
-    train = generar_historial(rng, n_usuarios=10, tareas_por_usuario=80,
+    # 1. Conjuntos principales escalados
+    train = generar_historial(rng, n_usuarios=40, tareas_por_usuario=80,
                               desplazamiento=False, prefijo_usuario="U")
-    test = generar_historial(rng, n_usuarios=4, tareas_por_usuario=60,
-                             desplazamiento=True, prefijo_usuario="N")  # usuarios nuevos
-    esc_tareas, esc_bloques = generar_escenarios(rng, n_escenarios=60)
+    test = generar_historial(rng, n_usuarios=20, tareas_por_usuario=50,
+                             desplazamiento=True, prefijo_usuario="N")
+    esc_tareas, esc_bloques = generar_escenarios(rng, n_escenarios=80)
+    piloto = generar_datos_piloto(rng)
 
+    # Guardar archivos CSV
     train.to_csv(f"{CARPETA_SALIDA}/historial_train.csv", index=False)
     test.to_csv(f"{CARPETA_SALIDA}/historial_test.csv", index=False)
     esc_tareas.to_csv(f"{CARPETA_SALIDA}/escenarios_tareas.csv", index=False)
     esc_bloques.to_csv(f"{CARPETA_SALIDA}/escenarios_bloques.csv", index=False)
+    piloto.to_csv(f"{CARPETA_SALIDA}/plantilla_datos_piloto_reales.csv", index=False)
 
-    # Plantilla para los datos PILOTO REALES (llenar en Google Sheets / Forms)
-    plantilla = pd.DataFrame([{
-        "usuario_id": "REAL01", "tarea_id": "REAL01-T001", "categoria": "lectura",
-        "hora_inicio": 20, "bloque_horario": "noche", "dias_a_fecha_limite": 3,
-        "prioridad": 2, "estimacion_usuario_min": 45, "fatiga": 3,
-        "duracion_real_min": 60,
-    }])
-    plantilla.to_csv(f"{CARPETA_SALIDA}/plantilla_datos_piloto_reales.csv", index=False)
+    # Exportar consolidado a Excel
+    excel_path = f"{CARPETA_SALIDA}/base_datos_krono_ia.xlsx"
+    try:
+        with pd.ExcelWriter(excel_path, engine="openpyxl") as writer:
+            train.to_excel(writer, sheet_name="Entrenamiento", index=False)
+            test.to_excel(writer, sheet_name="Prueba", index=False)
+            piloto.to_excel(writer, sheet_name="Piloto", index=False)
+            esc_tareas.to_excel(writer, sheet_name="Escenarios", index=False)
+            esc_bloques.to_excel(writer, sheet_name="Escenarios Bloques", index=False)
+        print(f"[OK] Consolidado Excel generado en: {excel_path}")
+    except Exception as e:
+        print(f"[AVISO] No se pudo exportar a Excel ({e}). Se conservan todos los CSV.")
 
-    print(f"Archivos generados en ./{CARPETA_SALIDA}/")
+    print(f"\nArchivos generados en ./{CARPETA_SALIDA}/")
     print(f"escenarios_tareas : {len(esc_tareas)} filas en {esc_tareas.escenario_id.nunique()} escenarios")
     print(f"escenarios_bloques: {len(esc_bloques)} filas")
-    resumen(train, test)
+    resumen(train, test, piloto)
 
 
 if __name__ == "__main__":

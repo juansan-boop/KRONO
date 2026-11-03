@@ -31,6 +31,7 @@ enum class TimerStatus {
  * se descartó, no se guardó ni se sumó a la tarea, y hay que avisarlo.
  * @property errorMessageRes recurso del mensaje de error que hay que mostrar, si algo falló. Es un
  * texto genérico en español: los detalles técnicos del error no llegan a la pantalla.
+ * @property suggestedDuration duración sugerida por IA (F-11) cuando la tarea no tiene estimación manual.
  */
 data class TaskTimerUiState(
     val isLoading: Boolean = true,
@@ -44,11 +45,16 @@ data class TaskTimerUiState(
     val isSavedSessionWithoutTask: Boolean = false,
     val isSessionTooShort: Boolean = false,
     @StringRes val errorMessageRes: Int? = null,
+    val suggestedDuration: Duration? = null,
 ) {
+    /** Duración objetivo para el temporizador: estimación manual o sugerencia inteligente de IA (F-11). */
+    val targetDuration: Duration?
+        get() = task?.estimatedDuration?.takeIf { it.isPositive() } ?: suggestedDuration
+
     /** Fracción de la estimación ya trabajada, entre 0 y 1, o `null` si la tarea no tiene estimación. */
     val estimateProgress: Float?
         get() {
-            val estimate = task?.estimatedDuration?.takeIf { it.isPositive() } ?: return null
+            val estimate = targetDuration?.takeIf { it.isPositive() } ?: return null
             return (elapsed / estimate).toFloat().coerceIn(0f, 1f)
         }
 }
