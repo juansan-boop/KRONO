@@ -22,5 +22,6 @@ local.properties
 
 # Firebase: nunca versionar credenciales
 google-services.json
-*-firebase-adminsdk-*.json
-serviceAccount*.json
+*firebase-adminsdk*.json
+*serviceAccount*.json
+*serviceAccountKey*.json
