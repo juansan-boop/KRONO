@@ -92,6 +92,7 @@ class BuildPriorityPlanUseCase(
         if (task.estimatedDuration != null && task.estimatedDuration.isPositive()) {
             val hasCalibratedHistory = history.count {
                 it.isCompleted &&
+                    !it.isDeleted &&
                     it.category == task.category &&
                     it.actualDuration > Duration.ZERO &&
                     it.estimatedDuration?.isPositive() == true
@@ -117,6 +118,7 @@ class BuildPriorityPlanUseCase(
 
         val hasEstimatedInHistory = history.any {
             it.isCompleted &&
+                !it.isDeleted &&
                 it.category == task.category &&
                 it.actualDuration > Duration.ZERO &&
                 it.estimatedDuration?.isPositive() == true

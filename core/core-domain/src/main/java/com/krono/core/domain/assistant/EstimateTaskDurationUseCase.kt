@@ -66,7 +66,7 @@ class EstimateTaskDurationUseCase {
 
         // Adaptación online: calcula la razón duracion_real / pred_m1 en tareas recientes
         val recentMeasured = tasks
-            .filter { it.isCompleted && it.actualDuration > Duration.ZERO }
+            .filter { it.isCompleted && !it.isDeleted && it.category == category && it.actualDuration > Duration.ZERO }
             .sortedWith(compareByDescending(nullsFirst(naturalOrder<LocalDateTime>())) { it.dueDate })
             .take(HYBRID_WINDOW)
 

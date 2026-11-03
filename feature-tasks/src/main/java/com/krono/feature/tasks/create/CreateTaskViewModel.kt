@@ -238,6 +238,7 @@ class CreateTaskViewModel @Inject constructor(
         _uiState.update { current ->
             val hasMeasuredEstimatedHistory = taskHistory.count {
                 it.isCompleted &&
+                    !it.isDeleted &&
                     it.category == current.category &&
                     it.actualDuration > Duration.ZERO &&
                     it.estimatedDuration?.isPositive() == true

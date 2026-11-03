@@ -130,6 +130,9 @@ def obtener_duracion_planificada(tarea, bloque, tiempo_cursor, politica, razones
     if politica == "KRONO_AI":
         # Factor de reserva preventiva del 5% para absorber varianza estocástica y proteger entregas
         dur_total = predecir_duracion_h1(tarea, bloque["bloque_horario"], tiempo_cursor, razones_h1, modelo_app) * 1.05
+    elif politica == "H2_B0":
+        # Búsqueda informada con margen preventivo heurístico del 15%
+        dur_total = float(tarea["estimacion_usuario_min"]) * 1.15
     else:
         # B0: Estimación subjetiva
         dur_total = float(tarea["estimacion_usuario_min"])
@@ -196,12 +199,14 @@ def evaluar_secuencia_en_bloques(orden_tareas, bloques_restantes, estado_tareas,
             carga = CARGA_COGNITIVA.get(tarea["categoria"], 0.6)
             friccion = FRICCION_BLOQUE.get(bloque_actual["bloque_horario"], 0.0)
             fatiga = tarea["fatiga"] / 3.0
-            costo_circadiano = carga * friccion * fatiga * (asignado / dur_plan) * 25.0
+            holgura_estimada = float(tarea["fecha_limite_min"]) - cursor_tiempo
+            peso_circadiano = 8.0 if (politica == "H2_B0" and holgura_estimada < 480.0) else 25.0
+            costo_circadiano = carga * friccion * fatiga * (asignado / dur_plan) * peso_circadiano
             costo_total += costo_circadiano
 
         tiempo_fin = cursor_tiempo
         limite = float(tarea["fecha_limite_min"])
-        holgura = limite - tiempo_fin
+        holgura = limite - (tiempo_fin + (dur_plan * 0.15 if politica == "H2_B0" else 0.0))
         w_prio = PESO_PRIORIDAD.get(tarea["prioridad"], 1.0)
 
         # Costo por vencimiento y holgura (prioridad absoluta a fechas límite)

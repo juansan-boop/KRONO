@@ -176,6 +176,46 @@ class EstimateTaskDurationUseCaseTest {
         assertEquals(30.minutes, estimate(TaskCategory.ESTUDIO, history))
     }
 
+    @Test
+    fun predictHybrid_ignoraTareasEliminadasEnElCalculoDeSesgo() {
+        val tasks = listOf(
+            Task(
+                id = "1",
+                title = "Tarea 1",
+                category = TaskCategory.TRABAJO,
+                estimatedDuration = 30.minutes,
+                actualDuration = 60.minutes,
+                dueDate = LocalDateTime(2026, 10, 1, 14, 0),
+                isCompleted = true,
+                isDeleted = false,
+            ),
+            Task(
+                id = "eliminada",
+                title = "Tarea eliminada con sesgo irreal",
+                category = TaskCategory.TRABAJO,
+                estimatedDuration = 10.minutes,
+                actualDuration = 120.minutes,
+                dueDate = LocalDateTime(2026, 10, 2, 14, 0),
+                isCompleted = true,
+                isDeleted = true,
+            ),
+        )
+
+        val predConEliminada = estimate.predictHybrid(
+            category = TaskCategory.TRABAJO,
+            tasks = tasks,
+            baseEstimate = 30.minutes,
+        )
+
+        val predSoloActivas = estimate.predictHybrid(
+            category = TaskCategory.TRABAJO,
+            tasks = listOf(tasks.first()),
+            baseEstimate = 30.minutes,
+        )
+
+        assertEquals(predSoloActivas, predConEliminada)
+    }
+
     private fun completed(id: String, category: TaskCategory, actual: Duration, day: Int) = Task(
         id = id,
         title = "Tarea $id",

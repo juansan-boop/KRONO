@@ -16,6 +16,7 @@ import kotlin.time.Duration
  * @property isCompleted Indica si la tarea ya se terminó.
  * @property note Nota rápida o descripción adicional de la tarea, o `null` si no tiene.
  * @property subtasks Lista de subtareas embebidas asociadas a esta tarea.
+ * @property isDeleted Indica si la tarea fue enviada a la papelera / eliminada lógicamente.
  */
 data class Task(
     val id: String,
@@ -28,4 +29,5 @@ data class Task(
     val isCompleted: Boolean = false,
     val note: String? = null,
     val subtasks: List<Subtask> = emptyList(),
+    val isDeleted: Boolean = false,
 )
