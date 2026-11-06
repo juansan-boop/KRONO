@@ -65,9 +65,10 @@ class FirebaseAiPriorityExplanationGenerator @Inject constructor(
     companion object {
         /**
          * Modelo de Gemini. Si Google lo retira, basta con cambiar este nombre (o moverlo a
-         * Remote Config, como recomienda Firebase).
+         * Remote Config, como recomienda Firebase). Se usa Flash-Lite porque su cuota gratuita
+         * es independiente de la de Flash, que se agotaba con pocas peticiones del agente.
          */
-        const val MODEL_NAME = "gemini-3.5-flash"
+        const val MODEL_NAME = "gemini-3.5-flash-lite"
 
         /** Longitud máxima aceptada; las respuestas más largas se descartan. */
         const val MAX_EXPLANATION_LENGTH = 280

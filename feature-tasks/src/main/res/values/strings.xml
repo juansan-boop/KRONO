@@ -233,6 +233,36 @@
     <string name="assistant_retry">Reintentar</string>
     <string name="assistant_refresh">Recalcular</string>
 
+    <!-- Agente de planificación con function calling de Gemini (F-28) -->
+    <string name="agent_title">Pídele algo al agente</string>
+    <string name="agent_subtitle">Escríbelo en tus palabras: la IA propone las tareas y KRONO las estima y las ordena.</string>
+    <string name="agent_placeholder">Ej: tengo parcial de Cálculo el jueves, organízame la semana</string>
+    <string name="agent_send">Enviar</string>
+    <string name="agent_thinking">El agente está organizando tus tareas…</string>
+    <string name="agent_ai_caption">Redactado con IA</string>
+    <string name="agent_drafts_title">Tareas propuestas</string>
+    <string name="agent_draft_due">Vence %1$02d/%2$02d %3$02d:%4$02d</string>
+    <string name="agent_draft_no_due">Sin fecha límite</string>
+    <string name="agent_plan_title">Así quedaría tu plan</string>
+    <string name="agent_plan_caption">Duraciones de H1 y orden de H2, calculados por KRONO con tus reglas; la IA no decide el orden.</string>
+    <string name="agent_plan_item">%1$d. %2$s</string>
+    <string name="agent_new_badge">Nueva</string>
+    <plurals name="agent_confirm">
+        <item quantity="one">Crear %d tarea</item>
+        <item quantity="other">Crear %d tareas</item>
+    </plurals>
+    <string name="agent_discard">Descartar</string>
+    <string name="agent_saving">Guardando tareas…</string>
+    <plurals name="agent_saved">
+        <item quantity="one">Listo: se creó %d tarea y el plan de abajo ya la incluye.</item>
+        <item quantity="other">Listo: se crearon %d tareas y el plan de abajo ya las incluye.</item>
+    </plurals>
+    <string name="agent_save_failed">No pudimos guardar las tareas. Intenta de nuevo.</string>
+    <string name="agent_error_unavailable">El agente no está disponible ahora. Revisa tu conexión o crea la tarea a mano.</string>
+    <string name="agent_error_not_understood">No encontré tareas en tu mensaje. Prueba con algo como \"entrego el informe el viernes\".</string>
+    <string name="agent_error_invalid">Escribe qué necesitas organizar (máximo %d caracteres).</string>
+    <string name="agent_close">Cerrar</string>
+
     <!-- Plantillas de bloques de enfoque (F-10) -->
     <string name="focus_title">Plantillas de enfoque</string>
     <string name="focus_intro">Tiempos base que la IA utiliza para estructurar tus sesiones y descansos.</string>

@@ -2,7 +2,6 @@ package com.krono.core.data.assistant
 
 import com.krono.core.domain.assistant.EstimateSource
 import com.krono.core.domain.assistant.PlannedTask
-import com.krono.core.domain.assistant.PriorityFactor
 import com.krono.core.domain.assistant.PriorityPlan
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
@@ -62,17 +61,6 @@ class PriorityPromptBuilder @Inject constructor() {
         EstimateSource.MANUAL -> "estimación del usuario"
         EstimateSource.HISTORY -> "promedio de su historial real en esa categoría"
         EstimateSource.DEFAULT -> "duración por defecto, aún sin historial"
-    }
-
-    private fun PriorityFactor.label(): String = when (this) {
-        PriorityFactor.OVERDUE -> "la entrega ya venció"
-        PriorityFactor.DUE_VERY_SOON -> "vence en pocas horas"
-        PriorityFactor.DUE_TODAY -> "vence en menos de un día"
-        PriorityFactor.DUE_SOON -> "vence en los próximos días"
-        PriorityFactor.HIGH_PRIORITY -> "el usuario la marcó como prioridad alta"
-        PriorityFactor.TIGHT_SCHEDULE -> "la estimación ocupa buena parte del margen que queda"
-        PriorityFactor.CANNOT_FINISH_BY_DUE ->
-            "ya no alcanza a terminarse antes de la entrega: la estimación es mayor que el tiempo que queda"
     }
 
     private companion object {

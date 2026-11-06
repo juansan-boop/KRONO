@@ -89,8 +89,9 @@ internal fun TaskPriority.assistantLabelRes(): Int = when (this) {
     TaskPriority.BAJA -> R.string.assistant_priority_low
 }
 
+/** Origen de la duración: "Tu estimación", "Según tu historial" o "Estimación por defecto". */
 @StringRes
-private fun EstimateSource.labelRes(): Int = when (this) {
+internal fun EstimateSource.labelRes(): Int = when (this) {
     EstimateSource.MANUAL -> R.string.assistant_estimate_manual
     EstimateSource.HISTORY -> R.string.assistant_estimate_history
     EstimateSource.DEFAULT -> R.string.assistant_estimate_default
