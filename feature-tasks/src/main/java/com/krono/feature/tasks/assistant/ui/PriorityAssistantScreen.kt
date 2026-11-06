@@ -44,6 +44,7 @@ import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.tasks.R
 import com.krono.feature.tasks.assistant.PriorityAssistantUiState
 import com.krono.feature.tasks.assistant.PriorityAssistantViewModel
+import com.krono.feature.tasks.assistant.agent.ui.PlanningAgentRoute
 
 /**
  * Punto de entrada con estado del asistente de prioridades (F-12).
@@ -66,12 +67,16 @@ fun PriorityAssistantRoute(
         onOpenTask = onOpenTask,
         onRefresh = viewModel::onRefresh,
         modifier = modifier,
+        agentSection = { PlanningAgentRoute() },
     )
 }
 
 /**
  * Pantalla del asistente de prioridades (F-12 CA-1, diseño `asistente_de_prioridades_ia_1`):
  * tarea sugerida con su motivo, secuencia para después y balance por categoría.
+ *
+ * @param agentSection sección del agente de planificación (F-28); se recibe como contenido
+ * para que la pantalla no dependa de su ViewModel y siga siendo fácil de previsualizar.
  */
 @Composable
 fun PriorityAssistantScreen(
@@ -80,6 +85,7 @@ fun PriorityAssistantScreen(
     onOpenTask: (String) -> Unit,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    agentSection: @Composable () -> Unit = {},
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -88,6 +94,8 @@ fun PriorityAssistantScreen(
     ) {
         item { AssistantTopRow(onBack = onBack, onRefresh = onRefresh, canRefresh = state.plan != null) }
         item { AssistantHeader() }
+        // Sin tareas legibles el agente no tendría historial para H1 ni plan que mostrar.
+        if (!state.isLoading && !state.hasError) item { agentSection() }
 
         when {
             state.isLoading -> item { CenteredProgress() }

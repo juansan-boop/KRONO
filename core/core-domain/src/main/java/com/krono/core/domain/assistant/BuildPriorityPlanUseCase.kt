@@ -88,7 +88,12 @@ class BuildPriorityPlanUseCase(
         )
     }
 
-    private fun estimateFor(task: Task, history: List<Task>, now: LocalDateTime): Pair<Duration, EstimateSource> {
+    /**
+     * Duración con que se planifica [task] en [now] y su origen: la estimación manual (calibrada
+     * por H1 si hay historial suficiente), la de historial (F-11) o [DEFAULT_ESTIMATE_MINUTES].
+     * Pública para que el agente de planificación (F-28) estime sus borradores con la misma regla.
+     */
+    fun estimateFor(task: Task, history: List<Task>, now: LocalDateTime): Pair<Duration, EstimateSource> {
         if (task.estimatedDuration != null && task.estimatedDuration.isPositive()) {
             val hasCalibratedHistory = history.count {
                 it.isCompleted &&

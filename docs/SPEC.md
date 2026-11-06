@@ -395,6 +395,27 @@ La autenticación usa Firebase Authentication con correo y contraseña (D-1); `A
 - **Estado:** Pendiente · **Prioridad:** Media · **Responsable:** Juan Fernando Sánchez Otero · **Módulos:** `feature-onboarding` · **Depende de:** F-23 (autenticación, D-1 resuelta) · **PR:** —
 - **CA-1:** Tras crear cuenta, se muestra la bienvenida y luego "Completa tu Perfil" (donde se pide el nombre); con campos obligatorios vacíos no avanza.
 
+#### F-28 — Agente de planificación con function calling
+- **Estado:** En revisión · **Prioridad:** Media · **Responsable:** Kevin Vuskovit García González · **Módulos:** `feature-tasks`, `core-domain`, `core-data` · **Depende de:** F-11, F-12 · **PR:** —
+
+Extiende el enfoque híbrido de D-5: el usuario escribe en sus palabras ("tengo parcial el
+jueves, organízame la semana") en la sección "Pídele algo al agente" del asistente de
+prioridades, y Gemini, con function calling de Firebase AI Logic, llama herramientas de la
+app en vez de solo redactar: `create_task` (propone una tarea con lo que dijo el usuario),
+`estimate_task` (estima con H1) y `build_plan` (arma el plan con H2). Las herramientas viven
+en `PlanningAgentSession` (`core-domain`); el bucle de llamadas y las declaraciones, en
+`core-data/assistant/agent`. El modelo no tiene parámetros de orden ni de duración
+calculada: la duración la da H1 (`BuildPriorityPlanUseCase.estimateFor`, la misma regla del
+asistente) y el orden H2. Aunque el modelo no llame `estimate_task` o `build_plan`, la
+propuesta se estima y planifica igual al cerrar la petición. Nada se guarda hasta que el
+usuario pulsa "Crear N tareas"; cada tarea conserva el id de su borrador, así que reintentar
+un guardado fallido no duplica. Al guardarlas, el plan del asistente se recalcula solo.
+
+- **CA-1:** Dado un mensaje con tareas y fechas relativas, cuando se envía, entonces el agente muestra las tareas propuestas con su estimación y el plan resultante, con las nuevas marcadas, sin guardar nada.
+- **CA-2:** Dada una propuesta, cuando el usuario confirma, entonces se crean las tareas y el asistente las incluye en su plan; si descarta, no se crea ninguna.
+- **CA-3:** El orden del plan y las duraciones los calculan H2 y H1 en `core-domain`, con pruebas unitarias; el modelo de lenguaje nunca decide el orden (D-5).
+- **CA-4:** Dado que Gemini no responde en 45 s, falla o no encuentra tareas, cuando se envía el mensaje, entonces se muestra un aviso en español y el asistente sigue funcionando.
+
 #### F-18 — Sincronización con calendarios externos
 - **Estado:** Fuera de alcance (D-6) · **Prioridad:** Baja · **Módulos:** `feature-calendar`, `core-data` · **PR:** —
 
@@ -466,6 +487,7 @@ Las correcciones de los PRs #35 a #40 (hallazgos de QA) las ejecutó Juan Fernan
 | 2026-10-30 | F-10 pasa a En progreso: plantillas de enfoque en Firestore (`users/{uid}/focusTemplates`, siembra idempotente, una sola activa por lote atómico) y pantalla de gestión en `feature-tasks` con ruta cableada en `app`; falta el acceso desde Ajustes (F-20 CA-1, `feature-profile`). |
 | 2026-10-30 | F-09 pasa a En revisión (PR #47): modo enfoque sobre el cronómetro activo (`FocusBlock`), con descansos, aviso al llegar a cero y sesión `ENFOQUE`; F-13 pasa a Hecho (CA-2 resuelto) y F-06 CA-3 queda resuelto al cablear `app` (Inicio y detalle de tarea abren el enfoque). Se retira de la sección 11 la deuda de F-06 CA-3. |
 | 2026-10-30 | Correcciones de la prueba con la cuenta de demostración (rama `fix/demo-defectos-lista-resumen-calendario`): F-03 (agrupación con "Completadas" y vencidas pendientes en "Para Hoy"; Enfoque Diario reutiliza `DashboardSummary` y es del día completo), F-12 (tarea que ya no cabe antes de su límite deja de recomendarse "ahora" y se advierte; tope de 10 s a la explicación de la IA), F-08 y F-09 (**decisión pendiente de confirmar:** sesiones de menos de 1 minuto no se guardan) y F-16 (marca "Ahora" cronológica; título abreviado de la semana que cruza de mes). |
+| 2026-11-06 | F-28 (nueva, En revisión): agente de planificación con function calling de Gemini en el asistente de prioridades: Gemini propone tareas a partir de un mensaje libre llamando `create_task`, `estimate_task` (H1) y `build_plan` (H2); el usuario confirma antes de guardar. Se mantiene D-5: el modelo no decide el orden. |
 
 ## 11. Deuda técnica conocida
 
@@ -514,3 +536,4 @@ en cascada de `timeSessions` no es deuda: es una decisión de producto (F-21, se
 - Falta Firebase App Check para que solo la app oficial pueda llamar a Gemini; también conviene mover el nombre del modelo (`gemini-3.5-flash`) a Remote Config.
 - El plan gratuito tiene un límite diario de peticiones; al agotarse, el asistente cae a la plantilla (F-12 CA-2).
 - El prompt envía a Gemini el título, la categoría, la prioridad y la fecha de las tareas del plan; falta mencionarlo en la política de privacidad.
+- F-28: el agente envía a Gemini el mensaje libre del usuario y, con `build_plan`, los títulos de las tareas del plan; falta mencionarlo en la política de privacidad. El plan sigue limitado a `MAX_PLANNED_TASKS` (5) bloques consecutivos desde ahora, así que "organízame la semana" muestra los primeros bloques, no una vista semanal.
