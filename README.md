@@ -34,31 +34,6 @@ git clone -b develop https://github.com/juansan-boop/KRONO.git
 
 ---
 
-## 📲 Instalación (recomendada): descargar el APK
-
-No hace falta compilar nada. La versión lista para instalar está publicada en **[Releases → última versión](https://github.com/juansan-boop/KRONO/releases/latest)**.
-
-**Requisitos:** celular Android 8.0 (API 26) o superior, con conexión a internet.
-
-![Cómo instalar KRONO](docs/img/instalacion.png)
-
-1. **Descarga el APK.** En el repositorio entra a **Releases** (columna derecha de la página) o escanea el QR de la imagen, y toca **`KRONO.apk`** en la sección *Assets*. También puedes usar el enlace directo: [KRONO.apk](https://github.com/juansan-boop/KRONO/releases/latest/download/KRONO.apk).
-2. **Permite la instalación.** Como la app no viene de Play Store, Android pide autorizar la fuente la primera vez: *Ajustes → Apps → Chrome (o tu gestor de archivos) → Instalar apps desconocidas → Permitir de esta fuente*.
-3. **Instala.** Abre el archivo descargado (desde la notificación o desde *Archivos → Descargas*) y toca **Instalar**. Si aparece Google Play Protect, elige *Más detalles → Instalar de todos modos*.
-4. **Crea tu cuenta.** Abre KRONO, toca **Crear cuenta** y regístrate con correo y contraseña (mínimo 8 caracteres, un número y un carácter especial). Desde ahí ya puedes crear tareas y usar el cronómetro.
-
-<details>
-<summary><b>Alternativa: instalar desde el computador con ADB</b></summary>
-
-Con el celular conectado por USB y la *Depuración USB* activada (*Ajustes → Opciones de desarrollador*):
-
-```bash
-adb install KRONO.apk
-```
-</details>
-
----
-
 ## ✨ Funcionalidades
 
 - **Tareas** con categoría (Estudio, Trabajo, Personal), prioridad, fecha límite y subtareas; crear, editar, eliminar y posponer.
@@ -73,15 +48,11 @@ adb install KRONO.apk
 
 ## 🖼️ Pantallas
 
-![Pantallas de KRONO](docs/img/pantallas.png)
-
-*Diseño de referencia de las pantallas principales (Google Stitch, sistema de diseño Lumina Glass). El export completo, una carpeta por pantalla, está en [`design/`](design/).*
+El diseño de referencia de las pantallas (Google Stitch, sistema de diseño Lumina Glass) está en [`design/`](design/), una carpeta por pantalla con su `screen.png` y su `code.html`.
 
 ---
 
-## 🛠️ Compilar desde el código fuente
-
-Esta sección es para quien quiera revisar o modificar el código. Para solo usar la app, basta con el APK de arriba.
+## 🛠️ Compilar y ejecutar
 
 ### Requisitos
 
@@ -96,19 +67,16 @@ Esta sección es para quien quiera revisar o modificar el código. Para solo usa
    git clone -b develop https://github.com/juansan-boop/KRONO.git
    ```
 2. **Configura JDK 17:** *Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK* = 17. Desde la terminal, apunta `JAVA_HOME` a un JDK 17.
-3. **Agrega la configuración de Firebase.** El archivo `app/google-services.json` **no se versiona** porque contiene la configuración real del proyecto. Pídeselo al equipo o crea tu propio proyecto en [Firebase Console](https://console.firebase.google.com/):
-   - Registra una app Android con el paquete **`com.krono.app`** y descarga su `google-services.json` a la carpeta `app/`.
-   - Habilita **Authentication → Correo/contraseña**.
-   - Crea una base de datos **Cloud Firestore** y publica las reglas de [`firestore.rules`](firestore.rules) (ver [`docs/firestore-rules.md`](docs/firestore-rules.md)).
-   - Habilita **Firebase AI Logic** con la *Gemini Developer API* para el asistente y el agente de IA (la app no guarda ninguna clave de API).
+3. **Agrega la configuración de Firebase.** El archivo `google-services.json` **no se versiona** en el repositorio; el equipo lo entrega aparte al docente. Cópialo en la carpeta `app/` (queda como `KRONO/app/google-services.json`, junto a `app/build.gradle.kts`). Con ese archivo la app usa el proyecto de Firebase del equipo: inicio de sesión, Firestore y la IA funcionan sin configurar nada más.
 4. **Compila e instala** en un emulador o celular conectado con el botón ▶ *Run* de Android Studio, o desde la terminal:
    ```bash
    ./gradlew assembleDebug
    # APK generado en: app/build/outputs/apk/debug/app-debug.apk
    ./gradlew installDebug   # instala en el dispositivo conectado
    ```
+5. **Crea tu cuenta.** Abre KRONO, toca **Crear cuenta** y regístrate con correo y contraseña (mínimo 8 caracteres, un número y un carácter especial).
 
-> Sin un `google-services.json` real la app compila (el CI usa uno de relleno), pero no puede iniciar sesión ni guardar datos.
+> Sin `app/google-services.json` el build falla, porque el plugin de Google Services lo exige.
 
 ### Verificación
 
@@ -141,7 +109,7 @@ feature-calendar/       → vistas día/semana/mes
 feature-profile/        → perfil, ajustes, zona de seguridad
 KRONO-IA/               → scripts Python del modelo de estimación (datos, entrenamiento y resultados)
 design/                 → export de Google Stitch (referencia visual por pantalla)
-docs/                   → especificación (SPEC.md) e imágenes del README
+docs/                   → especificación (SPEC.md) y documentación
 ```
 
 Reglas principales: ningún `feature-*` importa a otro directamente, los ViewModel no importan `androidx.compose.*` y no hay colores ni espaciados hardcodeados fuera de `core-ui`.
