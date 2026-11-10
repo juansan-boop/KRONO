@@ -25,3 +25,12 @@ google-services.json
 *firebase-adminsdk*.json
 *serviceAccount*.json
 *serviceAccountKey*.json
+
+# Archivos locales que no se versionan
+/.idea/
+__pycache__/
+*.pyc
+build-log.txt
+test-log.txt
+*.bak
+/Claude outputs/
