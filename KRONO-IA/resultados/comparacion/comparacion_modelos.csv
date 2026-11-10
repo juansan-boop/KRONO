@@ -1,0 +1,13 @@
+estimador,MAE_min,MAPE_pct,R2,aciertos_20pct,sesgo_medio_min,modo,entrenamiento_s,prediccion_ms_por_tarea,parametros,despliegue_en_app
+M1 Ridge (elegido),13.3,16.9,0.656,65.7,-6.9,solo,0.263,0.0012,7,Fórmula de 7 coeficientes en JSON; se implementa en ~10 líneas de Kotlin
+M1 Ridge (elegido),12.8,17.1,0.694,66.3,-2.2,+ híbrido,0.263,0.0012,7,Fórmula de 7 coeficientes en JSON; se implementa en ~10 líneas de Kotlin
+M2 Bosque aleatorio,13.9,17.9,0.631,63.3,-6.5,solo,0.744,0.0481,299202,300 árboles; requiere TFLite/ONNX o un servidor
+M2 Bosque aleatorio,13.6,18.2,0.656,63.3,-1.9,+ híbrido,0.744,0.0481,299202,300 árboles; requiere TFLite/ONNX o un servidor
+M3 Gradient Boosting,13.4,17.0,0.652,65.6,-6.7,solo,0.381,0.0049,4456,300 árboles; requiere TFLite/ONNX o un servidor
+M3 Gradient Boosting,13.0,17.3,0.683,66.1,-2.0,+ híbrido,0.381,0.0049,4456,300 árboles; requiere TFLite/ONNX o un servidor
+M4 KNN (k=25),15.4,19.9,0.542,59.4,-6.8,solo,0.004,0.0096,22400,Debe llevar los 3.200 registros de entrenamiento al teléfono
+M4 KNN (k=25),15.3,20.7,0.558,56.8,-2.1,+ híbrido,0.004,0.0096,22400,Debe llevar los 3.200 registros de entrenamiento al teléfono
+M5 SVR (RBF),13.3,16.9,0.661,65.8,-6.4,solo,0.292,0.0657,17851,Debe llevar todos los vectores de soporte; requiere ONNX o servidor
+M5 SVR (RBF),12.9,17.2,0.693,66.7,-1.9,+ híbrido,0.292,0.0657,17851,Debe llevar todos los vectores de soporte; requiere ONNX o servidor
+M6 Red neuronal MLP,13.8,17.3,0.628,63.9,-7.2,solo,0.49,0.0014,769,Requiere TFLite/ONNX; caja negra
+M6 Red neuronal MLP,13.3,17.6,0.657,65.4,-2.0,+ híbrido,0.49,0.0014,769,Requiere TFLite/ONNX; caja negra
