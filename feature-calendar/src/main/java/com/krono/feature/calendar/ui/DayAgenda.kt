@@ -40,6 +40,7 @@ import com.krono.feature.calendar.DayAgendaState
 import com.krono.feature.calendar.NowMarker
 import com.krono.feature.calendar.R
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 
 /**
  * Añade a la lista la agenda del día seleccionado (F-16 CA-2 y CA-3): encabezado con el día y el
@@ -48,6 +49,7 @@ import kotlinx.datetime.LocalDate
  * @param selectedDate Día cuya agenda se muestra.
  * @param agenda Estado de la agenda.
  * @param onOpenTask Abre el detalle de una tarea por su identificador.
+ * @param onRescheduleTask Reprograma una tarea con su identificador y nueva fecha/hora.
  * @param onRetry Vuelve a leer las tareas tras un error.
  * @param itemModifier Modificador que se aplica a cada elemento de la agenda (su margen lateral).
  */
@@ -55,6 +57,7 @@ internal fun LazyListScope.dayAgenda(
     selectedDate: LocalDate,
     agenda: DayAgendaState,
     onOpenTask: (String) -> Unit,
+    onRescheduleTask: (String, LocalDateTime) -> Unit,
     onRetry: () -> Unit,
     itemModifier: Modifier = Modifier,
 ) {
@@ -73,7 +76,12 @@ internal fun LazyListScope.dayAgenda(
         is DayAgendaState.Loaded -> if (agenda.items.isEmpty()) {
             item(key = AGENDA_STATUS_KEY) { AgendaEmptyState(itemModifier) }
         } else {
-            agendaItems(loaded = agenda, onOpenTask = onOpenTask, itemModifier = itemModifier)
+            agendaItems(
+                loaded = agenda,
+                onOpenTask = onOpenTask,
+                onRescheduleTask = onRescheduleTask,
+                itemModifier = itemModifier,
+            )
         }
     }
 }
@@ -151,13 +159,19 @@ private const val DAY_CHIP_ALPHA = 0.2f
 private fun LazyListScope.agendaItems(
     loaded: DayAgendaState.Loaded,
     onOpenTask: (String) -> Unit,
+    onRescheduleTask: (String, LocalDateTime) -> Unit,
     itemModifier: Modifier,
 ) {
     val marker = loaded.nowMarker
     loaded.items.forEachIndexed { index, item ->
         if (marker?.beforeIndex == index) item(key = NOW_MARKER_KEY) { NowMarkerRow(marker, itemModifier) }
         item(key = item.taskId) {
-            AgendaItemCard(item = item, onClick = { onOpenTask(item.taskId) }, modifier = itemModifier)
+            AgendaItemCard(
+                item = item,
+                onClick = { onOpenTask(item.taskId) },
+                onReschedule = { newDateTime -> onRescheduleTask(item.taskId, newDateTime) },
+                modifier = itemModifier,
+            )
         }
     }
     // Si todas las tareas ya terminaron, la hora actual queda después de la última.

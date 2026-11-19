@@ -65,4 +65,11 @@
     <string name="calendar_load_error_title">No pudimos cargar tu calendario</string>
     <string name="calendar_load_error_body">Hubo un problema al leer tus tareas. Inténtalo de nuevo en un momento.</string>
     <string name="calendar_retry">Reintentar</string>
+
+    <!-- Operaciones CRUD del calendario (F-16) -->
+    <string name="calendar_create_task_fab">Crear tarea</string>
+    <string name="calendar_reschedule_task">Reprogramar tarea</string>
+    <string name="calendar_reschedule_plus_1h">Posponer 1 hora</string>
+    <string name="calendar_reschedule_tomorrow">Mañana a la misma hora</string>
+    <string name="calendar_reschedule_next_week">Próxima semana (+7 días)</string>
 </resources>
