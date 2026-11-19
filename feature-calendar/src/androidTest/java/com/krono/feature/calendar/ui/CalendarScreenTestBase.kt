@@ -29,8 +29,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.krono.core.domain.calendar.CurrentDateTimeProvider
 import com.krono.core.domain.calendar.ObserveCalendarUseCase
 import com.krono.core.domain.task.FakeTaskRepository
+import com.krono.core.domain.task.GetTaskByIdUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
+import com.krono.core.domain.task.UpsertTaskUseCase
 import com.krono.core.ui.theme.KronoTheme
 import com.krono.feature.calendar.CalendarViewModel
 import com.krono.feature.calendar.R
@@ -67,6 +69,8 @@ abstract class CalendarScreenTestBase {
         val viewModel = CalendarViewModel(
             observeCalendar = ObserveCalendarUseCase(repository),
             dateTimeProvider = CurrentDateTimeProvider(FixedClock) { TimeZone.UTC },
+            getTaskById = GetTaskByIdUseCase(repository),
+            upsertTask = UpsertTaskUseCase(repository),
         )
         composeRule.setContent {
             val density = LocalDensity.current

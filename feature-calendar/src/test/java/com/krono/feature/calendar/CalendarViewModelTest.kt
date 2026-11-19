@@ -5,6 +5,8 @@ import com.krono.core.domain.calendar.CalendarViewMode
 import com.krono.core.domain.calendar.CurrentDateTimeProvider
 import com.krono.core.domain.calendar.ObserveCalendarUseCase
 import com.krono.core.domain.task.FakeTaskRepository
+import com.krono.core.domain.task.GetTaskByIdUseCase
+import com.krono.core.domain.task.UpsertTaskUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
@@ -43,6 +45,8 @@ class CalendarViewModelTest {
     private fun viewModel(taskRepository: TaskRepository = repository) = CalendarViewModel(
         observeCalendar = ObserveCalendarUseCase(taskRepository),
         dateTimeProvider = CurrentDateTimeProvider(clock) { TimeZone.UTC },
+        getTaskById = GetTaskByIdUseCase(taskRepository),
+        upsertTask = UpsertTaskUseCase(taskRepository),
     )
 
     /** Mantiene suscrito el estado (WhileSubscribed) y deja correr las corrutinas pendientes. */
@@ -747,6 +751,81 @@ class CalendarViewModelTest {
         runCurrent()
 
         assertEquals(NowMarker(beforeIndex = 1, time = clock.current), vm.state.nowMarker)
+    }
+
+    @Test
+    fun alReprogramarTarea_actualizaSuDueDateYPersisteEnRepositorio() = runTest {
+        repository.givenTasks(task("reprogramar", LocalDateTime(2024, 10, 24, 10, 0)))
+        val vm = started(viewModel())
+
+        val nuevaFechaHora = LocalDateTime(2024, 10, 25, 15, 30)
+        vm.onRescheduleTask("reprogramar", nuevaFechaHora)
+        runCurrent()
+
+        val tareaActualizada = repository.storedTask("reprogramar")
+        assertEquals(nuevaFechaHora, tareaActualizada?.dueDate)
+        assertEquals(1, repository.upsertCalls)
+    }
+
+    @Test
+    fun alDespacharEventoRescheduleTask_reprogramaLaTarea() = runTest {
+        repository.givenTasks(task("evento-reprogramar", LocalDateTime(2024, 10, 24, 10, 0)))
+        val vm = started(viewModel())
+
+        val nuevaFechaHora = LocalDateTime(2024, 10, 26, 9, 0)
+        vm.onEvent(CalendarEvent.RescheduleTask("evento-reprogramar", nuevaFechaHora))
+        runCurrent()
+
+        val tareaActualizada = repository.storedTask("evento-reprogramar")
+        assertEquals(nuevaFechaHora, tareaActualizada?.dueDate)
+        assertEquals(1, repository.upsertCalls)
+    }
+
+    @Test
+    fun alDespacharEventosDeNavegacion_seComportanIgualQueMetodosDirectos() = runTest {
+        val vm = started(viewModel())
+
+        vm.onEvent(CalendarEvent.SelectMode(CalendarViewMode.WEEK))
+        runCurrent()
+        assertEquals(CalendarViewMode.WEEK, vm.state.mode)
+
+        vm.onEvent(CalendarEvent.SelectDate(LocalDate(2024, 10, 22)))
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 22), vm.state.selectedDate)
+
+        vm.onEvent(CalendarEvent.NextPeriod)
+        runCurrent()
+        assertEquals(LocalDate(2024, 10, 29), vm.state.selectedDate)
+
+        vm.onEvent(CalendarEvent.PreviousPeriod)
+        runCurrent()
+        assertEquals(TODAY, vm.state.selectedDate)
+
+        vm.onEvent(CalendarEvent.Today)
+        runCurrent()
+        assertEquals(TODAY, vm.state.selectedDate)
+    }
+
+    @Test
+    fun alCrearTareaEnFechaSeleccionada_persisteCorrectamenteEnRepositorio() = runTest {
+        val vm = started(viewModel())
+        val fechaSeleccionada = LocalDate(2024, 10, 28)
+        vm.onSelectDate(fechaSeleccionada)
+        runCurrent()
+
+        val nuevaTarea = Task(
+            id = "tarea-creada-desde-calendario",
+            title = "Tarea creada",
+            category = TaskCategory.ESTUDIO,
+            priority = TaskPriority.ALTA,
+            dueDate = LocalDateTime(fechaSeleccionada.year, fechaSeleccionada.monthNumber, fechaSeleccionada.dayOfMonth, 18, 0),
+        )
+        val upsert = UpsertTaskUseCase(repository)
+        val resultado = upsert(nuevaTarea)
+
+        assertTrue(resultado is KronoResult.Success)
+        assertEquals(nuevaTarea, repository.storedTask("tarea-creada-desde-calendario"))
+        assertEquals(1, repository.upsertCalls)
     }
 
     private fun task(

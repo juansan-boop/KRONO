@@ -1,5 +1,6 @@
 package com.krono.feature.tasks.create
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
@@ -40,6 +41,7 @@ class CreateTaskViewModel @Inject constructor(
     private val upsertTaskUseCase: UpsertTaskUseCase,
     private val observeTasksUseCase: ObserveTasksUseCase,
     private val estimateTaskDuration: EstimateTaskDurationUseCase,
+    savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
 
     /** Proveedor del instante actual; modificable en pruebas unitarias para aislar el tiempo. */
@@ -59,6 +61,11 @@ class CreateTaskViewModel @Inject constructor(
     private var taskHistory: List<Task> = emptyList()
 
     init {
+        savedStateHandle.get<String>(INITIAL_DATE_ARG)?.let { dateStr ->
+            runCatching { LocalDate.parse(dateStr) }.getOrNull()?.let { initialDate ->
+                _uiState.update { it.copy(dueDate = initialDate) }
+            }
+        }
         observeTaskHistory()
     }
 
@@ -267,5 +274,10 @@ class CreateTaskViewModel @Inject constructor(
 
             current.copy(durationSuggestion = suggestion)
         }
+    }
+
+    companion object {
+        /** Argumento de navegación opcional con la fecha inicial en formato ISO (YYYY-MM-DD). */
+        const val INITIAL_DATE_ARG = "initialDate"
     }
 }

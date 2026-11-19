@@ -8,6 +8,9 @@ import com.krono.core.domain.calendar.CalendarSchedule
 import com.krono.core.domain.calendar.CalendarViewMode
 import com.krono.core.domain.calendar.CurrentDateTimeProvider
 import com.krono.core.domain.calendar.ObserveCalendarUseCase
+import com.krono.core.domain.task.GetTaskByIdUseCase
+import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.UpsertTaskUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -24,7 +27,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
@@ -44,6 +49,8 @@ import kotlin.time.Duration.Companion.seconds
 class CalendarViewModel @Inject constructor(
     private val observeCalendar: ObserveCalendarUseCase,
     private val dateTimeProvider: CurrentDateTimeProvider,
+    private val getTaskById: GetTaskByIdUseCase,
+    private val upsertTask: UpsertTaskUseCase,
 ) : ViewModel() {
 
     private val selection = MutableStateFlow(selectionOfToday(CalendarViewMode.MONTH))
@@ -84,6 +91,22 @@ class CalendarViewModel @Inject constructor(
     )
 
     /**
+     * Procesa y canaliza los eventos de acción del calendario [event].
+     */
+    fun onEvent(event: CalendarEvent) {
+        when (event) {
+            is CalendarEvent.RescheduleTask -> onRescheduleTask(event.taskId, event.newDateTime)
+            is CalendarEvent.SelectDate -> onSelectDate(event.date)
+            is CalendarEvent.SelectMode -> onSelectMode(event.mode)
+            CalendarEvent.PreviousPeriod -> onPrevious()
+            CalendarEvent.NextPeriod -> onNext()
+            CalendarEvent.Today -> onToday()
+            CalendarEvent.Retry -> onRetry()
+            is CalendarEvent.CreateTask, is CalendarEvent.OpenTask -> Unit
+        }
+    }
+
+    /**
      * Cambia a la vista [mode] conservando el día seleccionado: la nueva vista muestra el mes, la
      * semana o el día que lo contiene.
      */
@@ -113,6 +136,31 @@ class CalendarViewModel @Inject constructor(
     /** Vuelve a abrir la observación de tareas después de un error de carga. */
     fun onRetry() {
         loadAttempts.update { it + 1 }
+    }
+
+    /**
+     * Reprograma la tarea especificada por [taskId] asignando [newDateTime] como su nueva fecha límite (F-16).
+     *
+     * Consulta la tarea existente mediante [GetTaskByIdUseCase], actualiza su fecha límite y la persiste
+     * con [UpsertTaskUseCase], lo que actualiza la agenda automáticamente a través del flujo reactivo del repositorio.
+     *
+     * @param taskId Identificador de la tarea a reprogramar.
+     * @param newDateTime Nueva fecha y hora límite de entrega.
+     */
+    fun onRescheduleTask(taskId: String, newDateTime: LocalDateTime) {
+        viewModelScope.launch {
+            when (val result = getTaskById(taskId)) {
+                is KronoResult.Success -> {
+                    val currentTask = result.data
+                    val updatedTask = currentTask.copy(dueDate = newDateTime)
+                    upsertTask(updatedTask)
+                }
+                is KronoResult.Error -> {
+                    // Si falla la búsqueda de la tarea, no se altera el estado
+                }
+                KronoResult.Loading -> Unit
+            }
+        }
     }
 
     /**

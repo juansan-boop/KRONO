@@ -86,7 +86,10 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
             )
         },
         calendario = {
-            CalendarRoute(onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) })
+            CalendarRoute(
+                onOpenTask = { taskId -> navController.navigateToTaskDetail(taskId) },
+                onCreateTask = { selectedDate -> navController.navigateToCreateTask(selectedDate) },
+            )
         },
         tareas = {
             TasksRoute(
@@ -122,7 +125,7 @@ fun KronoShell(
     ajustes: @Composable (alCerrarSesion: () -> Unit) -> Unit,
     inicio: @Composable () -> Unit = { SeccionProvisional(R.string.seccion_inicio) },
     tareas: @Composable () -> Unit = { TasksRoute(onAddTask = {}) },
-    calendario: @Composable () -> Unit = { CalendarRoute(onOpenTask = {}) },
+    calendario: @Composable () -> Unit = { CalendarRoute(onOpenTask = {}, onCreateTask = {}) },
 ) {
     val entradaActual by navController.currentBackStackEntryAsState()
     val seleccionado = entradaActual?.destination.pestanaSeleccionada()

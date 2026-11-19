@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
 import com.krono.feature.tasks.assistant.ui.PriorityAssistantRoute
+import com.krono.feature.tasks.create.CreateTaskViewModel.Companion.INITIAL_DATE_ARG
 import com.krono.feature.tasks.create.ui.CreateTaskRoute
 import com.krono.feature.tasks.detail.TaskDetailViewModel.Companion.TASK_ID_NAV_ARG
 import com.krono.feature.tasks.detail.ui.TaskDetailRoute
@@ -18,6 +19,7 @@ import com.krono.feature.tasks.focusmode.ui.FocusModeRoute
 import com.krono.feature.tasks.timer.TaskTimerViewModel.Companion.TASK_ID_NAV_ARG as TIMER_TASK_ID_NAV_ARG
 import com.krono.feature.tasks.timer.ui.TaskTimerRoute
 import com.krono.feature.tasks.ui.TasksRoute
+import kotlinx.datetime.LocalDate
 
 /**
  * Ruta canónica de la pantalla de tareas en el grafo de navegación.
@@ -25,9 +27,14 @@ import com.krono.feature.tasks.ui.TasksRoute
 const val TASKS_ROUTE = "tareas"
 
 /**
- * Ruta canónica de la pantalla de creación de tarea (F-04).
+ * Ruta base para la pantalla de creación de tarea (F-04).
  */
-const val CREATE_TASK_ROUTE = "tareas/nueva"
+const val CREATE_TASK_ROUTE_BASE = "tareas/nueva"
+
+/**
+ * Ruta canónica de la pantalla de creación de tarea (F-04) con soporte de argumento opcional de fecha.
+ */
+const val CREATE_TASK_ROUTE = "$CREATE_TASK_ROUTE_BASE?$INITIAL_DATE_ARG={$INITIAL_DATE_ARG}"
 
 /**
  * Ruta base para la pantalla de detalle de tarea y subtareas (F-06).
@@ -82,10 +89,14 @@ fun NavController.navigateToTasks(navOptions: NavOptions? = null) {
 }
 
 /**
- * Navega hacia la pantalla de creación de tarea (F-04).
+ * Navega hacia la pantalla de creación de tarea (F-04), opcionalmente prellenando la fecha [initialDate].
  */
-fun NavController.navigateToCreateTask(navOptions: NavOptions? = null) {
-    navigate(CREATE_TASK_ROUTE, navOptions)
+fun NavController.navigateToCreateTask(
+    initialDate: LocalDate? = null,
+    navOptions: NavOptions? = null,
+) {
+    val route = if (initialDate != null) "$CREATE_TASK_ROUTE_BASE?$INITIAL_DATE_ARG=$initialDate" else CREATE_TASK_ROUTE_BASE
+    navigate(route, navOptions)
 }
 
 /**
@@ -185,7 +196,16 @@ fun NavGraphBuilder.taskDetailScreen(
 fun NavGraphBuilder.createTaskScreen(
     onBack: () -> Unit,
 ) {
-    composable(route = CREATE_TASK_ROUTE) {
+    composable(
+        route = CREATE_TASK_ROUTE,
+        arguments = listOf(
+            navArgument(INITIAL_DATE_ARG) {
+                type = NavType.StringType
+                nullable = true
+                defaultValue = null
+            },
+        ),
+    ) {
         CreateTaskRoute(
             onBack = onBack,
         )
