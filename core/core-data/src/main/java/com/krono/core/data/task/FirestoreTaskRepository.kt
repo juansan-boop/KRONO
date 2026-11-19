@@ -3,6 +3,9 @@ package com.krono.core.data.task
 import com.krono.core.common.KronoResult
 import com.krono.core.data.auth.AuthRemoteDataSource
 import com.krono.core.data.firestore.awaitConfirmationOrQueued
+import com.krono.core.data.local.room.TaskDao
+import com.krono.core.data.local.room.TaskEntity
+import com.krono.core.data.local.room.toEntity
 import com.krono.core.data.timer.ActiveTimerDto
 import com.krono.core.data.timer.TimerRemoteDataSource
 import com.krono.core.domain.auth.User
@@ -14,82 +17,160 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Implementación de [TaskRepository] con Cloud Firestore (D-1, D-3, F-02).
- * Gestiona la sincronización offline, el mapeo de modelos y la traducción de errores a [KronoResult].
+ * Implementación de [TaskRepository] con respaldo dual: Cloud Firestore como fuente remota
+ * y [TaskDao] (Room) como base de datos local estructurada (D-1, D-3, F-02).
  *
- * Cada escritura espera la confirmación del servidor con [awaitConfirmationOrQueued]: sin red se
- * da por encolada y se informa como éxito (F-02 CA-1); los errores que llegan antes del límite
- * (validación local, permiso denegado) siguen devolviendo [KronoResult.Error].
+ * Garantiza recuperación estructurada de tareas y subtareas al reiniciar la aplicación
+ * sin conexión de red, manteniendo además la sincronización reactiva en tiempo real.
  *
- * @param timerDataSource se consulta al eliminar una tarea para descartar su cronómetro en curso.
+ * @param remoteDataSource Fuente de datos remota en Cloud Firestore.
+ * @param authDataSource Proveedor de estado de autenticación del usuario actual.
+ * @param timerDataSource Fuente de datos de temporizadores para descarte de cronómetro activo al borrar tareas.
+ * @param taskDao DAO de Room para almacenamiento estructurado local offline.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class FirestoreTaskRepository @Inject constructor(
     private val remoteDataSource: TaskRemoteDataSource,
     private val authDataSource: AuthRemoteDataSource,
     private val timerDataSource: TimerRemoteDataSource,
+    private val taskDao: TaskDao,
 ) : TaskRepository {
 
     /**
-     * Emite la lista de tareas de la sesión activa en tiempo real. Si el listener falla emite un
-     * [KronoResult.Error] y termina, en vez de fingir una lista vacía.
+     * Constructor secundario para pruebas unitarias sin persistencia física de Room.
+     */
+    constructor(
+        remoteDataSource: TaskRemoteDataSource,
+        authDataSource: AuthRemoteDataSource,
+        timerDataSource: TimerRemoteDataSource,
+    ) : this(remoteDataSource, authDataSource, timerDataSource, NoOpTaskDao)
+
+    /**
+     * Emite la lista de tareas de la sesión activa en tiempo real.
+     * Persiste automáticamente en Room cada emisión remota y, si la observación remota falla,
+     * intenta recuperar la última caché estructurada local disponible.
      */
     override fun observeTasks(): Flow<KronoResult<List<Task>>> =
         observeForUser(signedOutValue = emptyList()) { user ->
-            remoteDataSource.observeTasks(user.id).map { list -> list.map { it.toDomain() } }
+            remoteDataSource.observeTasks(user.id)
+                .onEach { dtoList ->
+                    val domainTasks = dtoList.map { it.toDomain() }
+                    taskDao.upsertTasks(domainTasks.map { it.toEntity(user.id, TaskEntity.STATUS_CONFIRMED) })
+                }
+                .map { list -> list.map { it.toDomain() } }
+                .catch { remoteError ->
+                    val cachedTasks = taskDao.getTasks(user.id)
+                    if (cachedTasks.isNotEmpty()) {
+                        emit(cachedTasks.map { it.toDomain() })
+                    } else {
+                        throw remoteError
+                    }
+                }
         }
 
     /**
-     * Emite los cambios de una tarea puntual en tiempo real (`null` si no existe). Si el listener
-     * falla emite un [KronoResult.Error] y termina, en vez de fingir que la tarea no existe.
+     * Emite los cambios de una tarea puntual en tiempo real (`null` si no existe).
+     * Si la observación remota falla, recurre a la tarea almacenada en Room si existe.
      */
     override fun observeTaskById(taskId: String): Flow<KronoResult<Task?>> =
         observeForUser(signedOutValue = null) { user ->
-            remoteDataSource.observeTask(user.id, taskId).map { it?.toDomain() }
+            remoteDataSource.observeTask(user.id, taskId)
+                .onEach { dto ->
+                    if (dto != null) {
+                        taskDao.upsertTask(dto.toDomain().toEntity(user.id, TaskEntity.STATUS_CONFIRMED))
+                    }
+                }
+                .map { it?.toDomain() }
+                .catch { remoteError ->
+                    val cached = taskDao.getTaskById(user.id, taskId)
+                    if (cached != null) {
+                        emit(cached.toDomain())
+                    } else {
+                        throw remoteError
+                    }
+                }
         }
 
-    /** Consulta directa de una tarea puntual en Firestore. */
+    /**
+     * Consulta directa de una tarea puntual en Firestore con respaldo en la caché de Room.
+     */
     override suspend fun getTaskById(taskId: String): KronoResult<Task> = runCatchingTask {
-        val dto = remoteDataSource.getTask(requireUser().id, taskId) ?: throw TaskError.TaskNotFound
-        dto.toDomain()
+        val userId = requireUser().id
+        try {
+            val dto = remoteDataSource.getTask(userId, taskId)
+            if (dto != null) {
+                val domain = dto.toDomain()
+                taskDao.upsertTask(domain.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
+                domain
+            } else {
+                val cached = taskDao.getTaskById(userId, taskId)
+                cached?.toDomain() ?: throw TaskError.TaskNotFound
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val cached = taskDao.getTaskById(userId, taskId)
+            cached?.toDomain() ?: throw e
+        }
     }
 
-    /** Crea o reemplaza una tarea completa en Firestore junto con sus subtareas embebidas. */
+    /**
+     * Crea o reemplaza una tarea completa junto con sus subtareas embebidas,
+     * respaldándola inmediatamente en Room antes y después de confirmar con el servidor.
+     */
     override suspend fun upsertTask(task: Task): KronoResult<Unit> = runCatchingTask {
         val userId = requireUser().id
+        taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_PENDING_SYNC))
         awaitConfirmationOrQueued { remoteDataSource.saveTask(userId, task.toDto()) }
+        taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
     }
 
-    /** Escribe solo los [fields] de [task]; el tiempo real y los demás campos no se tocan. */
+    /**
+     * Escribe solo los [fields] indicados de [task] sobre la tarea guardada,
+     * actualizando tanto el documento en Firestore como el registro correspondiente en Room.
+     */
     override suspend fun updateTaskFields(task: Task, fields: Set<TaskField>): KronoResult<Unit> =
         runCatchingTask {
             val userId = requireUser().id
             val partial = task.toDto().toPartialMap(fields)
             awaitConfirmationOrQueued { remoteDataSource.updateTaskFields(userId, task.id, partial) }
+
+            taskDao.getTaskById(userId, task.id)?.let { cached ->
+                var updated = cached.toDomain()
+                if (TaskField.TITLE in fields) updated = updated.copy(title = task.title)
+                if (TaskField.CATEGORY in fields) updated = updated.copy(category = task.category)
+                if (TaskField.PRIORITY in fields) updated = updated.copy(priority = task.priority)
+                if (TaskField.DUE_DATE in fields) updated = updated.copy(dueDate = task.dueDate)
+                if (TaskField.ESTIMATED_DURATION in fields) updated = updated.copy(estimatedDuration = task.estimatedDuration)
+                if (TaskField.IS_COMPLETED in fields) updated = updated.copy(isCompleted = task.isCompleted)
+                if (TaskField.NOTE in fields) updated = updated.copy(note = task.note)
+                if (TaskField.SUBTASKS in fields) updated = updated.copy(subtasks = task.subtasks)
+
+                taskDao.upsertTask(updated.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
+            }
         }
 
     /**
-     * Elimina una tarea y sus subtareas embebidas en Firestore. Si el cronómetro en curso mide esa
-     * tarea, se descarta en la misma escritura atómica para no dejar un cronómetro fantasma (F-07,
-     * F-08). Las sesiones de tiempo ya registradas se conservan (ver [TaskRepository.deleteTask]).
+     * Elimina una tarea y sus subtareas embebidas de Firestore y de la caché de Room.
      */
     override suspend fun deleteTask(taskId: String): KronoResult<Unit> = runCatchingTask {
         val userId = requireUser().id
         val discardActiveTimer = activeTimerTaskIdOrNull(userId) == taskId
+        taskDao.deleteTask(userId, taskId)
         awaitConfirmationOrQueued { remoteDataSource.deleteTask(userId, taskId, discardActiveTimer) }
     }
 
     /**
-     * Tarea que mide el cronómetro en curso, o `null` si no hay o no se puede leer. Una lectura
-     * fallida (sin red y sin el documento en caché) no impide borrar la tarea: si el cronómetro
-     * quedara huérfano, iniciar otro lo descarta sin pedir confirmación.
+     * Tarea que mide el cronómetro en curso, o `null` si no hay o no se puede leer.
      */
     private suspend fun activeTimerTaskIdOrNull(userId: String): String? = try {
         timerDataSource.getActiveTimer(userId)?.let(ActiveTimerDto::fromMap)?.taskId
@@ -120,4 +201,20 @@ class FirestoreTaskRepository @Inject constructor(
     } catch (t: Throwable) {
         KronoResult.Error(FirestoreTaskErrorMapper.map(t))
     }
+}
+
+/**
+ * Implementación no operativa de [TaskDao] empleada en pruebas donde no se requiere
+ * instanciar una base de datos SQLite en disco.
+ */
+internal object NoOpTaskDao : TaskDao {
+    override fun observeTasks(userId: String): Flow<List<TaskEntity>> = emptyFlow()
+    override fun observeTaskById(userId: String, taskId: String): Flow<TaskEntity?> = emptyFlow()
+    override suspend fun getTasks(userId: String): List<TaskEntity> = emptyList()
+    override suspend fun getTaskById(userId: String, taskId: String): TaskEntity? = null
+    override suspend fun upsertTask(task: TaskEntity) {}
+    override suspend fun upsertTasks(tasks: List<TaskEntity>) {}
+    override suspend fun getPendingSyncTasks(userId: String): List<TaskEntity> = emptyList()
+    override suspend fun clearTasksForUser(userId: String) {}
+    override suspend fun deleteTask(userId: String, taskId: String) {}
 }
