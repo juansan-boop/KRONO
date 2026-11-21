@@ -1,5 +1,6 @@
 package com.krono.feature.tasks.create
 
+import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.krono.core.domain.assistant.EstimateTaskDurationUseCase
 import com.krono.core.domain.task.FakeTaskRepository
@@ -234,6 +235,33 @@ class CreateTaskViewModelTest {
             assertTrue(awaitItem() is CreateTaskEvent.NavigateBack)
         }
         assertFalse(offlineViewModel.uiState.value.isSaving)
+    }
+
+    @Test
+    fun alIniciarConInitialDateEnSavedStateHandle_precargaLaFechaEnUiState() = runTest {
+        val initialDateString = "2026-11-25"
+        val handle = SavedStateHandle(mapOf(CreateTaskViewModel.INITIAL_DATE_ARG to initialDateString))
+        val vmWithDate = CreateTaskViewModel(
+            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
+            savedStateHandle = handle,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+
+        assertEquals(LocalDate(2026, 11, 25), vmWithDate.uiState.value.dueDate)
+    }
+
+    @Test
+    fun alIniciarConInitialDateInvalidoEnSavedStateHandle_noCrasheaYMantieneFechaNula() = runTest {
+        val handle = SavedStateHandle(mapOf(CreateTaskViewModel.INITIAL_DATE_ARG to "fecha-invalida"))
+        val vmWithDate = CreateTaskViewModel(
+            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
+            savedStateHandle = handle,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+
+        assertNull(vmWithDate.uiState.value.dueDate)
     }
 
     private fun fillValidForm(target: CreateTaskViewModel) {
