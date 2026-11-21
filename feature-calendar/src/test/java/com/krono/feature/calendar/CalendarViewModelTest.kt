@@ -6,6 +6,7 @@ import com.krono.core.domain.calendar.CurrentDateTimeProvider
 import com.krono.core.domain.calendar.ObserveCalendarUseCase
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.GetTaskByIdUseCase
+import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.UpsertTaskUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
@@ -765,6 +766,42 @@ class CalendarViewModelTest {
         val tareaActualizada = repository.storedTask("reprogramar")
         assertEquals(nuevaFechaHora, tareaActualizada?.dueDate)
         assertEquals(1, repository.upsertCalls)
+    }
+
+    @Test
+    fun alReprogramarTarea_preservaSubtareasPrioridadCategoriaYDuracion() = runTest {
+        val subtask = Subtask(id = "sub-1", taskId = "tarea-compleja", title = "Paso 1", isDone = false, position = 0)
+        val original = Task(
+            id = "tarea-compleja",
+            title = "Proyecto Final",
+            category = TaskCategory.ESTUDIO,
+            priority = TaskPriority.ALTA,
+            dueDate = LocalDateTime(2024, 10, 24, 10, 0),
+            estimatedDuration = 120.minutes,
+            actualDuration = 45.minutes,
+            isCompleted = false,
+            note = "Nota importante",
+            subtasks = listOf(subtask),
+            isDeleted = false,
+        )
+        repository.givenTasks(original)
+        val vm = started(viewModel())
+
+        val nuevaFechaHora = LocalDateTime(2024, 10, 28, 18, 0)
+        vm.onRescheduleTask("tarea-compleja", nuevaFechaHora)
+        runCurrent()
+
+        val actualizada = repository.storedTask("tarea-compleja")
+        assertEquals(nuevaFechaHora, actualizada?.dueDate)
+        assertEquals("Proyecto Final", actualizada?.title)
+        assertEquals(TaskCategory.ESTUDIO, actualizada?.category)
+        assertEquals(TaskPriority.ALTA, actualizada?.priority)
+        assertEquals(120.minutes, actualizada?.estimatedDuration)
+        assertEquals(45.minutes, actualizada?.actualDuration)
+        assertEquals(false, actualizada?.isCompleted)
+        assertEquals("Nota importante", actualizada?.note)
+        assertEquals(listOf(subtask), actualizada?.subtasks)
+        assertEquals(false, actualizada?.isDeleted)
     }
 
     @Test
