@@ -55,6 +55,9 @@ object KronoIcons {
     /** Engranaje de ajustes. */
     @DrawableRes val Settings: Int = R.drawable.ic_settings
 
+    /** Flechas circulares de sincronización (estado de sync y reintento). */
+    @DrawableRes val Sync: Int = R.drawable.ic_sync
+
     /** Marca de verificación dentro de un círculo abierto (operación completada). */
     @DrawableRes val TaskAlt: Int = R.drawable.ic_task_alt
 

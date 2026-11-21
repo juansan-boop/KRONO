@@ -3,11 +3,12 @@ package com.krono.feature.profile.notifications
 import app.cash.turbine.test
 import com.krono.core.common.KronoResult
 import com.krono.feature.profile.MainDispatcherRule
+import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.data.ProfileRepositoryImpl
 import com.krono.feature.profile.domain.InvalidReminderMinutesException
 import com.krono.feature.profile.domain.NotificationPrefs
-
 import com.krono.feature.profile.domain.ResetNotificationPrefsUseCase
 import com.krono.feature.profile.domain.SaveNotificationPrefsUseCase
 import com.krono.feature.profile.ui.ProfileSaveError
@@ -225,8 +226,9 @@ class NotificationPreferencesViewModelTest {
     @Test
     fun guardarPreferenciasPersisteValoresEnProfileLocalStore() = runTest {
         val store = ProfileLocalStore()
-        val saveUseCase = SaveNotificationPrefsUseCase(store)
-        val resetUseCase = ResetNotificationPrefsUseCase(store)
+        val repo = ProfileRepositoryImpl(store)
+        val saveUseCase = SaveNotificationPrefsUseCase(repo)
+        val resetUseCase = ResetNotificationPrefsUseCase(repo)
         val vm = NotificationPreferencesViewModel(saveUseCase, resetUseCase, store)
 
         vm.onDeadlineReminderMinutesChange(45)
@@ -254,8 +256,9 @@ class NotificationPreferencesViewModelTest {
         val store = ProfileLocalStore()
         store.bindUser("user_777", "carlos@krono.app")
         val remoteDataSource = NoOpProfileRemoteDataSource()
-        val saveUseCase = SaveNotificationPrefsUseCase(store, remoteDataSource)
-        val resetUseCase = ResetNotificationPrefsUseCase(store, remoteDataSource)
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val saveUseCase = SaveNotificationPrefsUseCase(repo)
+        val resetUseCase = ResetNotificationPrefsUseCase(repo)
         val vm = NotificationPreferencesViewModel(saveUseCase, resetUseCase, store)
 
         vm.onDeadlineReminderMinutesChange(45)
@@ -289,7 +292,8 @@ class NotificationPreferencesViewModelTest {
                 throw RuntimeException("PERMISSION_DENIED")
             }
         }
-        val saveUseCase = SaveNotificationPrefsUseCase(store, remoteDataSource)
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val saveUseCase = SaveNotificationPrefsUseCase(repo)
         val result = saveUseCase(NotificationPrefs(deadlineReminderMinutes = 15, focusStartSound = false))
 
         assertTrue("Debe retornar éxito incluso si Firestore falla", result is KronoResult.Success)
@@ -302,7 +306,7 @@ class NotificationPreferencesViewModelTest {
 /**
  * Doble de prueba para [SaveNotificationPrefsUseCase].
  */
-private class TestSaveNotificationPrefsUseCase : SaveNotificationPrefsUseCase() {
+private class TestSaveNotificationPrefsUseCase : SaveNotificationPrefsUseCase(ProfileRepositoryImpl()) {
     var gate: CompletableDeferred<Unit>? = null
     var failure: Throwable? = null
     var callCount = 0
@@ -320,7 +324,7 @@ private class TestSaveNotificationPrefsUseCase : SaveNotificationPrefsUseCase() 
 /**
  * Doble de prueba para [ResetNotificationPrefsUseCase].
  */
-private class TestResetNotificationPrefsUseCase : ResetNotificationPrefsUseCase() {
+private class TestResetNotificationPrefsUseCase : ResetNotificationPrefsUseCase(ProfileRepositoryImpl()) {
     var failure: Throwable? = null
     var callCount = 0
 

@@ -9,23 +9,45 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * Espera máxima a la confirmación del servidor de una escritura de perfil, preferencias o ajustes.
  *
- * Con red, Firestore confirma en menos de un segundo; sin red la confirmación no llega hasta
- * reconectar, así que el usuario solo espera este tiempo (mismo criterio que `core-data`).
+ * Con red, Firestore suele confirmar en menos de un segundo; sin red, el usuario solo espera este tiempo.
  */
 internal val PROFILE_WRITE_CONFIRMATION_TIMEOUT: Duration = 2.seconds
+
+/**
+ * Resultado explícito de la confirmación de escritura en Firestore para el módulo de perfil.
+ */
+sealed interface ProfileWriteConfirmation {
+    /** Confirmada por el servidor en la nube dentro del límite de tiempo. */
+    data object Confirmed : ProfileWriteConfirmation
+
+    /** Tiempo límite agotado; la escritura permanece encolada en la caché local para sincronización posterior. */
+    data object PendingSync : ProfileWriteConfirmation
+}
 
 /**
  * Ejecuta [write] (que suspende hasta la confirmación del servidor) esperando como mucho [timeout].
  *
  * Firestore aplica cada escritura al instante en su caché local y la encola para el servidor, por lo
- * que, si vence el límite, la escritura se da por encolada y no es un error. Los errores que llegan
- * antes del límite (permiso denegado, datos inválidos) se propagan como excepción.
+ * que si vence el límite la escritura se da por encolada ([ProfileWriteConfirmation.PendingSync]).
+ * Los errores reales (permiso denegado, datos inválidos) se propagan como excepción.
+ *
+ * @param timeout Tiempo límite de espera a la respuesta del servidor remoto.
+ * @param write Lambda de escritura suspendida.
+ * @return [ProfileWriteConfirmation.Confirmed] si se recibió confirmación, o [ProfileWriteConfirmation.PendingSync] si venció el tiempo.
  */
 internal suspend fun awaitWriteOrQueued(
     timeout: Duration = PROFILE_WRITE_CONFIRMATION_TIMEOUT,
     write: suspend () -> Unit,
-) {
-    withTimeoutOrNull(timeout) { write() }
+): ProfileWriteConfirmation {
+    val completed = withTimeoutOrNull(timeout) {
+        write()
+        true
+    }
+    return if (completed == true) {
+        ProfileWriteConfirmation.Confirmed
+    } else {
+        ProfileWriteConfirmation.PendingSync
+    }
 }
 
 /**

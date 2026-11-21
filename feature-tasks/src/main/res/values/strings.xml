@@ -46,6 +46,10 @@
     <string name="cd_category">Categoría %s</string>
     <string name="cd_delete_task">Eliminar tarea %s</string>
     <string name="cd_focus_progress">Progreso de enfoque diario: %d por ciento</string>
+    <string name="sync_status_pending">Pendiente</string>
+    <string name="sync_status_error">Sin sincronizar</string>
+    <string name="cd_sync_status_pending">Sincronización pendiente con la nube</string>
+    <string name="cd_sync_status_error">Error de sincronización con la nube</string>
 
     <!-- Estado vacío (CA-4) -->
     <string name="empty_tasks_title">Sin tareas pendientes</string>

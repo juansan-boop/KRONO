@@ -293,16 +293,16 @@ class FirestoreTaskRepositoryRoomTest {
     }
 
     /**
-     * Verifica que ante falla remota en upsertTask, la tarea quede registrada en Room
-     * con estado PENDING_SYNC para sincronización diferida posterior.
+     * Verifica que ante excepción remota en upsertTask, la tarea quede registrada en Room
+     * con estado STATUS_FAILED y se propague el error.
      */
     @Test
-    fun upsertTask_cuandoRemotoFalla_conservaRegistroEnRoomComoPendingSync() = runTest {
+    fun upsertTask_cuandoRemotoLanzaExcepcion_actualizaRegistroEnRoomComoFailedYPropagaError() = runTest {
         fakeTaskDataSource.failure = IOException("Error de red al guardar en Firestore")
 
         val task = Task(
             id = "t-offline-sync",
-            title = "Tarea creada sin red",
+            title = "Tarea con error remoto",
             category = TaskCategory.PERSONAL,
             priority = TaskPriority.ALTA,
         )
@@ -310,15 +310,35 @@ class FirestoreTaskRepositoryRoomTest {
         val result = repository.upsertTask(task)
         assertTrue(result is KronoResult.Error)
 
-        // Verificamos que la tarea persiste en Room pero con estado PENDING_SYNC
+        // Verificamos que la tarea persiste en Room con estado FAILED
         val cached = fakeTaskDao.getTaskById(testUser.id, "t-offline-sync")
         assertNotNull(cached)
-        assertEquals("Tarea creada sin red", cached?.title)
-        assertEquals(TaskEntity.STATUS_PENDING_SYNC, cached?.syncStatus)
+        assertEquals("Tarea con error remoto", cached?.title)
+        assertEquals(TaskEntity.STATUS_FAILED, cached?.syncStatus)
+    }
 
-        val pendingList = fakeTaskDao.getPendingSyncTasks(testUser.id)
-        assertEquals(1, pendingList.size)
-        assertEquals("t-offline-sync", pendingList[0].id)
+    /**
+     * Verifica que cuando la escritura en Firestore agota el timeout (encolada en caché),
+     * la tarea se mantenga en Room con estado PENDING_SYNC.
+     */
+    @Test
+    fun upsertTask_cuandoSeAgotaelTimeout_mantieneRegistroEnRoomComoPendingSync() = runTest {
+        // Simulamos que la confirmación del servidor nunca llega (offline / encolada)
+        fakeTaskDataSource.serverConfirmation = kotlinx.coroutines.CompletableDeferred()
+
+        val task = Task(
+            id = "t-queued-sync",
+            title = "Tarea encolada en caché",
+            category = TaskCategory.PERSONAL,
+            priority = TaskPriority.ALTA,
+        )
+
+        val result = repository.upsertTask(task)
+        assertTrue(result is KronoResult.Success)
+
+        val cached = fakeTaskDao.getTaskById(testUser.id, "t-queued-sync")
+        assertNotNull(cached)
+        assertEquals(TaskEntity.STATUS_PENDING_SYNC, cached?.syncStatus)
     }
 
     /**
@@ -376,5 +396,87 @@ class FirestoreTaskRepositoryRoomTest {
         assertTrue(deleteResult is KronoResult.Success)
 
         assertNull(fakeTaskDao.getTaskById(testUser.id, "t-borrar"))
+    }
+
+    /**
+     * Verifica que updateTaskFields ante timeout mantenga la tarea en Room con estado PENDING_SYNC.
+     */
+    @Test
+    fun updateTaskFields_cuandoSeAgotaElTimeout_mantieneRegistroEnRoomComoPendingSync() = runTest {
+        val task = Task(id = "t-timeout-fields", title = "Título Original")
+        repository.upsertTask(task)
+
+        // Simulamos timeout remoto al actualizar campos
+        fakeTaskDataSource.serverConfirmation = kotlinx.coroutines.CompletableDeferred()
+
+        val modified = task.copy(title = "Título Modificado")
+        val result = repository.updateTaskFields(modified, setOf(TaskField.TITLE))
+        assertTrue(result is KronoResult.Success)
+
+        val cached = fakeTaskDao.getTaskById(testUser.id, "t-timeout-fields")
+        assertNotNull(cached)
+        assertEquals("Título Modificado", cached?.title)
+        assertEquals(TaskEntity.STATUS_PENDING_SYNC, cached?.syncStatus)
+    }
+
+    /**
+     * Verifica que updateTaskFields ante excepción remota actualice Room con estado FAILED y propague el error.
+     */
+    @Test
+    fun updateTaskFields_cuandoRemotoLanzaExcepcion_actualizaRegistroEnRoomComoFailedYPropagaError() = runTest {
+        val task = Task(id = "t-error-fields", title = "Título Base")
+        repository.upsertTask(task)
+
+        fakeTaskDataSource.failure = IOException("Error de red en actualización parcial")
+
+        val modified = task.copy(title = "Título Fallido")
+        val result = repository.updateTaskFields(modified, setOf(TaskField.TITLE))
+        assertTrue(result is KronoResult.Error)
+
+        val cached = fakeTaskDao.getTaskById(testUser.id, "t-error-fields")
+        assertNotNull(cached)
+        assertEquals("Título Fallido", cached?.title)
+        assertEquals(TaskEntity.STATUS_FAILED, cached?.syncStatus)
+    }
+
+    /**
+     * Verifica que observeTasks emita tareas con estados explícitos CONFIRMED, PENDING_SYNC, FAILED y REJECTED
+     * cuando se recuperan desde la base local Room.
+     */
+    @Test
+    fun observeTasks_cuandoRoomTieneTareasEnVariosEstados_emitePreservandoEstados() = runTest {
+        val tConfirmed = Task(id = "t-conf", title = "Tarea Confirmada")
+        val tPending = Task(id = "t-pend", title = "Tarea Pendiente")
+        val tFailed = Task(id = "t-fail", title = "Tarea Fallida")
+        val tRejected = Task(id = "t-rej", title = "Tarea Rechazada")
+
+        fakeTaskDao.upsertTasks(
+            listOf(
+                tConfirmed.toEntity(testUser.id, TaskEntity.STATUS_CONFIRMED),
+                tPending.toEntity(testUser.id, TaskEntity.STATUS_PENDING_SYNC),
+                tFailed.toEntity(testUser.id, TaskEntity.STATUS_FAILED),
+                tRejected.toEntity(testUser.id, TaskEntity.STATUS_REJECTED),
+            ),
+        )
+
+        fakeTaskDataSource.listenerFailure = FirebaseFirestoreException(
+            "Offline",
+            FirebaseFirestoreException.Code.UNAVAILABLE,
+        )
+
+        repository.observeTasks().test {
+            val result = awaitItem()
+            assertTrue(result is KronoResult.Success)
+            val list = (result as KronoResult.Success).data
+            assertEquals(4, list.size)
+
+            val statusMap = list.associate { it.id to it.syncStatus }
+            assertEquals(com.krono.core.domain.sync.SyncStatus.CONFIRMED, statusMap["t-conf"])
+            assertEquals(com.krono.core.domain.sync.SyncStatus.PENDING_SYNC, statusMap["t-pend"])
+            assertEquals(com.krono.core.domain.sync.SyncStatus.FAILED, statusMap["t-fail"])
+            assertEquals(com.krono.core.domain.sync.SyncStatus.REJECTED, statusMap["t-rej"])
+
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 }

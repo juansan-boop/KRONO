@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
 import com.krono.core.domain.auth.ObserveSessionUseCase
 import com.krono.feature.profile.data.NoOpAuthRepository
-import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.data.ProfileRepositoryImpl
+import com.krono.feature.profile.domain.ProfileRepository
 import com.krono.feature.profile.domain.UpdateProfileUseCase
 import com.krono.feature.profile.ui.toProfileSaveError
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,13 +31,13 @@ import javax.inject.Inject
  *
  * @property updateProfile Caso de uso para validar y persistir los cambios de perfil.
  * @property observeSession Caso de uso para vincular la cuenta activa de Firebase Authentication.
- * @property localStore Almacén local persistente para cargar los datos de perfil actuales.
+ * @property profileRepository Repositorio unificado para identidad, perfil y sincronización con Firestore.
  */
 @HiltViewModel
 class EditProfileViewModel @Inject constructor(
     private val updateProfile: UpdateProfileUseCase,
     private val observeSession: ObserveSessionUseCase,
-    private val localStore: ProfileLocalStore,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel() {
 
     constructor(
@@ -45,30 +46,31 @@ class EditProfileViewModel @Inject constructor(
     ) : this(
         updateProfile = updateProfile,
         observeSession = observeSession,
-        localStore = ProfileLocalStore(),
+        profileRepository = ProfileRepositoryImpl(),
     )
 
     constructor(
         updateProfile: UpdateProfileUseCase,
-        localStore: ProfileLocalStore,
+        profileRepository: ProfileRepository,
     ) : this(
         updateProfile = updateProfile,
         observeSession = ObserveSessionUseCase(NoOpAuthRepository()),
-        localStore = localStore,
+        profileRepository = profileRepository,
     )
 
     constructor(updateProfile: UpdateProfileUseCase) : this(
         updateProfile = updateProfile,
         observeSession = ObserveSessionUseCase(NoOpAuthRepository()),
-        localStore = ProfileLocalStore(),
+        profileRepository = ProfileRepositoryImpl(),
     )
 
     private val _uiState = MutableStateFlow(
         EditProfileUiState(
-            name = localStore.userName.value,
-            role = localStore.userRole.value,
-            email = localStore.userEmail.value,
-            avatarUri = localStore.avatarUri.value,
+            name = profileRepository.userName.value,
+            role = profileRepository.userRole.value,
+            email = profileRepository.userEmail.value,
+            avatarUri = profileRepository.avatarUri.value,
+            syncState = profileRepository.syncState.value,
         ),
     )
 
@@ -84,21 +86,27 @@ class EditProfileViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            profileRepository.syncState.collect { syncState ->
+                _uiState.update { it.copy(syncState = syncState) }
+            }
+        }
+
+        viewModelScope.launch {
             observeSession().collect { user ->
                 if (user != null) {
-                    localStore.bindUser(user.id, user.email)
+                    profileRepository.bindUser(user.id, user.email)
                     if (isInitializedForUser != user.id) {
                         isInitializedForUser = user.id
                         _uiState.update { current ->
                             current.copy(
                                 email = user.email,
-                                name = if (current.name.isBlank() || current.name == ProfileLocalStore.DEFAULT_NAME) {
-                                    localStore.userName.value
+                                name = if (current.name.isBlank() || current.name == DEFAULT_NAME) {
+                                    profileRepository.userName.value
                                 } else {
                                     current.name
                                 },
-                                role = if (current.role.isBlank()) localStore.userRole.value else current.role,
-                                avatarUri = current.avatarUri ?: localStore.avatarUri.value,
+                                role = if (current.role.isBlank()) profileRepository.userRole.value else current.role,
+                                avatarUri = current.avatarUri ?: profileRepository.avatarUri.value,
                             )
                         }
                     }
@@ -142,6 +150,7 @@ class EditProfileViewModel @Inject constructor(
      * @param uri Cadena que representa el URI de la imagen seleccionada.
      */
     fun onAvatarSelected(uri: String) {
+        profileRepository.saveAvatarUri(uri)
         _uiState.update { current ->
             current.copy(
                 avatarUri = uri,
@@ -156,6 +165,15 @@ class EditProfileViewModel @Inject constructor(
     fun onCancel() {
         viewModelScope.launch {
             _events.send(EditProfileEvent.NavigateBack)
+        }
+    }
+
+    /**
+     * Reintenta la sincronización con Cloud Firestore invocando el repositorio de perfil.
+     */
+    fun retrySync() {
+        viewModelScope.launch {
+            profileRepository.retrySync()
         }
     }
 
@@ -215,6 +233,7 @@ class EditProfileViewModel @Inject constructor(
     }
 
     private companion object {
+        const val DEFAULT_NAME = "Usuario"
         const val OPERATION_SAVE_PROFILE = "guardar perfil"
     }
 }

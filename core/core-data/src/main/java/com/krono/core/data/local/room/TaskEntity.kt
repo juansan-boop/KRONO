@@ -2,6 +2,7 @@ package com.krono.core.data.local.room
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.krono.core.domain.sync.SyncStatus
 import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
@@ -106,6 +107,18 @@ data class TaskEntity(
             TaskPriority.MEDIA
         }
 
+        val parsedSyncStatus = when (syncStatus) {
+            STATUS_CONFIRMED -> SyncStatus.CONFIRMED
+            STATUS_PENDING_SYNC -> SyncStatus.PENDING_SYNC
+            STATUS_FAILED -> SyncStatus.FAILED
+            STATUS_REJECTED -> SyncStatus.REJECTED
+            else -> try {
+                SyncStatus.valueOf(syncStatus)
+            } catch (_: Exception) {
+                SyncStatus.CONFIRMED
+            }
+        }
+
         return Task(
             id = id,
             title = title,
@@ -118,6 +131,7 @@ data class TaskEntity(
             note = note,
             subtasks = parsedSubtasks,
             isDeleted = isDeleted,
+            syncStatus = parsedSyncStatus,
         )
     }
 
@@ -125,6 +139,7 @@ data class TaskEntity(
         const val STATUS_CONFIRMED = "CONFIRMED"
         const val STATUS_PENDING_SYNC = "PENDING_SYNC"
         const val STATUS_FAILED = "FAILED"
+        const val STATUS_REJECTED = "REJECTED"
 
         /**
          * Mapea una tarea del dominio [Task] a la entidad [TaskEntity] lista para persistencia en Room.
@@ -137,7 +152,12 @@ data class TaskEntity(
         fun fromDomain(
             task: Task,
             userId: String,
-            syncStatus: String = STATUS_CONFIRMED,
+            syncStatus: String = when (task.syncStatus) {
+                SyncStatus.CONFIRMED -> STATUS_CONFIRMED
+                SyncStatus.PENDING_SYNC -> STATUS_PENDING_SYNC
+                SyncStatus.FAILED -> STATUS_FAILED
+                SyncStatus.REJECTED -> STATUS_REJECTED
+            },
         ): TaskEntity {
             val subtasksSerialized = try {
                 buildJsonArray {
@@ -173,15 +193,43 @@ data class TaskEntity(
                 syncStatus = syncStatus,
             )
         }
+
+        /**
+         * Sobrecarga tipada para mapear [Task] a [TaskEntity] usando [SyncStatus].
+         */
+        fun fromDomain(
+            task: Task,
+            userId: String,
+            syncStatus: SyncStatus,
+        ): TaskEntity = fromDomain(
+            task = task,
+            userId = userId,
+            syncStatus = when (syncStatus) {
+                SyncStatus.CONFIRMED -> STATUS_CONFIRMED
+                SyncStatus.PENDING_SYNC -> STATUS_PENDING_SYNC
+                SyncStatus.FAILED -> STATUS_FAILED
+                SyncStatus.REJECTED -> STATUS_REJECTED
+            },
+        )
     }
 }
 
 /**
- * Función de extensión para transformar cómodamente un [Task] del dominio a [TaskEntity].
+ * Función de extensión para transformar un [Task] del dominio a [TaskEntity] especificando el estado en String.
  *
  * @param userId Identificador del usuario activo.
- * @param syncStatus Estado de sincronización local.
+ * @param syncStatus Estado de sincronización local como cadena.
  * @return Instancia correspondiente de [TaskEntity].
  */
-fun Task.toEntity(userId: String, syncStatus: String = TaskEntity.STATUS_CONFIRMED): TaskEntity =
+fun Task.toEntity(userId: String, syncStatus: String): TaskEntity =
+    TaskEntity.fromDomain(this, userId, syncStatus)
+
+/**
+ * Función de extensión para transformar un [Task] del dominio a [TaskEntity] con [SyncStatus].
+ *
+ * @param userId Identificador del usuario activo.
+ * @param syncStatus Estado de sincronización local tipado (por defecto toma el de la tarea).
+ * @return Instancia correspondiente de [TaskEntity].
+ */
+fun Task.toEntity(userId: String, syncStatus: SyncStatus = this.syncStatus): TaskEntity =
     TaskEntity.fromDomain(this, userId, syncStatus)

@@ -11,14 +11,44 @@ import kotlin.time.Duration.Companion.seconds
 internal val WRITE_CONFIRMATION_TIMEOUT: Duration = 2.seconds
 
 /**
- * Ejecuta [write] (que suspende hasta la confirmación del servidor) esperando como mucho
- * [WRITE_CONFIRMATION_TIMEOUT].
+ * Resultado explícito de la confirmación de una escritura en Firestore.
+ */
+sealed interface WriteConfirmationResult {
+    /** La escritura fue confirmada por el servidor remoto dentro del tiempo límite. */
+    data object Confirmed : WriteConfirmationResult
+
+    /** El tiempo límite expiró sin confirmación del servidor; la escritura quedó encolada en la caché local offline. */
+    data object Queued : WriteConfirmationResult
+}
+
+/**
+ * Ejecuta [write] (que suspende hasta la confirmación del servidor) esperando como mucho [timeout].
  *
  * Firestore aplica cada escritura al instante en su caché local y la encola para el servidor; sin
- * red la confirmación no llega hasta reconectar. Por eso, si vence el límite, la escritura se da
- * por encolada y no es un error (F-02 CA-1). Los errores que llegan antes del límite (validación
- * local, permiso denegado, documento inexistente) se propagan como excepción.
+ * red la confirmación no llega hasta reconectar.
+ *
+ * @param timeout Tiempo máximo de espera a la confirmación del servidor.
+ * @param write Operación de escritura suspendida.
+ * @return [WriteConfirmationResult.Confirmed] si el servidor confirmó dentro del límite,
+ * o [WriteConfirmationResult.Queued] si se agotó el tiempo. Errores reales se propagan como excepción.
  */
-internal suspend fun awaitConfirmationOrQueued(write: suspend () -> Unit) {
-    withTimeoutOrNull(WRITE_CONFIRMATION_TIMEOUT) { write() }
+internal suspend fun awaitWriteConfirmation(
+    timeout: Duration = WRITE_CONFIRMATION_TIMEOUT,
+    write: suspend () -> Unit,
+): WriteConfirmationResult {
+    val completed = withTimeoutOrNull(timeout) {
+        write()
+        true
+    }
+    return if (completed == true) {
+        WriteConfirmationResult.Confirmed
+    } else {
+        WriteConfirmationResult.Queued
+    }
 }
+
+/**
+ * Función de compatibilidad que delega en [awaitWriteConfirmation].
+ */
+internal suspend fun awaitConfirmationOrQueued(write: suspend () -> Unit): WriteConfirmationResult =
+    awaitWriteConfirmation(write = write)

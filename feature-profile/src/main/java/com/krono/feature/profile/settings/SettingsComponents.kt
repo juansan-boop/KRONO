@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -74,6 +75,7 @@ import com.krono.core.ui.theme.SurfaceContainerHighest
 import com.krono.core.ui.theme.SurfaceContainerLow
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.profile.R
+import com.krono.feature.profile.domain.SyncState
 import com.krono.feature.profile.ui.rememberAsyncAvatarBitmap
 
 /**
@@ -165,12 +167,14 @@ internal fun SettingsTopBar(
  *
  * @param state Estado visual del perfil.
  * @param onEditProfileClick Acción para editar la información del perfil.
+ * @param onRetrySync Acción para reintentar la sincronización remota con Cloud Firestore.
  * @param modifier Modificador de diseño.
  */
 @Composable
 internal fun ProfileHeader(
     state: SettingsUiState,
     onEditProfileClick: () -> Unit = {},
+    onRetrySync: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -308,6 +312,49 @@ internal fun ProfileHeader(
             // Sub-barra de Sincronización KRONO AI
             HorizontalDivider(color = OutlineVariant.copy(alpha = 0.4f), thickness = KronoGlass.borderWidth)
 
+            val isPending = state.syncState == SyncState.PENDING_SYNC
+            val isRejected = state.syncState == SyncState.REJECTED
+
+            val dotColor = when {
+                isRejected -> ErrorColor
+                else -> SecondaryCyan
+            }
+
+            val syncPulseTransition = rememberInfiniteTransition(label = "sync_pulse")
+            val syncPulseAlpha by syncPulseTransition.animateFloat(
+                initialValue = 0.35f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "sync_pulse_alpha",
+            )
+
+            val statusTextRes = when {
+                isRejected -> R.string.profile_ai_sync_error
+                isPending -> R.string.profile_ai_sync_pending
+                else -> R.string.profile_ai_sync_completed
+            }
+            val statusCdRes = when {
+                isRejected -> R.string.profile_ai_sync_cd_status_error
+                isPending -> R.string.profile_ai_sync_cd_status_pending
+                else -> R.string.profile_ai_sync_cd_status_confirmed
+            }
+            val chipBg = when {
+                isRejected -> ErrorColor.copy(alpha = 0.15f)
+                else -> SecondaryCyan.copy(alpha = 0.12f)
+            }
+            val chipBorder = when {
+                isRejected -> ErrorColor.copy(alpha = 0.40f)
+                isPending -> SecondaryCyan.copy(alpha = 0.35f)
+                else -> SecondaryCyan.copy(alpha = 0.30f)
+            }
+            val chipTextColor = when {
+                isRejected -> ErrorColor
+                else -> SecondaryCyan
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -321,7 +368,8 @@ internal fun ProfileHeader(
                         modifier = Modifier
                             .size(KronoSpacing.sm)
                             .clip(CircleShape)
-                            .background(SecondaryCyan),
+                            .background(dotColor)
+                            .then(if (isPending) Modifier.alpha(syncPulseAlpha) else Modifier),
                     )
                     Text(
                         text = stringResource(R.string.profile_ai_sync_label),
@@ -330,18 +378,46 @@ internal fun ProfileHeader(
                     )
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(KronoSpacing.xs),
-                    color = SecondaryCyan.copy(alpha = 0.12f),
-                    border = BorderStroke(KronoGlass.borderWidth, SecondaryCyan.copy(alpha = 0.30f)),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(KronoSpacing.xs),
                 ) {
-                    Text(
-                        text = stringResource(R.string.profile_ai_sync_active),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = SecondaryCyan,
-                        modifier = Modifier.padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs / 2),
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(KronoSpacing.xs),
+                        color = chipBg,
+                        border = BorderStroke(KronoGlass.borderWidth, chipBorder),
+                    ) {
+                        Text(
+                            text = stringResource(statusTextRes),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = chipTextColor,
+                            modifier = Modifier.padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs / 2),
+                        )
+                    }
+
+                    if (state.syncState != SyncState.CONFIRMED) {
+                        TextButton(
+                            onClick = onRetrySync,
+                            modifier = Modifier.heightIn(min = KronoSizes.minTouchTarget),
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = chipTextColor,
+                            ),
+                        ) {
+                            Icon(
+                                painter = painterResource(KronoIcons.Sync),
+                                contentDescription = stringResource(R.string.profile_ai_sync_cd_retry),
+                                tint = chipTextColor,
+                                modifier = Modifier.size(KronoSizes.iconSmall),
+                            )
+                            Spacer(Modifier.width(KronoSpacing.xs))
+                            Text(
+                                text = stringResource(R.string.profile_ai_sync_retry),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
             }
         }

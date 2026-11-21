@@ -110,6 +110,33 @@ class TaskEntityTest {
     }
 
     /**
+     * Verifica que el estado de sincronización REJECTED se preserve correctamente ante rechazos por reglas del servidor.
+     */
+    @Test
+    fun fromDomain_conEstadoRejected_asignaStatusRejected() {
+        val entity = TaskEntity.fromDomain(sampleTask, userId = "user-1", syncStatus = TaskEntity.STATUS_REJECTED)
+        assertEquals(TaskEntity.STATUS_REJECTED, entity.syncStatus)
+    }
+
+    /**
+     * Verifica que toDomain mapee fielmente todos los estados de sincronización.
+     */
+    @Test
+    fun toDomain_mapeaTodosLosEstadosDeSincronizacion() {
+        val entityConfirmed = sampleTask.toEntity("u-1", TaskEntity.STATUS_CONFIRMED)
+        assertEquals(com.krono.core.domain.sync.SyncStatus.CONFIRMED, entityConfirmed.toDomain().syncStatus)
+
+        val entityPending = sampleTask.toEntity("u-1", TaskEntity.STATUS_PENDING_SYNC)
+        assertEquals(com.krono.core.domain.sync.SyncStatus.PENDING_SYNC, entityPending.toDomain().syncStatus)
+
+        val entityFailed = sampleTask.toEntity("u-1", TaskEntity.STATUS_FAILED)
+        assertEquals(com.krono.core.domain.sync.SyncStatus.FAILED, entityFailed.toDomain().syncStatus)
+
+        val entityRejected = sampleTask.toEntity("u-1", TaskEntity.STATUS_REJECTED)
+        assertEquals(com.krono.core.domain.sync.SyncStatus.REJECTED, entityRejected.toDomain().syncStatus)
+    }
+
+    /**
      * Verifica que si no se provee syncStatus en fromDomain, el valor por defecto sea STATUS_CONFIRMED.
      */
     @Test

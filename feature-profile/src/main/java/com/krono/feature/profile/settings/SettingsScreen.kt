@@ -1,5 +1,8 @@
 package com.krono.feature.profile.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -7,11 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +57,7 @@ import com.krono.core.ui.theme.SecondaryCyan
 import com.krono.core.ui.theme.SurfaceContainerLow
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.profile.R
+import com.krono.feature.profile.domain.SyncState
 
 /**
  * Pantalla principal stateless de Ajustes y Perfil (F-19, F-20, F-25 CA-4).
@@ -76,6 +83,7 @@ import com.krono.feature.profile.R
  * @param onRequestLogout Acción para solicitar el cierre de sesión (abre el diálogo).
  * @param onDismissLogoutDialog Acción para cancelar el cierre de sesión y permanecer en KRONO.
  * @param onConfirmLogout Acción para confirmar el cierre de sesión.
+ * @param onRetrySync Acción para reintentar la sincronización remota con Cloud Firestore.
  * @param modifier Modificador de diseño.
  */
 @Composable
@@ -95,6 +103,7 @@ fun SettingsScreen(
     onConfirmLogout: () -> Unit,
     showFocusTemplatesDialog: Boolean = false,
     onDismissFocusTemplatesDialog: () -> Unit = {},
+    onRetrySync: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -114,10 +123,23 @@ fun SettingsScreen(
             // 1. Barra superior
             SettingsTopBar(onBackClick = onBackClick)
 
+            // Banner superior discreto de sincronización remota si no está confirmada
+            AnimatedVisibility(
+                visible = state.syncState != SyncState.CONFIRMED,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                SettingsSyncBanner(
+                    syncState = state.syncState,
+                    onRetrySync = onRetrySync,
+                )
+            }
+
             // 2. Tarjeta de identidad de perfil (F-19)
             ProfileHeader(
                 state = state,
                 onEditProfileClick = onEditProfileClick,
+                onRetrySync = onRetrySync,
             )
 
             // 3. Bloque: RITMO Y DESCANSO (Inteligencia Circadiana)
@@ -412,6 +434,77 @@ fun SettingsScreen(
     }
 }
 
+/**
+ * Banner superior discreto en pantalla de Ajustes cuando la sincronización remota no está confirmada.
+ *
+ * Muestra estilo Lumina Glass translúcido con borde Neón Cyan para pendientes o ErrorColor
+ * para fallos/rechazos técnicos, con botón accesible de reintento.
+ *
+ * @param syncState Estado actual de sincronización remota ([SyncState]).
+ * @param onRetrySync Acción para reintentar la sincronización remota.
+ * @param modifier Modificador de diseño.
+ */
+@Composable
+private fun SettingsSyncBanner(
+    syncState: SyncState,
+    onRetrySync: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isPending = syncState == SyncState.PENDING_SYNC
+    val borderColor = if (isPending) SecondaryCyan.copy(alpha = 0.40f) else ErrorColor.copy(alpha = 0.50f)
+    val iconRes = if (isPending) KronoIcons.Sync else KronoIcons.Error
+    val iconTint = if (isPending) SecondaryCyan else ErrorColor
+    val descRes = if (isPending) R.string.settings_sync_banner_pending else R.string.settings_sync_banner_rejected
+    val cdIconRes = if (isPending) R.string.profile_ai_sync_cd_status_pending else R.string.profile_ai_sync_cd_status_error
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .glassSurface(
+                cornerRadius = KronoSpacing.md,
+                borderColor = borderColor,
+            )
+            .padding(KronoSpacing.md),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KronoSpacing.md),
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = stringResource(cdIconRes),
+                tint = iconTint,
+                modifier = Modifier.size(KronoSizes.iconMedium),
+            )
+            Text(
+                text = stringResource(descRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurface,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = onRetrySync,
+                modifier = Modifier.heightIn(min = KronoSizes.minTouchTarget),
+                colors = ButtonDefaults.textButtonColors(contentColor = iconTint),
+            ) {
+                Icon(
+                    painter = painterResource(KronoIcons.Sync),
+                    contentDescription = stringResource(R.string.settings_cd_retry_sync),
+                    tint = iconTint,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Spacer(Modifier.width(KronoSpacing.xs))
+                Text(
+                    text = stringResource(R.string.settings_action_retry),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
 // =========================================================================
 // Previews de Compose con KronoTheme
 // =========================================================================
@@ -442,6 +535,7 @@ private fun SettingsScreenDefaultPreview() {
             onRequestLogout = {},
             onDismissLogoutDialog = {},
             onConfirmLogout = {},
+            onRetrySync = {},
         )
     }
 }
@@ -470,6 +564,7 @@ private fun SettingsScreenLogoutDialogPreview() {
             onRequestLogout = {},
             onDismissLogoutDialog = {},
             onConfirmLogout = {},
+            onRetrySync = {},
         )
     }
 }
@@ -498,6 +593,63 @@ private fun SettingsScreenLoggingOutPreview() {
             onRequestLogout = {},
             onDismissLogoutDialog = {},
             onConfirmLogout = {},
+            onRetrySync = {},
+        )
+    }
+}
+
+/** Preview 4: Estado con sincronización remota pendiente. */
+@Preview(name = "Hub de Ajustes - Sincronización Pendiente", showBackground = true, backgroundColor = 0xFF121221)
+@Composable
+private fun SettingsScreenPendingSyncPreview() {
+    KronoTheme {
+        SettingsScreen(
+            state = SettingsUiState(
+                userName = "Juan Esteban",
+                userEmail = "juan.esteban@correo.com",
+                userRole = "Estudiante y trabajador",
+                syncState = SyncState.PENDING_SYNC,
+            ),
+            onBackClick = {},
+            onEditProfileClick = {},
+            onDynamicBreaksToggle = {},
+            onSilenceNotificationsToggle = {},
+            onFocusTemplatesClick = {},
+            onPriorityAlertsToggle = {},
+            onThemeSelectorClick = {},
+            onSecurityZoneClick = {},
+            onRequestLogout = {},
+            onDismissLogoutDialog = {},
+            onConfirmLogout = {},
+            onRetrySync = {},
+        )
+    }
+}
+
+/** Preview 5: Estado con error de sincronización remota. */
+@Preview(name = "Hub de Ajustes - Error de Sincronización", showBackground = true, backgroundColor = 0xFF121221)
+@Composable
+private fun SettingsScreenRejectedSyncPreview() {
+    KronoTheme {
+        SettingsScreen(
+            state = SettingsUiState(
+                userName = "Juan Esteban",
+                userEmail = "juan.esteban@correo.com",
+                userRole = "Estudiante y trabajador",
+                syncState = SyncState.REJECTED,
+            ),
+            onBackClick = {},
+            onEditProfileClick = {},
+            onDynamicBreaksToggle = {},
+            onSilenceNotificationsToggle = {},
+            onFocusTemplatesClick = {},
+            onPriorityAlertsToggle = {},
+            onThemeSelectorClick = {},
+            onSecurityZoneClick = {},
+            onRequestLogout = {},
+            onDismissLogoutDialog = {},
+            onConfirmLogout = {},
+            onRetrySync = {},
         )
     }
 }

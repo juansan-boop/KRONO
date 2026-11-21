@@ -5,12 +5,16 @@ import com.krono.core.common.KronoResult
 import com.krono.core.domain.auth.AuthError
 import com.krono.core.domain.auth.AuthRepository
 import com.krono.core.domain.auth.LogoutUseCase
+import com.krono.core.domain.auth.ObserveSessionUseCase
 import com.krono.core.domain.auth.User
 import com.krono.feature.profile.MainDispatcherRule
+import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
-
+import com.krono.feature.profile.data.ProfileRepositoryImpl
+import com.krono.feature.profile.domain.SyncState
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -21,9 +25,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-
-import com.krono.core.domain.auth.ObserveSessionUseCase
 
 /**
  * Doble de prueba en memoria para [AuthRepository] que soporta compuertas de suspensión ([gate])
@@ -51,13 +52,6 @@ private class TestAuthRepository : AuthRepository {
 
 /**
  * Pruebas unitarias para [SettingsViewModel] (F-19, F-20, F-25 CA-4).
- *
- * Valida de forma aislada:
- * - El estado inicial del hub de ajustes y perfil.
- * - La alternancia de interruptores (pausas dinámicas, silenciar notificaciones, alertas P1).
- * - La apertura y cierre seguro del diálogo de confirmación de cierre de sesión.
- * - La ejecución de [LogoutUseCase], manejo de carga [SettingsUiState.isLoggingOut] y emisión de [SettingsEvent.LoggedOut].
- * - El manejo de errores y la protección contra doble clic concurrente.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
@@ -85,6 +79,7 @@ class SettingsViewModelTest {
         assertFalse(state.showLogoutConfirmationDialog)
         assertFalse(state.isLoggingOut)
         assertNull(state.logoutError)
+        assertEquals(SyncState.CONFIRMED, state.syncState)
     }
 
     @Test
@@ -142,15 +137,12 @@ class SettingsViewModelTest {
         vm.onRequestLogout()
         vm.onConfirmLogout()
 
-        // Operación en progreso antes de completar el gate
         assertTrue(vm.uiState.value.isLoggingOut)
         assertTrue(vm.uiState.value.showLogoutConfirmationDialog)
 
-        // Intento de descartar cancelado por seguridad
         vm.onDismissLogoutDialog()
         assertTrue(vm.uiState.value.showLogoutConfirmationDialog)
 
-        // Liberar operación
         gate.complete(Unit)
         advanceUntilIdle()
 
@@ -189,7 +181,6 @@ class SettingsViewModelTest {
         assertEquals(LogoutError.NO_CONNECTION, state.logoutError)
     }
 
-
     @Test
     fun confirmarCierreDeSesionConDemasiadosIntentosExponeErrorTipado() = runTest {
         authRepository.failure = AuthError.TooManyRequests
@@ -213,6 +204,7 @@ class SettingsViewModelTest {
 
         assertEquals(LogoutError.UNEXPECTED, vm.uiState.value.logoutError)
     }
+
     @Test
     fun confirmarCierreDeSesionConErrorInesperadoExponeMensajeGenerico() = runTest {
         authRepository.failure = RuntimeException("")
@@ -239,10 +231,8 @@ class SettingsViewModelTest {
             vm.onConfirmLogout()
             assertTrue(vm.uiState.value.isLoggingOut)
 
-            // Segundo intento concurrente mientras el primero sigue bloqueado
             vm.onConfirmLogout()
 
-            // Liberamos compuerta
             gate.complete(Unit)
             advanceUntilIdle()
 
@@ -256,27 +246,29 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun modificarInterruptoresPersisteValoresEnProfileLocalStore() {
+    fun modificarInterruptoresPersisteValoresEnProfileRepository() {
         val store = ProfileLocalStore()
-        val vm = SettingsViewModel(LogoutUseCase(authRepository), store)
+        val repo = ProfileRepositoryImpl(store)
+        val vm = SettingsViewModel(LogoutUseCase(authRepository), repo)
 
         vm.onDynamicBreaksToggle(false)
-        assertFalse(store.dynamicBreaksEnabled.value)
+        assertFalse(repo.dynamicBreaksEnabled.value)
         assertFalse(vm.uiState.value.dynamicBreaksEnabled)
 
         vm.onSilenceNotificationsToggle(false)
-        assertFalse(store.silenceInternalNotificationsEnabled.value)
+        assertFalse(repo.silenceInternalNotificationsEnabled.value)
         assertFalse(vm.uiState.value.silenceInternalNotificationsEnabled)
 
         vm.onPriorityAlertsToggle(false)
-        assertFalse(store.priorityAlertsEnabled.value)
+        assertFalse(repo.priorityAlertsEnabled.value)
         assertFalse(vm.uiState.value.priorityAlertsEnabled)
     }
 
     @Test
-    fun cambioEnProfileLocalStoreActualizaAutomaticamenteElEstadoVisual() = runTest {
+    fun cambioEnProfileRepositoryActualizaAutomaticamenteElEstadoVisual() = runTest {
         val store = ProfileLocalStore()
-        val vm = SettingsViewModel(LogoutUseCase(authRepository), store)
+        val repo = ProfileRepositoryImpl(store)
+        val vm = SettingsViewModel(LogoutUseCase(authRepository), repo)
 
         store.saveProfile("Carlos Sainz", "Piloto F1")
         advanceUntilIdle()
@@ -290,10 +282,11 @@ class SettingsViewModelTest {
     @Test
     fun sesionDeUsuarioAutenticadoActualizaEmailYNombreEnSettings() = runTest {
         val store = ProfileLocalStore()
+        val repo = ProfileRepositoryImpl(store)
         val vm = SettingsViewModel(
             logout = LogoutUseCase(authRepository),
             observeSession = ObserveSessionUseCase(authRepository),
-            localStore = store,
+            profileRepository = repo,
         )
 
         authRepository.sessionFlow.value = User(id = "user_789", email = "maria.gonzalez@empresa.com")
@@ -306,11 +299,12 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun cambioDeAvatarEnProfileLocalStoreActualizaAvatarUriEnSettings() = runTest {
+    fun cambioDeAvatarEnProfileRepositoryActualizaAvatarUriEnSettings() = runTest {
         val store = ProfileLocalStore()
-        val vm = SettingsViewModel(LogoutUseCase(authRepository), store)
+        val repo = ProfileRepositoryImpl(store)
+        val vm = SettingsViewModel(LogoutUseCase(authRepository), repo)
 
-        store.saveAvatarUri("content://media/picker/photo123")
+        repo.saveAvatarUri("content://media/picker/photo123")
         advanceUntilIdle()
 
         val state = vm.uiState.value
@@ -322,11 +316,11 @@ class SettingsViewModelTest {
         val store = ProfileLocalStore()
         store.bindUser("user_sync_test", "sync@krono.app")
         val remoteDataSource = NoOpProfileRemoteDataSource()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
         val vm = SettingsViewModel(
             logout = LogoutUseCase(authRepository),
             observeSession = ObserveSessionUseCase(authRepository),
-            localStore = store,
-            remoteDataSource = remoteDataSource,
+            profileRepository = repo,
         )
 
         vm.onDynamicBreaksToggle(false)
@@ -334,20 +328,21 @@ class SettingsViewModelTest {
         vm.onPriorityAlertsToggle(false)
         advanceUntilIdle()
 
-        assertFalse(store.dynamicBreaksEnabled.value)
-        assertFalse(store.silenceInternalNotificationsEnabled.value)
-        assertFalse(store.priorityAlertsEnabled.value)
+        assertFalse(repo.dynamicBreaksEnabled.value)
+        assertFalse(repo.silenceInternalNotificationsEnabled.value)
+        assertFalse(repo.priorityAlertsEnabled.value)
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
     }
 
     @Test
     fun sesionDeUsuarioAutenticadoInvocaSyncFromRemoteEnSettings() = runTest {
         val store = ProfileLocalStore()
         val remoteDataSource = NoOpProfileRemoteDataSource()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
         val vm = SettingsViewModel(
             logout = LogoutUseCase(authRepository),
             observeSession = ObserveSessionUseCase(authRepository),
-            localStore = store,
-            remoteDataSource = remoteDataSource,
+            profileRepository = repo,
         )
 
         authRepository.sessionFlow.value = User(id = "user_remote_sync_456", email = "test@krono.app")
@@ -356,5 +351,96 @@ class SettingsViewModelTest {
         assertTrue(remoteDataSource.syncFromRemoteCalled)
         assertEquals("user_remote_sync_456", remoteDataSource.lastSyncUserId)
     }
-}
 
+    @Test
+    fun retrySyncInvocaSincronizacionRemotaEnSettings() = runTest {
+        val store = ProfileLocalStore()
+        store.bindUser("user_settings_retry", "test@krono.app")
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val vm = SettingsViewModel(
+            logout = LogoutUseCase(authRepository),
+            observeSession = ObserveSessionUseCase(authRepository),
+            profileRepository = repo,
+        )
+
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
+    }
+
+    @Test
+    fun uiStateReflejaEstadoPendingSyncAlAlternarInterruptorOfflineYReintentoLoRecuperaAConfirmed() = runTest {
+        var isOnline = false
+        val store = ProfileLocalStore()
+        store.bindUser("user_settings_offline", "test@krono.app")
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        remoteDataSource.shouldFail = com.krono.feature.profile.domain.NetworkUnavailableException()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { isOnline })
+        val vm = SettingsViewModel(
+            logout = LogoutUseCase(authRepository),
+            observeSession = ObserveSessionUseCase(authRepository),
+            profileRepository = repo,
+        )
+
+        vm.onDynamicBreaksToggle(false)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.dynamicBreaksEnabled)
+        assertEquals(SyncState.PENDING_SYNC, vm.uiState.value.syncState)
+
+        // Se restaura conectividad y reintenta
+        isOnline = true
+        remoteDataSource.shouldFail = null
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
+    }
+
+    @Test
+    fun uiStateReflejaEstadoRejectedAnteFalloRemotoAlAlternarInterruptorYReintentoLoRecuperaAConfirmed() = runTest {
+        val store = ProfileLocalStore()
+        store.bindUser("user_settings_rejected", "test@krono.app")
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        remoteDataSource.shouldFail = IllegalStateException("FIRESTORE_TOGGLE_FAIL")
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val vm = SettingsViewModel(
+            logout = LogoutUseCase(authRepository),
+            observeSession = ObserveSessionUseCase(authRepository),
+            profileRepository = repo,
+        )
+
+        vm.onPriorityAlertsToggle(false)
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.priorityAlertsEnabled)
+        assertEquals(SyncState.REJECTED, vm.uiState.value.syncState)
+
+        // Se arregla el error remoto y reintenta
+        remoteDataSource.shouldFail = null
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
+    }
+
+    @Test
+    fun retrySyncMantienePendingSyncSiSettingsReintentaOffline() = runTest {
+        val store = ProfileLocalStore()
+        store.bindUser("user_settings_offline_retry", "test@krono.app")
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { false })
+        val vm = SettingsViewModel(
+            logout = LogoutUseCase(authRepository),
+            observeSession = ObserveSessionUseCase(authRepository),
+            profileRepository = repo,
+        )
+
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.PENDING_SYNC, vm.uiState.value.syncState)
+    }
+}

@@ -2,14 +2,24 @@ package com.krono.feature.profile.edit
 
 import app.cash.turbine.test
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.auth.AuthRepository
+import com.krono.core.domain.auth.ObserveSessionUseCase
+import com.krono.core.domain.auth.User
 import com.krono.feature.profile.MainDispatcherRule
+import com.krono.feature.profile.data.ConnectivityChecker
+import com.krono.feature.profile.data.NoOpAuthRepository
+import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.data.ProfileRepositoryImpl
 import com.krono.feature.profile.domain.BlankRoleException
+import com.krono.feature.profile.domain.ProfileRepository
+import com.krono.feature.profile.domain.SyncState
 import com.krono.feature.profile.domain.UpdateProfileUseCase
 import com.krono.feature.profile.ui.ProfileSaveError
-
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -20,19 +30,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-import com.krono.core.domain.auth.AuthRepository
-import com.krono.core.domain.auth.ObserveSessionUseCase
-import com.krono.core.domain.auth.User
-import com.krono.feature.profile.data.NoOpAuthRepository
-import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-
 /**
  * Doble de prueba en memoria para [UpdateProfileUseCase] que permite simular latencia
  * suspendida con compuertas ([gate]), registrar llamadas y simular fallos de persistencia.
  */
-private class TestUpdateProfileUseCase : UpdateProfileUseCase() {
+private class TestUpdateProfileUseCase(
+    repository: ProfileRepository = ProfileRepositoryImpl(),
+) : UpdateProfileUseCase(repository) {
     var failure: Throwable? = null
     var gate: CompletableDeferred<Unit>? = null
     var callCount: Int = 0
@@ -61,15 +65,6 @@ private class TestUpdateProfileUseCase : UpdateProfileUseCase() {
 
 /**
  * Pruebas unitarias para [EditProfileViewModel] (F-19 CA-2: Edición de Perfil).
- *
- * Valida de forma exhaustiva:
- * - El estado inicial por defecto del formulario.
- * - La actualización de nombre y rol junto con la limpieza de errores previos.
- * - La validación obligatoria ante nombres en blanco sin invocar el caso de uso.
- * - La protección estricta contra doble envío concurrente mientras [EditProfileUiState.isSaving] es true.
- * - El flujo de guardado exitoso con emisión de [EditProfileEvent.ProfileSaved].
- * - El manejo y exposición de errores si la persistencia falla.
- * - La cancelación del formulario con emisión de [EditProfileEvent.NavigateBack].
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class EditProfileViewModelTest {
@@ -107,6 +102,7 @@ class EditProfileViewModelTest {
         assertFalse(state.isNameMissing)
         assertNull(state.saveError)
         assertTrue(state.canSave)
+        assertEquals(SyncState.CONFIRMED, state.syncState)
     }
 
     @Test
@@ -159,13 +155,10 @@ class EditProfileViewModelTest {
             vm.onNameChange("Esteban Sora")
             vm.onSave()
 
-            // Estado en suspensión de guardado
             assertTrue(vm.uiState.value.isSaving)
 
-            // Segundo intento inmediato (simulando doble clic)
             vm.onSave()
 
-            // Liberamos la operación
             gate.complete(Unit)
             advanceUntilIdle()
 
@@ -173,7 +166,7 @@ class EditProfileViewModelTest {
             expectNoEvents()
         }
 
-        assertEquals("No debe invocar el caso de uso nuevamente mientras isSaving está activo", 1, updateProfileUseCase.callCount)
+        assertEquals(1, updateProfileUseCase.callCount)
         assertFalse(vm.uiState.value.isSaving)
         assertTrue(vm.uiState.value.isSuccess)
     }
@@ -217,7 +210,6 @@ class EditProfileViewModelTest {
         }
     }
 
-
     @Test
     fun fallaDeValidacionDelCasoDeUsoExponeErrorDeDatosInvalidos() = runTest {
         updateProfileUseCase.failure = BlankRoleException()
@@ -242,6 +234,7 @@ class EditProfileViewModelTest {
 
         assertNull(vm.uiState.value.saveError)
     }
+
     @Test
     fun cancelarEmiteEventoNavigateBackSinModificarDatos() = runTest {
         val vm = createViewModel()
@@ -257,10 +250,11 @@ class EditProfileViewModelTest {
     }
 
     @Test
-    fun guardarPerfilPersisteDatosEnProfileLocalStore() = runTest {
+    fun guardarPerfilPersisteDatosEnProfileRepository() = runTest {
         val store = ProfileLocalStore()
-        val updateUseCase = UpdateProfileUseCase(store)
-        val vm = EditProfileViewModel(updateUseCase, store)
+        val repo = ProfileRepositoryImpl(store)
+        val updateUseCase = UpdateProfileUseCase(repo)
+        val vm = EditProfileViewModel(updateUseCase, repo)
 
         vm.onNameChange("Beatriz Pinzón")
         vm.onRoleChange("Economista Senior")
@@ -273,8 +267,8 @@ class EditProfileViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
 
-        assertEquals("Beatriz Pinzón", store.userName.value)
-        assertEquals("Economista Senior", store.userRole.value)
+        assertEquals("Beatriz Pinzón", repo.userName.value)
+        assertEquals("Economista Senior", repo.userRole.value)
     }
 
     @Test
@@ -318,8 +312,9 @@ class EditProfileViewModelTest {
             override fun observeSession(): Flow<User?> = sessionFlow
         }
         val store = ProfileLocalStore()
+        val repo = ProfileRepositoryImpl(store)
         val observeSession = ObserveSessionUseCase(authRepo)
-        val vm = EditProfileViewModel(updateProfileUseCase, observeSession, store)
+        val vm = EditProfileViewModel(updateProfileUseCase, observeSession, repo)
 
         sessionFlow.value = User(id = "user_456", email = "juan.esteban@correo.com")
         advanceUntilIdle()
@@ -335,8 +330,9 @@ class EditProfileViewModelTest {
         val store = ProfileLocalStore()
         store.bindUser("user_999", "ana.torres@krono.app")
         val remoteDataSource = NoOpProfileRemoteDataSource()
-        val updateUseCase = UpdateProfileUseCase(store, remoteDataSource)
-        val vm = EditProfileViewModel(updateUseCase, store)
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val updateUseCase = UpdateProfileUseCase(repo)
+        val vm = EditProfileViewModel(updateUseCase, repo)
 
         vm.onNameChange("Ana Torres")
         vm.onRoleChange("Trabajador tiempo completo")
@@ -353,6 +349,7 @@ class EditProfileViewModelTest {
         assertEquals("Ana Torres", remoteDataSource.lastSavedName)
         assertEquals("Trabajador tiempo completo", remoteDataSource.lastSavedRole)
         assertEquals("content://media/picker/photo_789", remoteDataSource.lastSavedAvatarUri)
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
     }
 
     @Test
@@ -368,19 +365,22 @@ class EditProfileViewModelTest {
                 throw RuntimeException("PERMISSION_DENIED")
             }
         }
-        val updateUseCase = UpdateProfileUseCase(store, remoteDataSource)
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val updateUseCase = UpdateProfileUseCase(repo)
         val result = updateUseCase("Carlos Gómez", "Estudiante", null)
 
         assertTrue("Debe retornar éxito incluso si Firestore falla", result is KronoResult.Success)
         assertEquals("Carlos Gómez", store.userName.value)
         assertEquals("Estudiante", store.userRole.value)
+        assertEquals(SyncState.REJECTED, repo.syncState.value)
     }
 
     @Test
     fun guardarPerfilAplicaTrimANombreYRolAntesDeGuardar() = runTest {
         val store = ProfileLocalStore()
-        val updateUseCase = UpdateProfileUseCase(store)
-        val vm = EditProfileViewModel(updateUseCase, store)
+        val repo = ProfileRepositoryImpl(store)
+        val updateUseCase = UpdateProfileUseCase(repo)
+        val vm = EditProfileViewModel(updateUseCase, repo)
 
         vm.onNameChange("   Carlos Sánchez   ")
         vm.onRoleChange("   Ingeniero de Software   ")
@@ -406,24 +406,119 @@ class EditProfileViewModelTest {
             override fun observeSession(): Flow<User?> = sessionFlow
         }
         val store = ProfileLocalStore()
+        val repo = ProfileRepositoryImpl(store)
         val observeSession = ObserveSessionUseCase(authRepo)
-        val vm = EditProfileViewModel(updateProfileUseCase, observeSession, store)
+        val vm = EditProfileViewModel(updateProfileUseCase, observeSession, repo)
 
-        // 1. Primera emisión: inicializa datos para el usuario
         sessionFlow.value = User(id = "user_456", email = "juan.esteban@correo.com")
         advanceUntilIdle()
         assertEquals("Juan Esteban", vm.uiState.value.name)
 
-        // 2. El usuario modifica el campo en el formulario
         vm.onNameChange("Juan Esteban Modificado")
         assertEquals("Juan Esteban Modificado", vm.uiState.value.name)
 
-        // 3. Re-emisión del mismo usuario (ej. refresh de token)
         sessionFlow.value = User(id = "user_456", email = "juan.esteban@correo.com")
         advanceUntilIdle()
 
-        // 4. Se comprueba que NO se pisa la edición en curso
         assertEquals("Juan Esteban Modificado", vm.uiState.value.name)
     }
-}
 
+    @Test
+    fun retrySyncInvocaSincronizacionEnRepositorio() = runTest {
+        val store = ProfileLocalStore().apply {
+            bindUser("user_retry", "retry@krono.app")
+            saveProfile("Usuario Retry", "Estudiante")
+        }
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val vm = EditProfileViewModel(
+            updateProfile = UpdateProfileUseCase(repo),
+            profileRepository = repo,
+        )
+
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals("Usuario Retry", remoteDataSource.lastSavedName)
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
+    }
+
+    @Test
+    fun uiStateReflejaEstadoPendingSyncCuandoGuardadoOcurreOfflineYReintentoLoRecuperaAConfirmed() = runTest {
+        var isOnline = false
+        val store = ProfileLocalStore().apply {
+            bindUser("user_offline", "offline@krono.app")
+        }
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        remoteDataSource.shouldFail = com.krono.feature.profile.domain.NetworkUnavailableException()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { isOnline })
+        val vm = EditProfileViewModel(
+            updateProfile = UpdateProfileUseCase(repo),
+            profileRepository = repo,
+        )
+
+        vm.onNameChange("Usuario Desconectado")
+        vm.onRoleChange("Estudiante")
+        vm.onSave()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.PENDING_SYNC, vm.uiState.value.syncState)
+
+        // Se restablece conexión y se ejecuta retrySync()
+        isOnline = true
+        remoteDataSource.shouldFail = null
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
+        assertEquals("Usuario Desconectado", remoteDataSource.lastSavedName)
+    }
+
+    @Test
+    fun uiStateReflejaEstadoRejectedAnteFalloRemotoYReintentoLoRecuperaAConfirmed() = runTest {
+        val store = ProfileLocalStore().apply {
+            bindUser("user_rejected", "rejected@krono.app")
+        }
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        remoteDataSource.shouldFail = IllegalStateException("PERMISSION_DENIED_EN_FIRESTORE")
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { true })
+        val vm = EditProfileViewModel(
+            updateProfile = UpdateProfileUseCase(repo),
+            profileRepository = repo,
+        )
+
+        vm.onNameChange("Usuario Rechazado")
+        vm.onRoleChange("Trabajador tiempo completo")
+        vm.onSave()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.REJECTED, vm.uiState.value.syncState)
+
+        // Se corrige el fallo remoto y se reintenta
+        remoteDataSource.shouldFail = null
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.CONFIRMED, vm.uiState.value.syncState)
+        assertEquals("Usuario Rechazado", remoteDataSource.lastSavedName)
+    }
+
+    @Test
+    fun retrySyncMantienePendingSyncSiDispositivoSigueOffline() = runTest {
+        val store = ProfileLocalStore().apply {
+            bindUser("user_still_offline", "still_offline@krono.app")
+            saveProfile("Sin Red", "Estudiante")
+        }
+        val remoteDataSource = NoOpProfileRemoteDataSource()
+        val repo = ProfileRepositoryImpl(store, remoteDataSource, ConnectivityChecker { false })
+        val vm = EditProfileViewModel(
+            updateProfile = UpdateProfileUseCase(repo),
+            profileRepository = repo,
+        )
+
+        vm.retrySync()
+        advanceUntilIdle()
+
+        assertEquals(SyncState.PENDING_SYNC, vm.uiState.value.syncState)
+    }
+}
