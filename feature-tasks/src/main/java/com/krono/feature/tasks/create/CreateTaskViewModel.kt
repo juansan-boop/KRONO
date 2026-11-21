@@ -30,6 +30,7 @@ import kotlinx.datetime.toLocalDateTime
 import java.util.UUID
 import javax.inject.Inject
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * ViewModel que gestiona el estado y la lógica de validación para la creación de tareas (F-04).
@@ -41,7 +42,7 @@ class CreateTaskViewModel @Inject constructor(
     private val upsertTaskUseCase: UpsertTaskUseCase,
     private val observeTasksUseCase: ObserveTasksUseCase,
     private val estimateTaskDuration: EstimateTaskDurationUseCase,
-    savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
 
     /** Proveedor del instante actual; modificable en pruebas unitarias para aislar el tiempo. */
@@ -61,11 +62,38 @@ class CreateTaskViewModel @Inject constructor(
     private var taskHistory: List<Task> = emptyList()
 
     init {
-        savedStateHandle.get<String>(INITIAL_DATE_ARG)?.let { dateStr ->
-            runCatching { LocalDate.parse(dateStr) }.getOrNull()?.let { initialDate ->
-                _uiState.update { it.copy(dueDate = initialDate) }
-            }
+        val restoredTitle = savedStateHandle.get<String>(KEY_DRAFT_TITLE)
+        val restoredNote = savedStateHandle.get<String>(KEY_DRAFT_NOTE)
+        val restoredCategory = savedStateHandle.get<String>(KEY_DRAFT_CATEGORY)?.let { name ->
+            runCatching { TaskCategory.valueOf(name) }.getOrNull()
         }
+        val restoredPriority = savedStateHandle.get<String>(KEY_DRAFT_PRIORITY)?.let { name ->
+            runCatching { TaskPriority.valueOf(name) }.getOrNull()
+        }
+        val restoredDueDate = savedStateHandle.get<String>(KEY_DRAFT_DUE_DATE)?.let { dateStr ->
+            runCatching { LocalDate.parse(dateStr) }.getOrNull()
+        } ?: savedStateHandle.get<String>(INITIAL_DATE_ARG)?.let { dateStr ->
+            runCatching { LocalDate.parse(dateStr) }.getOrNull()
+        }
+        val restoredDueTime = savedStateHandle.get<String>(KEY_DRAFT_DUE_TIME)?.let { timeStr ->
+            runCatching { LocalTime.parse(timeStr) }.getOrNull()
+        }
+        val restoredDuration = savedStateHandle.get<Long>(KEY_DRAFT_ESTIMATED_DURATION)?.let { secs ->
+            secs.seconds
+        }
+
+        _uiState.update { current ->
+            current.copy(
+                title = restoredTitle ?: current.title,
+                note = restoredNote ?: current.note,
+                category = restoredCategory ?: current.category,
+                priority = restoredPriority ?: current.priority,
+                dueDate = restoredDueDate ?: current.dueDate,
+                dueTime = restoredDueTime ?: current.dueTime,
+                estimatedDuration = restoredDuration ?: current.estimatedDuration,
+            )
+        }
+
         observeTaskHistory()
     }
 
@@ -73,6 +101,7 @@ class CreateTaskViewModel @Inject constructor(
      * Actualiza el título de la tarea y limpia errores previos del campo.
      */
     fun onTitleChanged(newTitle: String) {
+        savedStateHandle[KEY_DRAFT_TITLE] = newTitle
         _uiState.update { current ->
             current.copy(
                 title = newTitle,
@@ -82,9 +111,18 @@ class CreateTaskViewModel @Inject constructor(
     }
 
     /**
+     * Actualiza la nota del borrador de la tarea.
+     */
+    fun onNoteChanged(newNote: String) {
+        savedStateHandle[KEY_DRAFT_NOTE] = newNote
+        _uiState.update { it.copy(note = newNote) }
+    }
+
+    /**
      * Selecciona la categoría de la tarea.
      */
     fun onCategorySelected(newCategory: TaskCategory) {
+        savedStateHandle[KEY_DRAFT_CATEGORY] = newCategory.name
         _uiState.update { it.copy(category = newCategory) }
         refreshDurationSuggestion()
     }
@@ -93,6 +131,7 @@ class CreateTaskViewModel @Inject constructor(
      * Selecciona la fecha límite de entrega y limpia errores asociados.
      */
     fun onDateSelected(newDate: LocalDate) {
+        savedStateHandle[KEY_DRAFT_DUE_DATE] = newDate.toString()
         _uiState.update { current ->
             current.copy(
                 dueDate = newDate,
@@ -107,6 +146,7 @@ class CreateTaskViewModel @Inject constructor(
      * Selecciona la hora límite de entrega y limpia errores asociados.
      */
     fun onTimeSelected(newTime: LocalTime) {
+        savedStateHandle[KEY_DRAFT_DUE_TIME] = newTime.toString()
         _uiState.update { current ->
             current.copy(
                 dueTime = newTime,
@@ -120,6 +160,7 @@ class CreateTaskViewModel @Inject constructor(
      * Selecciona el nivel de prioridad de la tarea.
      */
     fun onPrioritySelected(newPriority: TaskPriority) {
+        savedStateHandle[KEY_DRAFT_PRIORITY] = newPriority.name
         _uiState.update { it.copy(priority = newPriority) }
         refreshDurationSuggestion()
     }
@@ -128,6 +169,11 @@ class CreateTaskViewModel @Inject constructor(
      * Selecciona la estimación de duración o `null` si se deselecciona (CA-4).
      */
     fun onDurationSelected(newDuration: Duration?) {
+        if (newDuration != null) {
+            savedStateHandle[KEY_DRAFT_ESTIMATED_DURATION] = newDuration.inWholeSeconds
+        } else {
+            savedStateHandle.remove<Long>(KEY_DRAFT_ESTIMATED_DURATION)
+        }
         _uiState.update { it.copy(estimatedDuration = newDuration) }
     }
 
@@ -199,6 +245,7 @@ class CreateTaskViewModel @Inject constructor(
         val newTask = Task(
             id = UUID.randomUUID().toString(),
             title = currentState.title.trim(),
+            note = currentState.note.trim().takeIf { it.isNotEmpty() },
             category = currentState.category,
             priority = currentState.priority,
             dueDate = dueDateCombined,
@@ -212,6 +259,7 @@ class CreateTaskViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = upsertTaskUseCase(newTask)) {
                 is KronoResult.Success -> {
+                    clearDraft()
                     _uiState.update { it.copy(isSaving = false) }
                     _events.emit(CreateTaskEvent.NavigateBack)
                 }
@@ -276,8 +324,27 @@ class CreateTaskViewModel @Inject constructor(
         }
     }
 
+    private fun clearDraft() {
+        savedStateHandle.remove<String>(KEY_DRAFT_TITLE)
+        savedStateHandle.remove<String>(KEY_DRAFT_NOTE)
+        savedStateHandle.remove<String>(KEY_DRAFT_CATEGORY)
+        savedStateHandle.remove<String>(KEY_DRAFT_PRIORITY)
+        savedStateHandle.remove<String>(KEY_DRAFT_DUE_DATE)
+        savedStateHandle.remove<String>(KEY_DRAFT_DUE_TIME)
+        savedStateHandle.remove<Long>(KEY_DRAFT_ESTIMATED_DURATION)
+    }
+
     companion object {
         /** Argumento de navegación opcional con la fecha inicial en formato ISO (YYYY-MM-DD). */
         const val INITIAL_DATE_ARG = "initialDate"
+
+        /** Claves de persistencia de borrador en [SavedStateHandle]. */
+        const val KEY_DRAFT_TITLE = "draft_title"
+        const val KEY_DRAFT_NOTE = "draft_note"
+        const val KEY_DRAFT_CATEGORY = "draft_category"
+        const val KEY_DRAFT_PRIORITY = "draft_priority"
+        const val KEY_DRAFT_DUE_DATE = "draft_due_date"
+        const val KEY_DRAFT_DUE_TIME = "draft_due_time"
+        const val KEY_DRAFT_ESTIMATED_DURATION = "draft_estimated_duration_seconds"
     }
 }

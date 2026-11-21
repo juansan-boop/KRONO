@@ -6,6 +6,7 @@ import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTaskByIdUseCase
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskError
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import com.krono.core.domain.timer.ActiveTimer
 import com.krono.core.domain.timer.FakeClock
 import com.krono.core.domain.timer.FakeTimerRepository
@@ -288,6 +289,38 @@ class TaskTimerViewModelTest {
         assertEquals(TimerStatus.PAUSED, viewModel.uiState.value.status)
     }
 
+    @Test
+    fun alCompletarTareaDesdeCronometro_registraCompletedAtYMarcaCompletada() = runTimerTest {
+        runCurrent()
+        viewModel.onCompleteTask()
+        runCurrent()
+
+        val taskResult = tasks.getTaskById("informe")
+        assertTrue(taskResult is com.krono.core.common.KronoResult.Success)
+        val task = (taskResult as com.krono.core.common.KronoResult.Success).data
+        assertTrue(task.isCompleted)
+        assertEquals(viewModel.currentDateTimeProvider(), task.completedAt)
+    }
+
+    @Test
+    fun alConmutarCompletitudDesdeCronometro_limpiaCompletedAtAlReabrir() = runTimerTest {
+        runCurrent()
+        viewModel.onToggleTaskCompletion()
+        runCurrent()
+
+        var task = (tasks.getTaskById("informe") as com.krono.core.common.KronoResult.Success).data
+        assertTrue(task.isCompleted)
+        assertEquals(viewModel.currentDateTimeProvider(), task.completedAt)
+
+        // Reabrir tarea
+        viewModel.onToggleTaskCompletion()
+        runCurrent()
+
+        task = (tasks.getTaskById("informe") as com.krono.core.common.KronoResult.Success).data
+        assertFalse(task.isCompleted)
+        assertNull(task.completedAt)
+    }
+
     private fun runTimerTest(block: suspend TestScope.() -> Unit) = runTest {
         try {
             block()
@@ -317,6 +350,7 @@ class TaskTimerViewModelTest {
             resumeTimer = ResumeTimerUseCase(gated, clock),
             finishTimer = finish,
             clock = clock,
+            updateTaskFields = UpdateTaskFieldsUseCase(tasks),
         ).also { createdViewModels += it }
     }
 }

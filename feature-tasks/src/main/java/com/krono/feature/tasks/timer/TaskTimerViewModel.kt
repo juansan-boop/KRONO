@@ -8,6 +8,8 @@ import com.krono.core.domain.assistant.EstimateTaskDurationUseCase
 import com.krono.core.domain.task.ObserveTaskByIdUseCase
 import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.Task
+import com.krono.core.domain.task.TaskField
+import com.krono.core.domain.task.UpdateTaskFieldsUseCase
 import com.krono.core.domain.timer.ActiveTimer
 import com.krono.core.domain.timer.FinishTimerUseCase
 import com.krono.core.domain.timer.ObserveActiveTimerUseCase
@@ -27,6 +29,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -55,7 +60,13 @@ class TaskTimerViewModel @Inject constructor(
     private val clock: Clock,
     private val observeTasks: ObserveTasksUseCase? = null,
     private val estimateTaskDuration: EstimateTaskDurationUseCase = EstimateTaskDurationUseCase(),
+    private val updateTaskFields: UpdateTaskFieldsUseCase? = null,
 ) : ViewModel() {
+
+    /** Proveedor de fecha y hora actual; modificable en pruebas unitarias para aislar el tiempo. */
+    internal var currentDateTimeProvider: () -> LocalDateTime = {
+        clock.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    }
 
     private val taskId: String? = savedStateHandle.get<String>(TASK_ID_NAV_ARG)
 
@@ -135,6 +146,45 @@ class TaskTimerViewModel @Inject constructor(
     /** Limpia el mensaje de error ya mostrado. */
     fun onErrorShown() {
         _uiState.update { it.copy(errorMessageRes = null) }
+    }
+
+    /**
+     * Conmuta el estado de completitud de la tarea observada.
+     * Al marcar como completada registra `completedAt` con el instante actual (si era nulo),
+     * y al reabrir la tarea limpia `completedAt` a `null`, persistiendo ambos campos con [TaskField.IS_COMPLETED]
+     * y [TaskField.COMPLETED_AT].
+     */
+    fun onToggleTaskCompletion() {
+        val task = _uiState.value.task ?: return
+        val updater = updateTaskFields ?: return
+        val nextCompleted = !task.isCompleted
+        val nextCompletedAt = if (nextCompleted) {
+            task.completedAt ?: currentDateTimeProvider()
+        } else {
+            null
+        }
+        viewModelScope.launch {
+            updater(
+                task.copy(isCompleted = nextCompleted, completedAt = nextCompletedAt),
+                setOf(TaskField.IS_COMPLETED, TaskField.COMPLETED_AT)
+            )
+        }
+    }
+
+    /**
+     * Marca la tarea como completada registrando `completedAt` si aún no lo estaba.
+     */
+    fun onCompleteTask() {
+        val task = _uiState.value.task ?: return
+        if (task.isCompleted) return
+        val updater = updateTaskFields ?: return
+        val nextCompletedAt = task.completedAt ?: currentDateTimeProvider()
+        viewModelScope.launch {
+            updater(
+                task.copy(isCompleted = true, completedAt = nextCompletedAt),
+                setOf(TaskField.IS_COMPLETED, TaskField.COMPLETED_AT)
+            )
+        }
     }
 
     private fun observeTask(taskId: String) {

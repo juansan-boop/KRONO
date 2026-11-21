@@ -456,4 +456,25 @@ class TaskDetailViewModelTest {
         assertNotNull(state.task)
         assertEquals(com.krono.core.domain.sync.SyncStatus.PENDING_SYNC, state.task?.syncStatus)
     }
+
+    @Test
+    fun alConmutarCompletitudDeTarea_asignaCompletedAtYPersisteCampos() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val viewModel = createViewModel("task-100")
+        advanceUntilIdle()
+
+        viewModel.onToggleTaskCompletion()
+        advanceUntilIdle()
+
+        var updatedTask = (fakeRepository.getTaskById("task-100") as com.krono.core.common.KronoResult.Success).data
+        assertTrue(updatedTask.isCompleted)
+        assertEquals(fixedNow, updatedTask.completedAt)
+
+        viewModel.onToggleTaskCompletion()
+        advanceUntilIdle()
+
+        updatedTask = (fakeRepository.getTaskById("task-100") as com.krono.core.common.KronoResult.Success).data
+        assertFalse(updatedTask.isCompleted)
+        assertNull(updatedTask.completedAt)
+    }
 }
