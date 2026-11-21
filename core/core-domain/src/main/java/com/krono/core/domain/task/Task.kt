@@ -19,6 +19,7 @@ import kotlin.time.Duration
  * @property subtasks Lista de subtareas embebidas asociadas a esta tarea.
  * @property isDeleted Indica si la tarea fue enviada a la papelera / eliminada lógicamente.
  * @property syncStatus Estado explícito de sincronización remota de la tarea.
+ * @property completedAt Momento exacto en que la tarea fue marcada como completada, o `null` si está pendiente.
  */
 data class Task(
     val id: String,
@@ -33,4 +34,5 @@ data class Task(
     val subtasks: List<Subtask> = emptyList(),
     val isDeleted: Boolean = false,
     val syncStatus: SyncStatus = SyncStatus.CONFIRMED,
+    val completedAt: LocalDateTime? = null,
 )

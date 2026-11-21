@@ -25,12 +25,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.krono.core.domain.assistant.agent.AskPlanningAgentUseCase
+import com.krono.core.domain.assistant.agent.BatchSaveResult
 import com.krono.core.ui.theme.ErrorColor
 import com.krono.core.ui.theme.KronoShapes
 import com.krono.core.ui.theme.KronoSizes
@@ -66,6 +68,7 @@ fun PlanningAgentRoute(
         onSend = viewModel::onSend,
         onConfirm = viewModel::onConfirm,
         onDiscard = viewModel::onDiscard,
+        onRetryFailed = viewModel::retryFailedTasks,
         modifier = modifier,
     )
 }
@@ -81,6 +84,7 @@ fun PlanningAgentSection(
     onSend: () -> Unit,
     onConfirm: () -> Unit,
     onDiscard: () -> Unit,
+    onRetryFailed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -97,7 +101,12 @@ fun PlanningAgentSection(
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
             verticalArrangement = Arrangement.spacedBy(KronoSpacing.md),
         ) {
-            AgentStatusContent(status = state.status, onConfirm = onConfirm, onDiscard = onDiscard)
+            AgentStatusContent(
+                status = state.status,
+                onConfirm = onConfirm,
+                onDiscard = onDiscard,
+                onRetryFailed = onRetryFailed,
+            )
         }
     }
 }
@@ -169,7 +178,12 @@ private fun AgentInput(state: PlanningAgentUiState, onInputChange: (String) -> U
 }
 
 @Composable
-private fun AgentStatusContent(status: AgentStatus, onConfirm: () -> Unit, onDiscard: () -> Unit) {
+private fun AgentStatusContent(
+    status: AgentStatus,
+    onConfirm: () -> Unit,
+    onDiscard: () -> Unit,
+    onRetryFailed: () -> Unit = {},
+) {
     when (status) {
         AgentStatus.Idle -> Unit
         AgentStatus.Thinking -> ProgressLine(text = stringResource(R.string.agent_thinking))
@@ -179,15 +193,129 @@ private fun AgentStatusContent(status: AgentStatus, onConfirm: () -> Unit, onDis
             ProposalActions(draftCount = status.proposal.drafts.size, onConfirm = onConfirm, onDiscard = onDiscard)
         }
         is AgentStatus.Saving -> {
-            ProposalContent(proposal = status.proposal)
+            status.proposal?.let { ProposalContent(proposal = it) }
             ProgressLine(text = stringResource(R.string.agent_saving))
         }
-        is AgentStatus.Saved -> ResultLine(
-            text = pluralStringResource(R.plurals.agent_saved, status.count, status.count),
-            color = SecondaryCyan,
-            onClose = onDiscard,
-        )
+        is AgentStatus.Saved -> {
+            val result = status.result
+            if (result.failedTasks.isNotEmpty() || result.pendingSyncTasks.isNotEmpty()) {
+                BatchSaveSummary(
+                    result = result,
+                    onRetryFailed = onRetryFailed,
+                    onClose = onDiscard,
+                )
+            } else {
+                ResultLine(
+                    text = pluralStringResource(R.plurals.agent_saved, status.count, status.count),
+                    color = SecondaryCyan,
+                    onClose = onDiscard,
+                )
+            }
+        }
         is AgentStatus.Failed -> ResultLine(text = failureText(status.reason), color = ErrorColor, onClose = onDiscard)
+    }
+}
+
+@Composable
+private fun BatchSaveSummary(
+    result: BatchSaveResult,
+    onRetryFailed: () -> Unit,
+    onClose: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassSurface()
+            .padding(KronoSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(R.string.agent_batch_summary_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = OnSurface,
+                modifier = Modifier.semantics { heading() },
+            )
+            TextButton(onClick = onClose) {
+                Text(text = stringResource(R.string.agent_close), color = OnSurfaceVariant)
+            }
+        }
+
+        if (result.confirmedTasks.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(com.krono.core.ui.R.drawable.ic_check_circle),
+                    contentDescription = null,
+                    tint = SecondaryCyan,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Text(
+                    text = stringResource(R.string.agent_batch_confirmed, result.confirmedTasks.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SecondaryCyan,
+                )
+            }
+        }
+
+        if (result.pendingSyncTasks.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(com.krono.core.ui.R.drawable.ic_sync),
+                    contentDescription = null,
+                    tint = PrimaryFixedDim,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Text(
+                    text = stringResource(R.string.agent_batch_pending_sync, result.pendingSyncTasks.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PrimaryFixedDim,
+                )
+            }
+        }
+
+        if (result.failedTasks.isNotEmpty()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(KronoSpacing.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(com.krono.core.ui.R.drawable.ic_error),
+                    contentDescription = null,
+                    tint = ErrorColor,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Text(
+                    text = stringResource(R.string.agent_batch_failed, result.failedTasks.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ErrorColor,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                val retryCd = stringResource(R.string.agent_retry_failed_cd, result.failedTasks.size)
+                AgentPrimaryButton(
+                    text = stringResource(R.string.agent_retry_failed),
+                    enabled = true,
+                    onClick = onRetryFailed,
+                    modifier = Modifier.semantics {
+                        contentDescription = retryCd
+                    },
+                )
+            }
+        }
     }
 }
 

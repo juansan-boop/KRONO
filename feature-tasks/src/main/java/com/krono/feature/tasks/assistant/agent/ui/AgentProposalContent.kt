@@ -69,11 +69,16 @@ internal fun ProposalContent(proposal: AgentProposal) {
 
 /** Botón principal de la sección del agente, con el estilo de los botones del asistente. */
 @Composable
-internal fun AgentPrimaryButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun AgentPrimaryButton(
+    text: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.heightIn(min = KronoSizes.minTouchTarget),
+        modifier = modifier.heightIn(min = KronoSizes.minTouchTarget),
         shape = KronoShapes.small,
         colors = ButtonDefaults.buttonColors(containerColor = PrimaryMagenta, contentColor = OnSurface),
     ) {

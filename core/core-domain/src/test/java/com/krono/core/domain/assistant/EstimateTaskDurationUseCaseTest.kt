@@ -77,6 +77,69 @@ class EstimateTaskDurationUseCaseTest {
         assertEquals(5.minutes, estimate(TaskCategory.PERSONAL, tasks))
     }
 
+    @Test
+    fun completedAt_prevaleceSobreDueDate_alOrdenarUltimasTareasMedidas() {
+        // 5 tareas con completedAt reciente (Oct 26 a 30) y dueDate antiguo (Oct 1 a 5)
+        val recentTasks = (1..5).map { i ->
+            Task(
+                id = "reciente-$i",
+                title = "T$i",
+                category = TaskCategory.ESTUDIO,
+                dueDate = LocalDateTime(2026, 10, i, 10, 0),
+                completedAt = LocalDateTime(2026, 10, 25 + i, 18, 0),
+                actualDuration = 20.minutes,
+                isCompleted = true,
+            )
+        }
+        // 1 tarea antigua completada el 1 de Octubre, pero con dueDate posterior (Nov 15)
+        val oldTaskWithLaterDueDate = Task(
+            id = "antigua-con-due-date-tardio",
+            title = "T-Antigua",
+            category = TaskCategory.ESTUDIO,
+            dueDate = LocalDateTime(2026, 11, 15, 10, 0),
+            completedAt = LocalDateTime(2026, 10, 1, 18, 0),
+            actualDuration = 200.minutes,
+            isCompleted = true,
+        )
+
+        val tasks = recentTasks + oldTaskWithLaterDueDate
+
+        // Si se usara dueDate, la tarea antigua (due Nov 15) desplazaría a una reciente.
+        // Al prevalecer completedAt, las 5 más recientes son las de Oct 26..30 (promedio: 20 min).
+        assertEquals(20.minutes, estimate(TaskCategory.ESTUDIO, tasks))
+    }
+
+    @Test
+    fun fallbackADueDate_cuandoCompletedAtEsNulo() {
+        // 5 tareas con dueDate reciente (Oct 16 a 20) y completedAt nulo
+        val recentTasks = (1..5).map { i ->
+            Task(
+                id = "reciente-$i",
+                title = "T$i",
+                category = TaskCategory.ESTUDIO,
+                dueDate = LocalDateTime(2026, 10, 15 + i, 10, 0),
+                completedAt = null,
+                actualDuration = 30.minutes,
+                isCompleted = true,
+            )
+        }
+        // 1 tarea más antigua según dueDate (Oct 1) y completedAt nulo
+        val oldTask = Task(
+            id = "antigua",
+            title = "T-Antigua",
+            category = TaskCategory.ESTUDIO,
+            dueDate = LocalDateTime(2026, 10, 1, 10, 0),
+            completedAt = null,
+            actualDuration = 300.minutes,
+            isCompleted = true,
+        )
+
+        val tasks = recentTasks + oldTask
+
+        // Las 5 más recientes según dueDate promedian 30 min y descartan la de Oct 1.
+        assertEquals(30.minutes, estimate(TaskCategory.ESTUDIO, tasks))
+    }
+
     // --- Pruebas del Modelo Híbrido H1 (predictHybrid) ---
 
     @Test

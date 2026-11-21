@@ -1,6 +1,7 @@
 package com.krono.core.domain.task
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.sync.SyncStatus
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +23,15 @@ class FakeTaskRepository : TaskRepository {
 
     /** Error forzado que devolverán las operaciones; `null` para funcionamiento normal. */
     var failure: Throwable? = null
+
+    /** Estado de sincronización por defecto que devolverá [upsertTask]. */
+    var defaultSyncStatus: SyncStatus = SyncStatus.CONFIRMED
+
+    /** Mapa de estados de sincronización individuales por ID de tarea para pruebas de lotes. */
+    val taskSyncStatusMap = mutableMapOf<String, SyncStatus>()
+
+    /** Mapa de errores individuales por ID de tarea para simular fallos parciales. */
+    val taskFailureMap = mutableMapOf<String, Throwable>()
 
     /** Error con el que fallan las observaciones nuevas; `null` para funcionamiento normal. */
     var observeFailure: Throwable? = null
@@ -111,12 +121,17 @@ class FakeTaskRepository : TaskRepository {
     }
 
     /** Agrega o actualiza la tarea en el mapa en memoria. */
-    override suspend fun upsertTask(task: Task): KronoResult<Unit> {
+    override suspend fun upsertTask(task: Task): KronoResult<SyncStatus> {
         upsertCalls++
         awaitGate()
+        taskFailureMap[task.id]?.let { return KronoResult.Error(it) }
         failure?.let { return KronoResult.Error(it) }
-        givenTasks(task)
-        return KronoResult.Success(Unit)
+        val status = taskSyncStatusMap[task.id] ?: task.syncStatus.takeIf { it != SyncStatus.CONFIRMED } ?: defaultSyncStatus
+        if (status == SyncStatus.FAILED) {
+            return KronoResult.Error(TaskError.StorageError("Error de sincronización"))
+        }
+        givenTasks(task.copy(syncStatus = status))
+        return KronoResult.Success(status)
     }
 
     /**
@@ -167,5 +182,6 @@ class FakeTaskRepository : TaskRepository {
         TaskField.IS_COMPLETED -> copy(isCompleted = source.isCompleted)
         TaskField.NOTE -> copy(note = source.note)
         TaskField.SUBTASKS -> copy(subtasks = source.subtasks)
+        TaskField.COMPLETED_AT -> copy(completedAt = source.completedAt)
     }
 }

@@ -1,6 +1,7 @@
 package com.krono.core.domain.task
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.sync.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -40,10 +41,10 @@ interface TaskRepository {
      * Crea o actualiza una tarea completa (incluyendo sus subtareas embebidas) en Firestore.
      *
      * @param task Tarea con sus datos y lista de subtareas a persistir.
-     * @return [KronoResult.Success] con [Unit] si la escritura se aplicó o quedó encolada sin
+     * @return [KronoResult.Success] con el estado de sincronización [SyncStatus] si la escritura se aplicó o quedó encolada sin
      * conexión, o [KronoResult.Error] en caso de fallo.
      */
-    suspend fun upsertTask(task: Task): KronoResult<Unit>
+    suspend fun upsertTask(task: Task): KronoResult<SyncStatus>
 
     /**
      * Escribe solo los [fields] indicados de [task] sobre la tarea guardada, sin tocar el resto
@@ -92,7 +93,7 @@ object NoOpTaskRepository : TaskRepository {
     override fun observeTasks(): Flow<KronoResult<List<Task>>> = kotlinx.coroutines.flow.emptyFlow()
     override fun observeTaskById(taskId: String): Flow<KronoResult<Task?>> = kotlinx.coroutines.flow.emptyFlow()
     override suspend fun getTaskById(taskId: String): KronoResult<Task> = KronoResult.Error(TaskError.TaskNotFound)
-    override suspend fun upsertTask(task: Task): KronoResult<Unit> = KronoResult.Success(Unit)
+    override suspend fun upsertTask(task: Task): KronoResult<SyncStatus> = KronoResult.Success(SyncStatus.CONFIRMED)
     override suspend fun updateTaskFields(task: Task, fields: Set<TaskField>): KronoResult<Unit> = KronoResult.Success(Unit)
     override suspend fun deleteTask(taskId: String): KronoResult<Unit> = KronoResult.Success(Unit)
     override suspend fun clearTasksForUser(userId: String): KronoResult<Unit> = KronoResult.Success(Unit)

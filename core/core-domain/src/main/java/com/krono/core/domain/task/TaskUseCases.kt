@@ -1,6 +1,7 @@
 package com.krono.core.domain.task
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.sync.SyncStatus
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -44,9 +45,9 @@ class UpsertTaskUseCase(
      * Persiste la tarea tras validar sus campos obligatorios.
      *
      * @param task Tarea a guardar.
-     * @return [KronoResult.Success] en caso de éxito o [KronoResult.Error] si falla.
+     * @return [KronoResult.Success] con [SyncStatus] en caso de éxito o [KronoResult.Error] si falla.
      */
-    suspend operator fun invoke(task: Task): KronoResult<Unit> {
+    suspend operator fun invoke(task: Task): KronoResult<SyncStatus> {
         if (task.title.isBlank()) {
             return KronoResult.Error(TaskError.ValidationError("El título de la tarea no puede estar vacío."))
         }

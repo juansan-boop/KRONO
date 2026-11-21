@@ -267,6 +267,15 @@
     <string name="agent_error_invalid">Escribe qué necesitas organizar (máximo %d caracteres).</string>
     <string name="agent_close">Cerrar</string>
 
+    <!-- Resumen de guardado por lotes del agente (F-28) -->
+    <string name="agent_batch_summary_title">Resumen de guardado</string>
+    <string name="agent_batch_all_confirmed">Todas las tareas fueron confirmadas en la nube.</string>
+    <string name="agent_batch_confirmed">%1$d confirmadas en la nube</string>
+    <string name="agent_batch_pending_sync">%1$d pendientes de conexión</string>
+    <string name="agent_batch_failed">%1$d fallaron al guardarse</string>
+    <string name="agent_retry_failed">Reintentar fallidas</string>
+    <string name="agent_retry_failed_cd">Reintentar guardar las %1$d tareas fallidas</string>
+
     <!-- Plantillas de bloques de enfoque (F-10) -->
     <string name="focus_title">Plantillas de enfoque</string>
     <string name="focus_intro">Tiempos base que la IA utiliza para estructurar tus sesiones y descansos.</string>

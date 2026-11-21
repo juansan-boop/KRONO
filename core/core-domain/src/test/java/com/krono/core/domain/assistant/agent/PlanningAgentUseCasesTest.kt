@@ -4,6 +4,7 @@ import com.krono.core.common.KronoResult
 import com.krono.core.domain.assistant.AssistantError
 import com.krono.core.domain.assistant.BuildPriorityPlanUseCase
 import com.krono.core.domain.assistant.EstimateTaskDurationUseCase
+import com.krono.core.domain.sync.SyncStatus
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskError
@@ -81,20 +82,94 @@ class PlanningAgentUseCasesTest {
 
         val result = ConfirmAgentProposalUseCase(UpsertTaskUseCase(repository))(proposal)
 
-        assertEquals(KronoResult.Success(2), result)
+        assertTrue(result is KronoResult.Success)
+        val batch = (result as KronoResult.Success).data
+        assertEquals(2, batch.successfulCount)
+        assertEquals(2, batch.confirmedTasks.size)
+        assertTrue(batch.isAllSuccessful)
         assertEquals(90.minutes, repository.storedTask("id-1")?.estimatedDuration)
         // La duración por defecto es un supuesto del plan, no una estimación: no se guarda.
         assertNull(repository.storedTask("id-2")?.estimatedDuration)
     }
 
     @Test
-    fun confirmar_siFallaLaEscritura_devuelveElError() = runTest {
+    fun confirmar_siFallaLaEscritura_registraTareasFallidasEnBatchResult() = runTest {
         val repository = FakeTaskRepository().apply { failure = TaskError.UnauthenticatedUser }
         val proposal = proposalWith(draftRequest("Informe"))
 
         val result = ConfirmAgentProposalUseCase(UpsertTaskUseCase(repository))(proposal)
 
-        assertEquals(KronoResult.Error(TaskError.UnauthenticatedUser), result)
+        assertTrue(result is KronoResult.Success)
+        val batch = (result as KronoResult.Success).data
+        assertEquals(1, batch.failedTasks.size)
+        assertTrue(batch.isAllFailed)
+        assertEquals("Informe", batch.failedTasks.first().task.title)
+    }
+
+    @Test
+    fun guardadoSecuencial_conMezclaDeConfirmedPendingSyncYFailed_reportaExactoEnBatchSaveResult() = runTest {
+        val repository = FakeTaskRepository()
+        val proposal = proposalWith(
+            draftRequest("Tarea 1"),
+            draftRequest("Tarea 2"),
+            draftRequest("Tarea 3"),
+        )
+        // Tarea 1: confirmada
+        repository.taskSyncStatusMap["id-1"] = SyncStatus.CONFIRMED
+        // Tarea 2: pendiente de sincronización
+        repository.taskSyncStatusMap["id-2"] = SyncStatus.PENDING_SYNC
+        // Tarea 3: fallo de red
+        repository.taskFailureMap["id-3"] = TaskError.StorageError("Fallo de conexión remoto")
+
+        val result = ConfirmAgentProposalUseCase(UpsertTaskUseCase(repository))(proposal)
+
+        assertTrue(result is KronoResult.Success)
+        val batch = (result as KronoResult.Success).data
+        assertEquals(3, batch.totalCount)
+        assertEquals(2, batch.successfulCount)
+        assertTrue(batch.isPartial)
+
+        assertEquals(1, batch.confirmedTasks.size)
+        assertEquals("id-1", batch.confirmedTasks[0].id)
+        assertEquals(SyncStatus.CONFIRMED, batch.confirmedTasks[0].syncStatus)
+
+        assertEquals(1, batch.pendingSyncTasks.size)
+        assertEquals("id-2", batch.pendingSyncTasks[0].id)
+        assertEquals(SyncStatus.PENDING_SYNC, batch.pendingSyncTasks[0].syncStatus)
+
+        assertEquals(1, batch.failedTasks.size)
+        assertEquals("id-3", batch.failedTasks[0].task.id)
+        assertTrue(batch.failedTasks[0].reason.contains("Fallo de conexión"))
+    }
+
+    @Test
+    fun retryTasks_conservaIdsOriginales_yGuardaSoloLasTareasFallidas() = runTest {
+        val repository = FakeTaskRepository()
+        val useCase = ConfirmAgentProposalUseCase(UpsertTaskUseCase(repository))
+
+        val proposal = proposalWith(
+            draftRequest("Tarea A"),
+            draftRequest("Tarea B"),
+        )
+        repository.taskFailureMap["id-2"] = TaskError.StorageError("Error temporal")
+
+        val initialResult = useCase(proposal)
+        val initialBatch = (initialResult as KronoResult.Success).data
+        assertEquals(1, initialBatch.confirmedTasks.size)
+        assertEquals(1, initialBatch.failedTasks.size)
+
+        // Limpiamos el error para el reintento
+        repository.taskFailureMap.remove("id-2")
+        val failedToRetry = initialBatch.failedTasks.map { it.task }
+
+        val retryResult = useCase.retryTasks(failedToRetry)
+        assertTrue(retryResult is KronoResult.Success)
+        val retryBatch = (retryResult as KronoResult.Success).data
+
+        assertEquals(1, retryBatch.confirmedTasks.size)
+        assertEquals("id-2", retryBatch.confirmedTasks[0].id)
+        assertTrue(retryBatch.failedTasks.isEmpty())
+        assertTrue(retryBatch.isAllSuccessful)
     }
 
     private suspend fun ask(agent: PlanningAgent, request: String): KronoResult<AgentProposal> {

@@ -131,7 +131,7 @@ class FirestoreTaskRepository @Inject constructor(
      * Crea o reemplaza una tarea completa junto con sus subtareas embebidas,
      * respaldándola inmediatamente en Room antes y después de confirmar con el servidor.
      */
-    override suspend fun upsertTask(task: Task): KronoResult<Unit> = runCatchingTask {
+    override suspend fun upsertTask(task: Task): KronoResult<SyncStatus> = runCatchingTask {
         val userId = requireUser().id
         taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_PENDING_SYNC))
         val confirmation = try {
@@ -145,6 +145,9 @@ class FirestoreTaskRepository @Inject constructor(
 
         if (confirmation is WriteConfirmationResult.Confirmed) {
             taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
+            SyncStatus.CONFIRMED
+        } else {
+            SyncStatus.PENDING_SYNC
         }
     }
 
@@ -166,6 +169,7 @@ class FirestoreTaskRepository @Inject constructor(
             if (TaskField.IS_COMPLETED in fields) updatedTask = updatedTask.copy(isCompleted = task.isCompleted)
             if (TaskField.NOTE in fields) updatedTask = updatedTask.copy(note = task.note)
             if (TaskField.SUBTASKS in fields) updatedTask = updatedTask.copy(subtasks = task.subtasks)
+            if (TaskField.COMPLETED_AT in fields) updatedTask = updatedTask.copy(completedAt = task.completedAt)
 
             taskDao.upsertTask(updatedTask.toEntity(userId, TaskEntity.STATUS_PENDING_SYNC))
 

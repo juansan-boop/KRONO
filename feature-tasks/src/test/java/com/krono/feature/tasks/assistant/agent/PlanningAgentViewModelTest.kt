@@ -9,6 +9,7 @@ import com.krono.core.domain.assistant.agent.ConfirmAgentProposalUseCase
 import com.krono.core.domain.assistant.agent.PlanningAgent
 import com.krono.core.domain.assistant.agent.PlanningAgentSession
 import com.krono.core.domain.assistant.agent.TaskDraftRequest
+import com.krono.core.domain.sync.SyncStatus
 import com.krono.core.domain.task.FakeTaskRepository
 import com.krono.core.domain.task.ObserveTasksUseCase
 import com.krono.core.domain.task.TaskCategory
@@ -89,8 +90,69 @@ class PlanningAgentViewModelTest {
         viewModel.onConfirm()
         advanceUntilIdle()
 
-        assertEquals(PlanningAgentUiState(status = AgentStatus.Saved(1)), viewModel.uiState.value)
+        val status = viewModel.uiState.value.status as AgentStatus.Saved
+        assertEquals(1, status.count)
         assertEquals(listOf("Estudiar para el parcial"), repository.storedTasks().map { it.title })
+    }
+
+    @Test
+    fun guardadoSecuencial_conMezclaDeConfirmedPendingSyncYFailed_reportaEnUiState() = runTest {
+        agentResult = { session ->
+            session.createTask(TaskDraftRequest("Tarea 1", TaskCategory.ESTUDIO, TaskPriority.ALTA, LocalDateTime(2026, 11, 12, 7, 0), null))
+            session.createTask(TaskDraftRequest("Tarea 2", TaskCategory.ESTUDIO, TaskPriority.MEDIA, LocalDateTime(2026, 11, 13, 7, 0), null))
+            session.createTask(TaskDraftRequest("Tarea 3", TaskCategory.ESTUDIO, TaskPriority.BAJA, LocalDateTime(2026, 11, 14, 7, 0), null))
+            KronoResult.Success("Propuesta múltiple.")
+        }
+        val viewModel = proposedViewModel()
+
+        repository.taskSyncStatusMap["id-1"] = SyncStatus.CONFIRMED
+        repository.taskSyncStatusMap["id-2"] = SyncStatus.PENDING_SYNC
+        repository.taskFailureMap["id-3"] = TaskError.StorageError("Error de prueba")
+
+        viewModel.onConfirm()
+        advanceUntilIdle()
+
+        val status = viewModel.uiState.value.status as AgentStatus.Saved
+        assertEquals(1, status.result.confirmedTasks.size)
+        assertEquals("id-1", status.result.confirmedTasks[0].id)
+        assertEquals(1, status.result.pendingSyncTasks.size)
+        assertEquals("id-2", status.result.pendingSyncTasks[0].id)
+        assertEquals(1, status.result.failedTasks.size)
+        assertEquals("id-3", status.result.failedTasks[0].task.id)
+    }
+
+    @Test
+    fun retryFailedTasks_conservaIdentificadoresYReintentaSoloFallidas() = runTest {
+        agentResult = { session ->
+            session.createTask(TaskDraftRequest("Tarea Éxito", TaskCategory.ESTUDIO, TaskPriority.ALTA, LocalDateTime(2026, 11, 12, 7, 0), null))
+            session.createTask(TaskDraftRequest("Tarea Fallo", TaskCategory.ESTUDIO, TaskPriority.ALTA, LocalDateTime(2026, 11, 13, 7, 0), null))
+            KronoResult.Success("Propuesta con fallo.")
+        }
+        val viewModel = proposedViewModel()
+
+        repository.taskSyncStatusMap["id-1"] = SyncStatus.CONFIRMED
+        repository.taskFailureMap["id-2"] = TaskError.StorageError("Error transitorio")
+
+        viewModel.onConfirm()
+        advanceUntilIdle()
+
+        val statusInitial = viewModel.uiState.value.status as AgentStatus.Saved
+        assertEquals(1, statusInitial.result.confirmedTasks.size)
+        assertEquals(1, statusInitial.result.failedTasks.size)
+
+        // Ahora resolvemos el fallo y ejecutamos retryFailedTasks()
+        repository.taskFailureMap.remove("id-2")
+        repository.taskSyncStatusMap["id-2"] = SyncStatus.CONFIRMED
+
+        viewModel.retryFailedTasks()
+        advanceUntilIdle()
+
+        val statusRetried = viewModel.uiState.value.status as AgentStatus.Saved
+        assertEquals(2, statusRetried.result.confirmedTasks.size)
+        assertTrue(statusRetried.result.failedTasks.isEmpty())
+        val storedIds = repository.storedTasks().map { it.id }.toSet()
+        assertTrue(storedIds.contains("id-1"))
+        assertTrue(storedIds.contains("id-2"))
     }
 
     @Test

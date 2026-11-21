@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.krono.core.common.KronoResult
 import com.krono.core.domain.assistant.agent.AgentProposal
 import com.krono.core.domain.assistant.agent.AskPlanningAgentUseCase
+import com.krono.core.domain.assistant.agent.BatchSaveResult
 import com.krono.core.domain.assistant.agent.ConfirmAgentProposalUseCase
 import com.krono.core.domain.assistant.agent.PlanningAgentError
 import com.krono.core.domain.task.ObserveTasksUseCase
@@ -82,9 +83,45 @@ class PlanningAgentViewModel @Inject constructor(
         _uiState.update { it.copy(status = AgentStatus.Saving(proposal)) }
         viewModelScope.launch {
             when (val result = confirmAgentProposal(proposal)) {
-                is KronoResult.Success -> _uiState.update { PlanningAgentUiState(status = AgentStatus.Saved(result.data)) }
+                is KronoResult.Success -> {
+                    val batchResult = result.data
+                    if (batchResult.isAllFailed) {
+                        _uiState.update { it.copy(status = AgentStatus.Proposed(proposal, saveFailed = true)) }
+                    } else {
+                        _uiState.update { PlanningAgentUiState(status = AgentStatus.Saved(batchResult)) }
+                    }
+                }
                 is KronoResult.Error, KronoResult.Loading -> _uiState.update {
                     it.copy(status = AgentStatus.Proposed(proposal, saveFailed = true))
+                }
+            }
+        }
+    }
+
+    /**
+     * Reintenta guardar únicamente las tareas que fallaron en el último lote,
+     * conservando sus identificadores originales para evitar duplicados.
+     */
+    fun retryFailedTasks() {
+        val currentStatus = _uiState.value.status as? AgentStatus.Saved ?: return
+        val failedEntries = currentStatus.result.failedTasks
+        if (failedEntries.isEmpty()) return
+
+        val failedTasks = failedEntries.map { it.task }
+        _uiState.update { it.copy(status = AgentStatus.Saving(null)) }
+        viewModelScope.launch {
+            when (val retryResult = confirmAgentProposal.retryTasks(failedTasks)) {
+                is KronoResult.Success -> {
+                    val newBatch = retryResult.data
+                    val combinedResult = BatchSaveResult(
+                        confirmedTasks = currentStatus.result.confirmedTasks + newBatch.confirmedTasks,
+                        pendingSyncTasks = currentStatus.result.pendingSyncTasks + newBatch.pendingSyncTasks,
+                        failedTasks = newBatch.failedTasks,
+                    )
+                    _uiState.update { PlanningAgentUiState(status = AgentStatus.Saved(combinedResult)) }
+                }
+                is KronoResult.Error, KronoResult.Loading -> {
+                    _uiState.update { it.copy(status = currentStatus) }
                 }
             }
         }

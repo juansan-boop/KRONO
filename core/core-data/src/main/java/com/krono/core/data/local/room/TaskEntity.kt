@@ -38,6 +38,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * @property subtasksJson Lista de subtareas embebidas serializada en formato JSON con kotlinx.serialization.
  * @property isDeleted Indica si la tarea ha sido descartada o eliminada lógicamente.
  * @property syncStatus Estado de sincronización respecto al servidor remoto ("CONFIRMED", "PENDING_SYNC", "FAILED").
+ * @property completedAtIso Cadena de fecha y hora en que se completó la tarea en formato ISO-8601, o `null` si no aplica.
  */
 @Entity(tableName = "tasks_cache")
 data class TaskEntity(
@@ -55,6 +56,7 @@ data class TaskEntity(
     val subtasksJson: String,
     val isDeleted: Boolean,
     val syncStatus: String,
+    val completedAtIso: String? = null,
 ) {
     /**
      * Convierte la entidad de caché de Room al modelo de dominio puro de KRONO ([Task]).
@@ -119,6 +121,14 @@ data class TaskEntity(
             }
         }
 
+        val parsedCompletedAt = completedAtIso?.let {
+            try {
+                LocalDateTime.parse(it)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
         return Task(
             id = id,
             title = title,
@@ -132,6 +142,7 @@ data class TaskEntity(
             subtasks = parsedSubtasks,
             isDeleted = isDeleted,
             syncStatus = parsedSyncStatus,
+            completedAt = parsedCompletedAt,
         )
     }
 
@@ -191,6 +202,7 @@ data class TaskEntity(
                 subtasksJson = subtasksSerialized,
                 isDeleted = task.isDeleted,
                 syncStatus = syncStatus,
+                completedAtIso = task.completedAt?.toString(),
             )
         }
 
