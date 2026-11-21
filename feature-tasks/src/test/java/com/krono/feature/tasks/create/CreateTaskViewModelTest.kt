@@ -264,6 +264,72 @@ class CreateTaskViewModelTest {
         assertNull(vmWithDate.uiState.value.dueDate)
     }
 
+    @Test
+    fun recreacionConSavedStateHandle_restauraBorradorCompleto() = runTest {
+        val handle = SavedStateHandle()
+        val vm1 = CreateTaskViewModel(
+            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
+            savedStateHandle = handle,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+
+        vm1.onTitleChanged("Borrador en curso")
+        vm1.onNoteChanged("Nota importante del borrador")
+        vm1.onCategorySelected(TaskCategory.TRABAJO)
+        vm1.onPrioritySelected(TaskPriority.ALTA)
+        vm1.onDateSelected(LocalDate(2026, 11, 28))
+        vm1.onTimeSelected(LocalTime(14, 30))
+        vm1.onDurationSelected(90.minutes)
+
+        // Simulación de muerte del proceso por Android: se recrea el ViewModel con el mismo SavedStateHandle
+        val vm2 = CreateTaskViewModel(
+            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
+            savedStateHandle = handle,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+
+        val state = vm2.uiState.value
+        assertEquals("Borrador en curso", state.title)
+        assertEquals("Nota importante del borrador", state.note)
+        assertEquals(TaskCategory.TRABAJO, state.category)
+        assertEquals(TaskPriority.ALTA, state.priority)
+        assertEquals(LocalDate(2026, 11, 28), state.dueDate)
+        assertEquals(LocalTime(14, 30), state.dueTime)
+        assertEquals(90.minutes, state.estimatedDuration)
+    }
+
+    @Test
+    fun alGuardarExitosamente_limpiaClavesDelBorradorEnSavedStateHandle() = runTest {
+        val handle = SavedStateHandle()
+        val vm = CreateTaskViewModel(
+            upsertTaskUseCase = UpsertTaskUseCase(fakeRepository),
+            observeTasksUseCase = ObserveTasksUseCase(fakeRepository),
+            estimateTaskDuration = EstimateTaskDurationUseCase(),
+            savedStateHandle = handle,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+
+        vm.onTitleChanged("Tarea a guardar")
+        vm.onNoteChanged("Nota temporal")
+        vm.onCategorySelected(TaskCategory.PERSONAL)
+        vm.onDateSelected(LocalDate(2026, 10, 15))
+        vm.onTimeSelected(LocalTime(18, 0))
+        vm.onPrioritySelected(TaskPriority.MEDIA)
+        vm.onDurationSelected(30.minutes)
+
+        vm.saveTask()
+        advanceUntilIdle()
+
+        assertNull(handle.get<String>(CreateTaskViewModel.KEY_DRAFT_TITLE))
+        assertNull(handle.get<String>(CreateTaskViewModel.KEY_DRAFT_NOTE))
+        assertNull(handle.get<String>(CreateTaskViewModel.KEY_DRAFT_CATEGORY))
+        assertNull(handle.get<String>(CreateTaskViewModel.KEY_DRAFT_PRIORITY))
+        assertNull(handle.get<String>(CreateTaskViewModel.KEY_DRAFT_DUE_DATE))
+        assertNull(handle.get<String>(CreateTaskViewModel.KEY_DRAFT_DUE_TIME))
+        assertNull(handle.get<Long>(CreateTaskViewModel.KEY_DRAFT_ESTIMATED_DURATION))
+    }
+
     private fun fillValidForm(target: CreateTaskViewModel) {
         target.onTitleChanged("Taller de estadística")
         target.onDateSelected(LocalDate(2026, 10, 15))

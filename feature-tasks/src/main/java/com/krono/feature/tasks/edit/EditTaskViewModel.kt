@@ -28,6 +28,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import javax.inject.Inject
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * ViewModel que gestiona la carga, edición y persistencia de una tarea existente (F-05).
@@ -36,7 +37,7 @@ import kotlin.time.Duration
  */
 @HiltViewModel
 class EditTaskViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+    private val savedStateHandle: SavedStateHandle,
     private val getTaskByIdUseCase: GetTaskByIdUseCase,
     private val updateTaskFieldsUseCase: UpdateTaskFieldsUseCase,
 ) : ViewModel() {
@@ -77,15 +78,36 @@ class EditTaskViewModel @Inject constructor(
                 is KronoResult.Success -> {
                     val task = result.data
                     originalTask = task
+                    val restoredTitle = savedStateHandle.get<String>(KEY_DRAFT_TITLE) ?: task.title
+                    val restoredNote = savedStateHandle.get<String>(KEY_DRAFT_NOTE) ?: task.note.orEmpty()
+                    val restoredCategory = savedStateHandle.get<String>(KEY_DRAFT_CATEGORY)?.let { name ->
+                        runCatching { TaskCategory.valueOf(name) }.getOrNull()
+                    } ?: task.category
+                    val restoredPriority = savedStateHandle.get<String>(KEY_DRAFT_PRIORITY)?.let { name ->
+                        runCatching { TaskPriority.valueOf(name) }.getOrNull()
+                    } ?: task.priority
+                    val restoredDueDate = savedStateHandle.get<String>(KEY_DRAFT_DUE_DATE)?.let { dateStr ->
+                        runCatching { LocalDate.parse(dateStr) }.getOrNull()
+                    } ?: task.dueDate?.date
+                    val restoredDueTime = savedStateHandle.get<String>(KEY_DRAFT_DUE_TIME)?.let { timeStr ->
+                        runCatching { LocalTime.parse(timeStr) }.getOrNull()
+                    } ?: task.dueDate?.time
+                    val restoredDuration = if (savedStateHandle.contains(KEY_DRAFT_ESTIMATED_DURATION)) {
+                        savedStateHandle.get<Long>(KEY_DRAFT_ESTIMATED_DURATION)?.seconds
+                    } else {
+                        task.estimatedDuration
+                    }
+
                     _uiState.update { current ->
                         current.copy(
                             taskId = task.id,
-                            title = task.title,
-                            category = task.category,
-                            dueDate = task.dueDate?.date,
-                            dueTime = task.dueDate?.time,
-                            priority = task.priority,
-                            estimatedDuration = task.estimatedDuration,
+                            title = restoredTitle,
+                            note = restoredNote,
+                            category = restoredCategory,
+                            dueDate = restoredDueDate,
+                            dueTime = restoredDueTime,
+                            priority = restoredPriority,
+                            estimatedDuration = restoredDuration,
                             isLoading = false,
                             isTaskNotFound = false,
                             errorMessage = null,
@@ -114,6 +136,7 @@ class EditTaskViewModel @Inject constructor(
      * Modifica el título de la tarea y limpia el error previo si existía.
      */
     fun onTitleChanged(newTitle: String) {
+        savedStateHandle[KEY_DRAFT_TITLE] = newTitle
         _uiState.update { current ->
             current.copy(
                 title = newTitle,
@@ -123,9 +146,18 @@ class EditTaskViewModel @Inject constructor(
     }
 
     /**
+     * Modifica la nota del borrador de edición.
+     */
+    fun onNoteChanged(newNote: String) {
+        savedStateHandle[KEY_DRAFT_NOTE] = newNote
+        _uiState.update { it.copy(note = newNote) }
+    }
+
+    /**
      * Actualiza la categoría funcional de la tarea.
      */
     fun onCategorySelected(newCategory: TaskCategory) {
+        savedStateHandle[KEY_DRAFT_CATEGORY] = newCategory.name
         _uiState.update { it.copy(category = newCategory) }
     }
 
@@ -133,6 +165,7 @@ class EditTaskViewModel @Inject constructor(
      * Actualiza la fecha límite de entrega y limpia errores asociados.
      */
     fun onDateSelected(newDate: LocalDate) {
+        savedStateHandle[KEY_DRAFT_DUE_DATE] = newDate.toString()
         _uiState.update { current ->
             current.copy(
                 dueDate = newDate,
@@ -146,6 +179,7 @@ class EditTaskViewModel @Inject constructor(
      * Actualiza la hora límite de entrega y limpia errores de validación temporal.
      */
     fun onTimeSelected(newTime: LocalTime) {
+        savedStateHandle[KEY_DRAFT_DUE_TIME] = newTime.toString()
         _uiState.update { current ->
             current.copy(
                 dueTime = newTime,
@@ -158,6 +192,7 @@ class EditTaskViewModel @Inject constructor(
      * Actualiza la prioridad de la tarea.
      */
     fun onPrioritySelected(newPriority: TaskPriority) {
+        savedStateHandle[KEY_DRAFT_PRIORITY] = newPriority.name
         _uiState.update { it.copy(priority = newPriority) }
     }
 
@@ -165,6 +200,11 @@ class EditTaskViewModel @Inject constructor(
      * Actualiza la estimación de duración o la elimina (`null`).
      */
     fun onDurationSelected(newDuration: Duration?) {
+        if (newDuration != null) {
+            savedStateHandle[KEY_DRAFT_ESTIMATED_DURATION] = newDuration.inWholeSeconds
+        } else {
+            savedStateHandle.remove<Long>(KEY_DRAFT_ESTIMATED_DURATION)
+        }
         _uiState.update { it.copy(estimatedDuration = newDuration) }
     }
 
@@ -234,20 +274,29 @@ class EditTaskViewModel @Inject constructor(
             LocalDateTime(date, time)
         }
 
+        val noteToSave = currentState.note.trim().takeIf { it.isNotEmpty() }
         val updatedTask = original.copy(
             title = currentState.title.trim(),
+            note = noteToSave,
             category = currentState.category,
             dueDate = dueDateCombined,
             priority = currentState.priority,
             estimatedDuration = currentState.estimatedDuration,
         )
 
+        val fieldsToUpdate = if (noteToSave != original.note) {
+            TaskField.EDIT_FORM + setOf(TaskField.NOTE)
+        } else {
+            TaskField.EDIT_FORM
+        }
+
         // Se marca antes de lanzar la corrutina para que un segundo toque ya lo vea.
         _uiState.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            when (val result = updateTaskFieldsUseCase(updatedTask, TaskField.EDIT_FORM)) {
+            when (val result = updateTaskFieldsUseCase(updatedTask, fieldsToUpdate)) {
                 is KronoResult.Success -> {
                     originalTask = updatedTask
+                    clearDraft()
                     _uiState.update { it.copy(isSaving = false) }
                     _events.emit(EditTaskEvent.NavigateBack)
                 }
@@ -268,8 +317,27 @@ class EditTaskViewModel @Inject constructor(
         }
     }
 
+    private fun clearDraft() {
+        savedStateHandle.remove<String>(KEY_DRAFT_TITLE)
+        savedStateHandle.remove<String>(KEY_DRAFT_NOTE)
+        savedStateHandle.remove<String>(KEY_DRAFT_CATEGORY)
+        savedStateHandle.remove<String>(KEY_DRAFT_PRIORITY)
+        savedStateHandle.remove<String>(KEY_DRAFT_DUE_DATE)
+        savedStateHandle.remove<String>(KEY_DRAFT_DUE_TIME)
+        savedStateHandle.remove<Long>(KEY_DRAFT_ESTIMATED_DURATION)
+    }
+
     companion object {
         /** Nombre del argumento de navegación para el identificador de la tarea. */
         const val TASK_ID_NAV_ARG = "taskId"
+
+        /** Claves de persistencia de borrador en [SavedStateHandle]. */
+        const val KEY_DRAFT_TITLE = "draft_title"
+        const val KEY_DRAFT_NOTE = "draft_note"
+        const val KEY_DRAFT_CATEGORY = "draft_category"
+        const val KEY_DRAFT_PRIORITY = "draft_priority"
+        const val KEY_DRAFT_DUE_DATE = "draft_due_date"
+        const val KEY_DRAFT_DUE_TIME = "draft_due_time"
+        const val KEY_DRAFT_ESTIMATED_DURATION = "draft_estimated_duration_seconds"
     }
 }

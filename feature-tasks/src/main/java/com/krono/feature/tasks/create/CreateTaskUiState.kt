@@ -37,6 +37,7 @@ data class CreateTaskUiState(
     @StringRes val dateTimeErrorRes: Int? = null,
     val isSaving: Boolean = false,
     val errorMessage: String? = null,
+    val note: String = "",
 ) {
     /** Indica si hay un error visual asociado al campo del título. */
     val isTitleError: Boolean get() = titleErrorRes != null

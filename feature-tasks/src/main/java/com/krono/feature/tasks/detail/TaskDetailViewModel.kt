@@ -226,6 +226,47 @@ class TaskDetailViewModel @Inject constructor(
     }
 
     /**
+     * Conmuta el estado de completitud de la tarea observada.
+     * Al marcar como completada registra `completedAt` con el instante actual (si era nulo),
+     * y al reabrir la tarea limpia `completedAt` a `null`, persistiendo ambos campos con [TaskField.IS_COMPLETED]
+     * y [TaskField.COMPLETED_AT].
+     */
+    fun onToggleTaskCompletion() {
+        val currentTask = _uiState.value.task ?: return
+        val nextCompleted = !currentTask.isCompleted
+        val nextCompletedAt = if (nextCompleted) {
+            currentTask.completedAt ?: currentDateTimeProvider()
+        } else {
+            null
+        }
+        viewModelScope.launch {
+            val updatedTask = currentTask.copy(isCompleted = nextCompleted, completedAt = nextCompletedAt)
+            val result = updateTaskFieldsUseCase(
+                updatedTask,
+                setOf(TaskField.IS_COMPLETED, TaskField.COMPLETED_AT)
+            )
+            if (result is KronoResult.Error) showWriteError(result.throwable)
+        }
+    }
+
+    /**
+     * Marca la tarea como completada registrando `completedAt` si aún no lo estaba.
+     */
+    fun onCompleteTask() {
+        val currentTask = _uiState.value.task ?: return
+        if (currentTask.isCompleted) return
+        val nextCompletedAt = currentTask.completedAt ?: currentDateTimeProvider()
+        viewModelScope.launch {
+            val updatedTask = currentTask.copy(isCompleted = true, completedAt = nextCompletedAt)
+            val result = updateTaskFieldsUseCase(
+                updatedTask,
+                setOf(TaskField.IS_COMPLETED, TaskField.COMPLETED_AT)
+            )
+            if (result is KronoResult.Error) showWriteError(result.throwable)
+        }
+    }
+
+    /**
      * Función pura que calcula el tiempo restante entre la fecha de entrega y el instante actual (CA-1).
      */
     internal fun calculateRemainingTime(dueDate: LocalDateTime?, now: LocalDateTime): RemainingTime? {

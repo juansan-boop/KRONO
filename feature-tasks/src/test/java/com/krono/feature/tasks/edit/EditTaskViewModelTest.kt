@@ -314,4 +314,57 @@ class EditTaskViewModelTest {
         assertFalse(viewModel.uiState.value.isSaving)
         assertEquals("Editada sin red", offline.cachedTask("task-123")?.title)
     }
+
+    @Test
+    fun recreacionConSavedStateHandle_restauraBorradorEditadoSobreOriginal() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val handle = SavedStateHandle(mapOf(EditTaskViewModel.TASK_ID_NAV_ARG to "task-123"))
+
+        val vm1 = EditTaskViewModel(
+            savedStateHandle = handle,
+            getTaskByIdUseCase = getTaskByIdUseCase,
+            updateTaskFieldsUseCase = updateTaskFieldsUseCase,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+        advanceUntilIdle()
+
+        vm1.onTitleChanged("Título modificado")
+        vm1.onNoteChanged("Nota modificada")
+        vm1.onPrioritySelected(TaskPriority.BAJA)
+
+        // Simulación de muerte de proceso: nuevo ViewModel con el mismo handle
+        val vm2 = EditTaskViewModel(
+            savedStateHandle = handle,
+            getTaskByIdUseCase = getTaskByIdUseCase,
+            updateTaskFieldsUseCase = updateTaskFieldsUseCase,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+        advanceUntilIdle()
+
+        val state = vm2.uiState.value
+        assertEquals("Título modificado", state.title)
+        assertEquals("Nota modificada", state.note)
+        assertEquals(TaskPriority.BAJA, state.priority)
+        // Mantiene lo no editado del original
+        assertEquals(sampleTask.category, state.category)
+    }
+
+    @Test
+    fun alGuardarCambiosExitosamente_limpiaClavesDelBorrador() = runTest {
+        fakeRepository.givenTasks(sampleTask)
+        val handle = SavedStateHandle(mapOf(EditTaskViewModel.TASK_ID_NAV_ARG to "task-123"))
+
+        val vm = EditTaskViewModel(
+            savedStateHandle = handle,
+            getTaskByIdUseCase = getTaskByIdUseCase,
+            updateTaskFieldsUseCase = updateTaskFieldsUseCase,
+        ).apply { currentDateTimeProvider = { fixedNow } }
+        advanceUntilIdle()
+
+        vm.onTitleChanged("Nuevo título")
+        vm.onNoteChanged("Nueva nota")
+        vm.saveChanges()
+        advanceUntilIdle()
+
+        assertNull(handle.get<String>(EditTaskViewModel.KEY_DRAFT_TITLE))
+        assertNull(handle.get<String>(EditTaskViewModel.KEY_DRAFT_NOTE))
+    }
 }

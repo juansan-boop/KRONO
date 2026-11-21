@@ -2,6 +2,9 @@ package com.krono.app.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -9,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
@@ -101,9 +105,15 @@ fun KronoApp(viewModel: KronoAppViewModel = hiltViewModel()) {
     )
 }
 
+/** Umbral de ancho disponible para activar la navegación lateral en riel (tablets / horizontal). */
+private val UMBRAL_VENTANA_AMPLIA = 600.dp
+
 /**
  * Estructura de navegación de la app: [NavHost] con el grafo de auth y el flujo principal, y la
- * barra inferior visible solo dentro del flujo principal.
+ * barra inferior o riel lateral según el ancho de la ventana disponible.
+ *
+ * En ventanas compactas (< 600.dp) muestra la barra inferior [KronoBottomBar].
+ * En ventanas amplias (>= 600.dp) despliega el riel lateral adaptativo [KronoNavigationRail].
  *
  * Recibe el grafo de auth y las pestañas como parámetros para que las pruebas puedan
  * sustituirlos sin Hilt.
@@ -130,44 +140,96 @@ fun KronoShell(
     val entradaActual by navController.currentBackStackEntryAsState()
     val seleccionado = entradaActual?.destination.pestanaSeleccionada()
 
-    Scaffold(
-        containerColor = DeepMidnight,
-        bottomBar = {
-            if (seleccionado != null) {
-                KronoBottomBar(
-                    seleccionado = seleccionado,
-                    onSeleccionar = { navController.navegarAPestana(it) },
-                )
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val esPantallaAmplia = maxWidth >= UMBRAL_VENTANA_AMPLIA
+        if (esPantallaAmplia) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DeepMidnight),
+            ) {
+                if (seleccionado != null) {
+                    KronoNavigationRail(
+                        seleccionado = seleccionado,
+                        onSeleccionar = { navController.navegarAPestana(it) },
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                ) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = destinoInicial,
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        grafoAuth { navController.irAlFlujoPrincipal() }
+                        grafoPrincipal(
+                            ajustes = { ajustes { navController.volverAAutenticacion() } },
+                            inicio = inicio,
+                            tareas = tareas,
+                            calendario = calendario,
+                            alVolverDeCrearTarea = { navController.popBackStack() },
+                            alVolverDeEditarTarea = { navController.popBackStack() },
+                            alVolverDeDetalleTarea = { navController.popBackStack() },
+                            alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
+                            alIniciarEnfoqueDesdeDetalle = { taskId -> navController.navigateToFocusMode(taskId) },
+                            alVolverDeEnfoque = { navController.popBackStack() },
+                            alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
+                            alVolverDeCronometro = { navController.popBackStack() },
+                            alVolverDeAsistente = { navController.popBackStack() },
+                            alAbrirTareaDesdeAsistente = { taskId -> navController.navigateToTaskDetail(taskId) },
+                            alVolverDeEditarPerfil = { navController.popBackStack() },
+                            alVolverDeZonaSeguridad = { navController.popBackStack() },
+                            alVolverDeNotificaciones = { navController.popBackStack() },
+                            alVolverDePlantillasEnfoque = { navController.popBackStack() },
+                            alEliminarCuenta = { navController.volverAAutenticacion() },
+                        )
+                    }
+                }
             }
-        },
-    ) { padding ->
-        NavHost(
-            navController = navController,
-            startDestination = destinoInicial,
-            modifier = Modifier.padding(padding),
-        ) {
-            grafoAuth { navController.irAlFlujoPrincipal() }
-            grafoPrincipal(
-                ajustes = { ajustes { navController.volverAAutenticacion() } },
-                inicio = inicio,
-                tareas = tareas,
-                calendario = calendario,
-                alVolverDeCrearTarea = { navController.popBackStack() },
-                alVolverDeEditarTarea = { navController.popBackStack() },
-                alVolverDeDetalleTarea = { navController.popBackStack() },
-                alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
-                alIniciarEnfoqueDesdeDetalle = { taskId -> navController.navigateToFocusMode(taskId) },
-                alVolverDeEnfoque = { navController.popBackStack() },
-                alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
-                alVolverDeCronometro = { navController.popBackStack() },
-                alVolverDeAsistente = { navController.popBackStack() },
-                alAbrirTareaDesdeAsistente = { taskId -> navController.navigateToTaskDetail(taskId) },
-                alVolverDeEditarPerfil = { navController.popBackStack() },
-                alVolverDeZonaSeguridad = { navController.popBackStack() },
-                alVolverDeNotificaciones = { navController.popBackStack() },
-                alVolverDePlantillasEnfoque = { navController.popBackStack() },
-                alEliminarCuenta = { navController.volverAAutenticacion() },
-            )
+        } else {
+            Scaffold(
+                containerColor = DeepMidnight,
+                bottomBar = {
+                    if (seleccionado != null) {
+                        KronoBottomBar(
+                            seleccionado = seleccionado,
+                            onSeleccionar = { navController.navegarAPestana(it) },
+                        )
+                    }
+                },
+            ) { padding ->
+                NavHost(
+                    navController = navController,
+                    startDestination = destinoInicial,
+                    modifier = Modifier.padding(padding),
+                ) {
+                    grafoAuth { navController.irAlFlujoPrincipal() }
+                    grafoPrincipal(
+                        ajustes = { ajustes { navController.volverAAutenticacion() } },
+                        inicio = inicio,
+                        tareas = tareas,
+                        calendario = calendario,
+                        alVolverDeCrearTarea = { navController.popBackStack() },
+                        alVolverDeEditarTarea = { navController.popBackStack() },
+                        alVolverDeDetalleTarea = { navController.popBackStack() },
+                        alEditarDesdeDetalle = { taskId -> navController.navigateToEditTask(taskId) },
+                        alIniciarEnfoqueDesdeDetalle = { taskId -> navController.navigateToFocusMode(taskId) },
+                        alVolverDeEnfoque = { navController.popBackStack() },
+                        alAbrirCronometro = { taskId -> navController.navigateToTaskTimer(taskId) },
+                        alVolverDeCronometro = { navController.popBackStack() },
+                        alVolverDeAsistente = { navController.popBackStack() },
+                        alAbrirTareaDesdeAsistente = { taskId -> navController.navigateToTaskDetail(taskId) },
+                        alVolverDeEditarPerfil = { navController.popBackStack() },
+                        alVolverDeZonaSeguridad = { navController.popBackStack() },
+                        alVolverDeNotificaciones = { navController.popBackStack() },
+                        alVolverDePlantillasEnfoque = { navController.popBackStack() },
+                        alEliminarCuenta = { navController.volverAAutenticacion() },
+                    )
+                }
+            }
         }
     }
 }

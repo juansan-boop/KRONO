@@ -30,7 +30,7 @@ import com.krono.core.ui.theme.glassSurface
 private const val ESCALA_MAXIMA_ETIQUETA = 1.3f
 
 @get:DrawableRes
-private val KronoDestination.icono: Int
+internal val KronoDestination.icono: Int
     get() = when (this) {
         KronoDestination.Inicio -> KronoIcons.GridView
         KronoDestination.Tareas -> KronoIcons.Checklist
@@ -40,7 +40,7 @@ private val KronoDestination.icono: Int
 
 /** Texto de una pestaña: una sola línea y con la escala de fuente acotada a [ESCALA_MAXIMA_ETIQUETA]. */
 @Composable
-private fun EtiquetaDePestana(texto: String) {
+internal fun EtiquetaDePestana(texto: String) {
     val densidad = LocalDensity.current
     val densidadAcotada = Density(densidad.density, densidad.fontScale.coerceAtMost(ESCALA_MAXIMA_ETIQUETA))
     CompositionLocalProvider(LocalDensity provides densidadAcotada) {
