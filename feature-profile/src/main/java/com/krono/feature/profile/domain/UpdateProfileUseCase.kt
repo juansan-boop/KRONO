@@ -1,32 +1,17 @@
 package com.krono.feature.profile.domain
 
 import com.krono.core.common.KronoResult
-import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
-import com.krono.feature.profile.data.ProfileLocalStore
-import com.krono.feature.profile.data.ProfileRemoteDataSource
 import javax.inject.Inject
 
 /**
  * Caso de uso desacoplado dentro de `:feature-profile` para actualizar y validar
  * la información del perfil del usuario (F-19 CA-2).
  *
- * Cumple con el criterio de aceptación CA-2: campos obligatorios vacíos devuelven
- * error y cambios válidos persisten en el estado local y en Cloud Firestore (`users/{uid}`).
+ * Depende exclusivamente de [ProfileRepository], sin acoplamiento a fuentes de datos locales o remotas.
  */
 open class UpdateProfileUseCase @Inject constructor(
-    private val localStore: ProfileLocalStore,
-    private val remoteDataSource: ProfileRemoteDataSource,
+    private val profileRepository: ProfileRepository,
 ) {
-
-    constructor(localStore: ProfileLocalStore) : this(
-        localStore = localStore,
-        remoteDataSource = NoOpProfileRemoteDataSource(),
-    )
-
-    constructor() : this(
-        localStore = ProfileLocalStore(),
-        remoteDataSource = NoOpProfileRemoteDataSource(),
-    )
 
     /**
      * Valida y actualiza los datos del perfil de usuario.
@@ -50,23 +35,6 @@ open class UpdateProfileUseCase @Inject constructor(
         if (trimmedRole.isBlank()) {
             return KronoResult.Error(BlankRoleException())
         }
-        // 1. Guardar en caché local instantánea
-        localStore.saveProfile(trimmedName, trimmedRole, avatarUri)
-
-        // 2. Sincronizar en Cloud Firestore (users/{uid}) y Firebase Auth en modo best-effort
-        syncRemoteBestEffort(OPERATION_SAVE_PROFILE) {
-            remoteDataSource.saveUserProfile(
-                userId = localStore.activeUserId,
-                name = trimmedName,
-                role = trimmedRole,
-                avatarUri = avatarUri,
-            )
-        }
-
-        return KronoResult.Success(Unit)
-    }
-
-    private companion object {
-        const val OPERATION_SAVE_PROFILE = "guardar perfil"
+        return profileRepository.updateProfile(trimmedName, trimmedRole, avatarUri)
     }
 }

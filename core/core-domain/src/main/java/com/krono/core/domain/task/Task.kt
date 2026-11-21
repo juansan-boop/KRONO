@@ -1,5 +1,6 @@
 package com.krono.core.domain.task
 
+import com.krono.core.domain.sync.SyncStatus
 import kotlinx.datetime.LocalDateTime
 import kotlin.time.Duration
 
@@ -17,6 +18,7 @@ import kotlin.time.Duration
  * @property note Nota rápida o descripción adicional de la tarea, o `null` si no tiene.
  * @property subtasks Lista de subtareas embebidas asociadas a esta tarea.
  * @property isDeleted Indica si la tarea fue enviada a la papelera / eliminada lógicamente.
+ * @property syncStatus Estado explícito de sincronización remota de la tarea.
  */
 data class Task(
     val id: String,
@@ -30,4 +32,5 @@ data class Task(
     val note: String? = null,
     val subtasks: List<Subtask> = emptyList(),
     val isDeleted: Boolean = false,
+    val syncStatus: SyncStatus = SyncStatus.CONFIRMED,
 )

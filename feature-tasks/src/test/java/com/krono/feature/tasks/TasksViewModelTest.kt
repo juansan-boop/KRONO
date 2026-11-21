@@ -477,4 +477,47 @@ class TasksViewModelTest {
             cancelAndIgnoreRemainingEvents()
         }
     }
+
+    @Test
+    fun lasTareasCargadasPreservanLosEstadosDeSincronizacionConfirmedPendingSyncFailedYRejected() = runTest {
+        val tConfirmed = Task(
+            id = "t-conf",
+            title = "Tarea Confirmada",
+            dueDate = LocalDateTime(2026, 10, 15, 10, 0),
+            syncStatus = com.krono.core.domain.sync.SyncStatus.CONFIRMED,
+        )
+        val tPending = Task(
+            id = "t-pend",
+            title = "Tarea Pendiente de Sync",
+            dueDate = LocalDateTime(2026, 10, 15, 11, 0),
+            syncStatus = com.krono.core.domain.sync.SyncStatus.PENDING_SYNC,
+        )
+        val tFailed = Task(
+            id = "t-fail",
+            title = "Tarea Fallida de Sync",
+            dueDate = LocalDateTime(2026, 10, 15, 12, 0),
+            syncStatus = com.krono.core.domain.sync.SyncStatus.FAILED,
+        )
+        val tRejected = Task(
+            id = "t-rej",
+            title = "Tarea Rechazada de Sync",
+            dueDate = LocalDateTime(2026, 10, 15, 13, 0),
+            syncStatus = com.krono.core.domain.sync.SyncStatus.REJECTED,
+        )
+
+        fakeRepository.givenTasks(tConfirmed, tPending, tFailed, tRejected)
+
+        viewModel.uiState.test {
+            awaitItem() // Loading
+            val state = awaitItem()
+
+            val statusById = state.todayTasks.associate { it.id to it.syncStatus }
+            assertEquals(com.krono.core.domain.sync.SyncStatus.CONFIRMED, statusById["t-conf"])
+            assertEquals(com.krono.core.domain.sync.SyncStatus.PENDING_SYNC, statusById["t-pend"])
+            assertEquals(com.krono.core.domain.sync.SyncStatus.FAILED, statusById["t-fail"])
+            assertEquals(com.krono.core.domain.sync.SyncStatus.REJECTED, statusById["t-rej"])
+
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
 }

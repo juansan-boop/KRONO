@@ -32,6 +32,7 @@ class KronoIconsTest {
         "MarkEmailRead" to KronoIcons.MarkEmailRead,
         "RadioButtonUnchecked" to KronoIcons.RadioButtonUnchecked,
         "Settings" to KronoIcons.Settings,
+        "Sync" to KronoIcons.Sync,
         "TaskAlt" to KronoIcons.TaskAlt,
         "Visibility" to KronoIcons.Visibility,
         "VisibilityOff" to KronoIcons.VisibilityOff,

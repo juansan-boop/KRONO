@@ -7,10 +7,8 @@ import com.krono.core.domain.auth.AuthError
 import com.krono.core.domain.auth.LogoutUseCase
 import com.krono.core.domain.auth.ObserveSessionUseCase
 import com.krono.feature.profile.data.NoOpAuthRepository
-import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
-import com.krono.feature.profile.data.ProfileLocalStore
-import com.krono.feature.profile.data.ProfileRemoteDataSource
-import com.krono.feature.profile.domain.syncRemoteBestEffort
+import com.krono.feature.profile.data.ProfileRepositoryImpl
+import com.krono.feature.profile.domain.ProfileRepository
 import com.krono.feature.profile.ui.ProfileLog
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
@@ -18,7 +16,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
@@ -43,65 +40,50 @@ sealed interface SettingsEvent {
  *
  * @property logout Caso de uso oficial de dominio para cerrar la sesión activa.
  * @property observeSession Caso de uso para observar la identidad del usuario autenticado en Firebase.
- * @property localStore Almacén local persistente para reactividad y persistencia entre reinicios.
- * @property remoteDataSource Fuente remota para sincronizar configuraciones en Cloud Firestore (`users/{uid}`).
+ * @property profileRepository Repositorio unificado para gestión del perfil, preferencias y sincronización remota.
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val logout: LogoutUseCase,
     private val observeSession: ObserveSessionUseCase,
-    private val localStore: ProfileLocalStore,
-    private val remoteDataSource: ProfileRemoteDataSource,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel() {
 
     constructor(
         logout: LogoutUseCase,
         observeSession: ObserveSessionUseCase,
-        localStore: ProfileLocalStore,
     ) : this(
         logout = logout,
         observeSession = observeSession,
-        localStore = localStore,
-        remoteDataSource = NoOpProfileRemoteDataSource(),
+        profileRepository = ProfileRepositoryImpl(),
     )
 
     constructor(
         logout: LogoutUseCase,
-        observeSession: ObserveSessionUseCase,
-    ) : this(
-        logout = logout,
-        observeSession = observeSession,
-        localStore = ProfileLocalStore(),
-        remoteDataSource = NoOpProfileRemoteDataSource(),
-    )
-
-    constructor(
-        logout: LogoutUseCase,
-        localStore: ProfileLocalStore,
+        profileRepository: ProfileRepository,
     ) : this(
         logout = logout,
         observeSession = ObserveSessionUseCase(NoOpAuthRepository()),
-        localStore = localStore,
-        remoteDataSource = NoOpProfileRemoteDataSource(),
+        profileRepository = profileRepository,
     )
 
     constructor(logout: LogoutUseCase) : this(
         logout = logout,
         observeSession = ObserveSessionUseCase(NoOpAuthRepository()),
-        localStore = ProfileLocalStore(),
-        remoteDataSource = NoOpProfileRemoteDataSource(),
+        profileRepository = ProfileRepositoryImpl(),
     )
 
     private val _uiState = MutableStateFlow(
         SettingsUiState(
-            userName = localStore.userName.value,
-            userRole = localStore.userRole.value,
-            userEmail = localStore.userEmail.value,
-            avatarUri = localStore.avatarUri.value,
-            userInitials = calculateInitials(localStore.userName.value),
-            dynamicBreaksEnabled = localStore.dynamicBreaksEnabled.value,
-            silenceInternalNotificationsEnabled = localStore.silenceInternalNotificationsEnabled.value,
-            priorityAlertsEnabled = localStore.priorityAlertsEnabled.value,
+            userName = profileRepository.userName.value,
+            userRole = profileRepository.userRole.value,
+            userEmail = profileRepository.userEmail.value,
+            avatarUri = profileRepository.avatarUri.value,
+            userInitials = calculateInitials(profileRepository.userName.value),
+            dynamicBreaksEnabled = profileRepository.dynamicBreaksEnabled.value,
+            silenceInternalNotificationsEnabled = profileRepository.silenceInternalNotificationsEnabled.value,
+            priorityAlertsEnabled = profileRepository.priorityAlertsEnabled.value,
+            syncState = profileRepository.syncState.value,
         ),
     )
 
@@ -115,20 +97,26 @@ class SettingsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            profileRepository.syncState.collect { syncState ->
+                _uiState.update { it.copy(syncState = syncState) }
+            }
+        }
+
+        viewModelScope.launch {
             observeSession().collect { user ->
                 if (user != null) {
-                    localStore.bindUser(user.id, user.email)
-                    remoteDataSource.syncFromRemote(user.id, localStore)
+                    profileRepository.bindUser(user.id, user.email)
+                    profileRepository.syncFromRemote(user.id)
                 }
             }
         }
 
         viewModelScope.launch {
             combine(
-                localStore.userName,
-                localStore.userRole,
-                localStore.userEmail,
-                localStore.avatarUri,
+                profileRepository.userName,
+                profileRepository.userRole,
+                profileRepository.userEmail,
+                profileRepository.avatarUri,
             ) { name, role, email, avatar ->
                 ProfileIdentity(name, role, email, avatar)
             }.collect { identity ->
@@ -146,9 +134,9 @@ class SettingsViewModel @Inject constructor(
 
         viewModelScope.launch {
             combine(
-                localStore.dynamicBreaksEnabled,
-                localStore.silenceInternalNotificationsEnabled,
-                localStore.priorityAlertsEnabled,
+                profileRepository.dynamicBreaksEnabled,
+                profileRepository.silenceInternalNotificationsEnabled,
+                profileRepository.priorityAlertsEnabled,
             ) { dynamicBreaks, silenceNotifs, priorityAlerts ->
                 Triple(dynamicBreaks, silenceNotifs, priorityAlerts)
             }.collect { (dynamicBreaks, silenceNotifs, priorityAlerts) ->
@@ -169,7 +157,7 @@ class SettingsViewModel @Inject constructor(
      * @param enabled Nuevo valor del interruptor.
      */
     fun onDynamicBreaksToggle(enabled: Boolean) {
-        localStore.setDynamicBreaksEnabled(enabled)
+        profileRepository.setDynamicBreaksEnabled(enabled)
         _uiState.update { it.copy(dynamicBreaksEnabled = enabled) }
         syncSettingsToggles()
     }
@@ -180,7 +168,7 @@ class SettingsViewModel @Inject constructor(
      * @param enabled Nuevo valor del interruptor.
      */
     fun onSilenceNotificationsToggle(enabled: Boolean) {
-        localStore.setSilenceInternalNotificationsEnabled(enabled)
+        profileRepository.setSilenceInternalNotificationsEnabled(enabled)
         _uiState.update { it.copy(silenceInternalNotificationsEnabled = enabled) }
         syncSettingsToggles()
     }
@@ -191,21 +179,23 @@ class SettingsViewModel @Inject constructor(
      * @param enabled Nuevo valor del interruptor.
      */
     fun onPriorityAlertsToggle(enabled: Boolean) {
-        localStore.setPriorityAlertsEnabled(enabled)
+        profileRepository.setPriorityAlertsEnabled(enabled)
         _uiState.update { it.copy(priorityAlertsEnabled = enabled) }
         syncSettingsToggles()
     }
 
     private fun syncSettingsToggles() {
         viewModelScope.launch {
-            syncRemoteBestEffort(OPERATION_SYNC_TOGGLES) {
-                remoteDataSource.saveSettingsToggles(
-                    userId = localStore.activeUserId,
-                    dynamicBreaks = localStore.dynamicBreaksEnabled.value,
-                    silenceNotifications = localStore.silenceInternalNotificationsEnabled.value,
-                    priorityAlerts = localStore.priorityAlertsEnabled.value,
-                )
-            }
+            profileRepository.syncSettingsToggles()
+        }
+    }
+
+    /**
+     * Reintenta sincronizar con Cloud Firestore los cambios locales pendientes o rechazados.
+     */
+    fun retrySync() {
+        viewModelScope.launch {
+            profileRepository.retrySync()
         }
     }
 
@@ -274,7 +264,7 @@ class SettingsViewModel @Inject constructor(
                         )
                     }
                 }
-                KronoResult.Loading -> Unit
+                is KronoResult.Loading -> Unit
             }
         }
     }
@@ -298,7 +288,6 @@ class SettingsViewModel @Inject constructor(
 
     private companion object {
         const val OPERATION_LOGOUT = "cerrar sesión"
-        const val OPERATION_SYNC_TOGGLES = "guardar ajustes"
     }
 
     private data class ProfileIdentity(

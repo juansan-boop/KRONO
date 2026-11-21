@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -94,6 +95,7 @@ import com.krono.core.ui.theme.SurfaceContainerHigh
 import com.krono.core.ui.theme.SurfaceContainerLow
 import com.krono.core.ui.theme.glassSurface
 import com.krono.feature.profile.R
+import com.krono.feature.profile.domain.SyncState
 import com.krono.feature.profile.ui.ProfileSaveError
 import com.krono.feature.profile.ui.rememberAsyncAvatarBitmap
 
@@ -105,12 +107,14 @@ import com.krono.feature.profile.ui.rememberAsyncAvatarBitmap
  *
  * @param onBackClick Acción para navegar atrás descartando cambios.
  * @param onProfileSaved Acción invocada al persistir los cambios exitosamente.
+ * @param onRetrySync Acción para reintentar la sincronización remota con Cloud Firestore.
  * @param viewModel Instancia del ViewModel inyectada mediante Hilt.
  */
 @Composable
 fun EditProfileRoute(
     onBackClick: () -> Unit,
     onProfileSaved: () -> Unit = onBackClick,
+    onRetrySync: () -> Unit = {},
     viewModel: EditProfileViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -158,6 +162,10 @@ fun EditProfileRoute(
         },
         onSaveClick = viewModel::onSave,
         onCancelClick = viewModel::onCancel,
+        onRetrySync = {
+            viewModel.retrySync()
+            onRetrySync()
+        },
     )
 }
 
@@ -167,11 +175,12 @@ fun EditProfileRoute(
  * Diseñada bajo el Lumina Glass System utilizando exclusivamente tokens de `:core:core-ui`.
  * Contiene:
  * 1. Barra superior con navegación de regreso accesible.
- * 2. Editor visual de avatar con halo degradado y botón de cámara táctil.
- * 3. Formulario con campo editable de Nombre (con validación de errores), selector
+ * 2. Banner de sincronización accesible para estados de pendiente o rechazo con acción de reintento.
+ * 3. Editor visual de avatar con halo degradado y botón de cámara táctil.
+ * 4. Formulario con campo editable de Nombre (con validación de errores), selector
  *    de Rol Académico/Profesional y campo informativo de Correo Electrónico.
- * 4. Botón primario de guardar con estado de carga interactivo y protección contra doble clic.
- * 5. Botón secundario de cancelar.
+ * 5. Botón primario de guardar con estado de carga interactivo y protección contra doble clic.
+ * 6. Botón secundario de cancelar.
  *
  * @param state Estado inmutable de la pantalla ([EditProfileUiState]).
  * @param onBackClick Acción al presionar el botón de retorno.
@@ -180,6 +189,7 @@ fun EditProfileRoute(
  * @param onAvatarClick Callback para abrir el selector de imagen de galería.
  * @param onSaveClick Acción para validar y persistir los cambios.
  * @param onCancelClick Acción para cancelar y descartar modificaciones.
+ * @param onRetrySync Acción accesible para reintentar sincronización remota con la nube.
  * @param modifier Modificador de Compose para personalización del contenedor.
  */
 @Composable
@@ -191,6 +201,7 @@ fun EditProfileScreen(
     onSaveClick: () -> Unit,
     onCancelClick: () -> Unit,
     onAvatarClick: () -> Unit = {},
+    onRetrySync: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -209,6 +220,18 @@ fun EditProfileScreen(
         ) {
             // 1. Barra superior
             EditProfileTopBar(onBackClick = onBackClick)
+
+            // Banner accesible de sincronización remota si está pendiente o rechazado
+            AnimatedVisibility(
+                visible = state.syncState != SyncState.CONFIRMED,
+                enter = fadeIn(),
+                exit = fadeOut(),
+            ) {
+                EditProfileSyncBanner(
+                    syncState = state.syncState,
+                    onRetrySync = onRetrySync,
+                )
+            }
 
             // 2. Sección del avatar interactivo
             EditProfileAvatarSection(
@@ -776,6 +799,79 @@ private fun EditProfileFooterActions(
     }
 }
 
+/**
+ * Banner informativo de sincronización remota con Cloud Firestore bajo Lumina Glass.
+ *
+ * Muestra el estado cuando hay cambios pendientes de sincronizar en la nube o cuando
+ * ocurrió un rechazo/error técnico, ofreciendo un botón accesible para reintentar.
+ *
+ * @param syncState Estado actual de sincronización remota ([SyncState]).
+ * @param onRetrySync Acción para reintentar la sincronización remota.
+ * @param modifier Modificador de diseño.
+ */
+@Composable
+private fun EditProfileSyncBanner(
+    syncState: SyncState,
+    onRetrySync: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isPending = syncState == SyncState.PENDING_SYNC
+    val borderColor = if (isPending) SecondaryCyan.copy(alpha = 0.45f) else ErrorColor.copy(alpha = 0.50f)
+    val iconRes = if (isPending) KronoIcons.Sync else KronoIcons.Error
+    val iconTint = if (isPending) SecondaryCyan else ErrorColor
+    val descRes = if (isPending) R.string.edit_profile_sync_pending_desc else R.string.edit_profile_sync_rejected_desc
+    val cdIconRes = if (isPending) R.string.edit_profile_cd_sync_pending else R.string.edit_profile_cd_sync_rejected
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .glassSurface(
+                cornerRadius = KronoSpacing.md,
+                borderColor = borderColor,
+            )
+            .padding(KronoSpacing.md),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(KronoSpacing.md),
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = stringResource(cdIconRes),
+                tint = iconTint,
+                modifier = Modifier.size(KronoSizes.iconMedium),
+            )
+            Text(
+                text = stringResource(descRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurface,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                onClick = onRetrySync,
+                modifier = Modifier.heightIn(min = KronoSizes.minTouchTarget),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = iconTint,
+                ),
+            ) {
+                Icon(
+                    painter = painterResource(KronoIcons.Sync),
+                    contentDescription = stringResource(R.string.edit_profile_cd_retry_sync),
+                    tint = iconTint,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Spacer(Modifier.width(KronoSpacing.xs))
+                Text(
+                    text = stringResource(R.string.edit_profile_sync_retry_action),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
 @Preview(name = "EditProfileScreen - Estado Normal", showBackground = true, backgroundColor = 0xFF121221)
 @Composable
 private fun EditProfileScreenNormalPreview() {
@@ -787,6 +883,7 @@ private fun EditProfileScreenNormalPreview() {
             onRoleChange = {},
             onSaveClick = {},
             onCancelClick = {},
+            onRetrySync = {},
         )
     }
 }
@@ -802,6 +899,39 @@ private fun EditProfileScreenSavingPreview() {
             onRoleChange = {},
             onSaveClick = {},
             onCancelClick = {},
+            onRetrySync = {},
+        )
+    }
+}
+
+@Preview(name = "EditProfileScreen - Sincronización Pendiente", showBackground = true, backgroundColor = 0xFF121221)
+@Composable
+private fun EditProfileScreenPendingSyncPreview() {
+    KronoTheme {
+        EditProfileScreen(
+            state = EditProfileUiState(syncState = SyncState.PENDING_SYNC),
+            onBackClick = {},
+            onNameChange = {},
+            onRoleChange = {},
+            onSaveClick = {},
+            onCancelClick = {},
+            onRetrySync = {},
+        )
+    }
+}
+
+@Preview(name = "EditProfileScreen - Error Sincronización", showBackground = true, backgroundColor = 0xFF121221)
+@Composable
+private fun EditProfileScreenRejectedSyncPreview() {
+    KronoTheme {
+        EditProfileScreen(
+            state = EditProfileUiState(syncState = SyncState.REJECTED),
+            onBackClick = {},
+            onNameChange = {},
+            onRoleChange = {},
+            onSaveClick = {},
+            onCancelClick = {},
+            onRetrySync = {},
         )
     }
 }

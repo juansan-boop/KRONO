@@ -1,11 +1,13 @@
 package com.krono.feature.profile.settings
 
+import com.krono.feature.profile.domain.SyncState
+
 /**
  * Estado inmutable de la pantalla de Ajustes y Perfil (F-19, F-20, F-25 CA-4).
  *
  * Centraliza la información del perfil del usuario, los interruptores del hub
- * de ajustes, la configuración de sesiones y el control del diálogo de confirmación
- * de cierre de sesión.
+ * de ajustes, la configuración de sesiones, el estado de sincronización y el control
+ * del diálogo de confirmación de cierre de sesión.
  *
  * @property userName Nombre completo del usuario para la tarjeta de identidad.
  * @property userEmail Correo electrónico asociado a la cuenta activa.
@@ -23,6 +25,7 @@ package com.krono.feature.profile.settings
  * @property showLogoutConfirmationDialog Controla la visibilidad del diálogo oficial de cierre de sesión.
  * @property isLoggingOut Indica si la operación de cierre de sesión está en proceso.
  * @property logoutError Causa tipada del fallo de cierre de sesión (la UI la traduce a copy), o `null` si no hay.
+ * @property syncState Estado explícito de sincronización remota con Cloud Firestore.
  */
 data class SettingsUiState(
     val userName: String = "Usuario",
@@ -41,6 +44,7 @@ data class SettingsUiState(
     val showLogoutConfirmationDialog: Boolean = false,
     val isLoggingOut: Boolean = false,
     val logoutError: LogoutError? = null,
+    val syncState: SyncState = SyncState.CONFIRMED,
 )
 
 /**

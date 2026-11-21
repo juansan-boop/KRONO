@@ -3,9 +3,10 @@ package com.krono.feature.profile.security
 import app.cash.turbine.test
 import com.krono.core.common.KronoResult
 import com.krono.feature.profile.MainDispatcherRule
-import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ConnectivityChecker
+import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.data.ProfileRepositoryImpl
 import com.krono.feature.profile.domain.DeleteAccountUseCase
 import com.krono.feature.profile.domain.InvalidPasswordException
 import com.krono.feature.profile.domain.NetworkUnavailableException
@@ -26,7 +27,7 @@ import org.junit.Test
  * Doble de prueba para [ResetUserDataUseCase] que permite compuertas de suspensión ([gate]),
  * simular fallos y registrar invocaciones.
  */
-private class TestResetUserDataUseCase : ResetUserDataUseCase() {
+private class TestResetUserDataUseCase : ResetUserDataUseCase(ProfileRepositoryImpl()) {
     var failure: Throwable? = null
     var gate: CompletableDeferred<Unit>? = null
     var callCount: Int = 0
@@ -44,7 +45,7 @@ private class TestResetUserDataUseCase : ResetUserDataUseCase() {
  * Doble de prueba para [DeleteAccountUseCase] que permite compuertas de suspensión ([gate]),
  * verificar la contraseña de reautenticación y registrar invocaciones.
  */
-private class TestDeleteAccountUseCase : DeleteAccountUseCase() {
+private class TestDeleteAccountUseCase : DeleteAccountUseCase(ProfileRepositoryImpl()) {
     var failure: Throwable? = null
     var gate: CompletableDeferred<Unit>? = null
     var callCount: Int = 0
@@ -434,8 +435,9 @@ class SecurityZoneViewModelTest {
         store.saveProfile("Usuario Modificado", "Rol Modificado")
         store.setDynamicBreaksEnabled(false)
 
-        val resetUseCase = ResetUserDataUseCase(store)
-        val deleteUseCase = DeleteAccountUseCase(store)
+        val repo = ProfileRepositoryImpl(store)
+        val resetUseCase = ResetUserDataUseCase(repo)
+        val deleteUseCase = DeleteAccountUseCase(repo)
         val vm = SecurityZoneViewModel(resetUseCase, deleteUseCase)
 
         vm.onSelectAction(SecurityActionType.RESET_DATA)
@@ -531,9 +533,10 @@ class SecurityZoneViewModelTest {
         online: Boolean = true,
     ): SecurityZoneViewModel {
         val connectivity = ConnectivityChecker { online }
+        val repository = ProfileRepositoryImpl(store, remoteDataSource, connectivity)
         return SecurityZoneViewModel(
-            ResetUserDataUseCase(store, remoteDataSource, connectivity),
-            DeleteAccountUseCase(store, remoteDataSource, connectivity),
+            ResetUserDataUseCase(repository),
+            DeleteAccountUseCase(repository),
         )
     }
 }

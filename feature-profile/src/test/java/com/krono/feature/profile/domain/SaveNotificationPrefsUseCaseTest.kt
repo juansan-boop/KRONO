@@ -1,8 +1,10 @@
 package com.krono.feature.profile.domain
 
 import com.krono.core.common.KronoResult
+import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.data.ProfileRepositoryImpl
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -12,7 +14,12 @@ import org.junit.Test
 class SaveNotificationPrefsUseCaseTest {
 
     private val remote = NoOpProfileRemoteDataSource()
-    private val useCase = SaveNotificationPrefsUseCase(ProfileLocalStore(), remote)
+    private val repository = ProfileRepositoryImpl(
+        localStore = ProfileLocalStore(),
+        remoteDataSource = remote,
+        connectivityChecker = ConnectivityChecker { true },
+    )
+    private val useCase = SaveNotificationPrefsUseCase(repository)
 
     @Test
     fun minutosNoPositivosDevuelvenInvalidReminderMinutesExceptionSinPersistir() = runTest {

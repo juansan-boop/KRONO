@@ -161,6 +161,7 @@ fun SettingsRoute(
         onConfirmLogout = viewModel::onConfirmLogout,
         showFocusTemplatesDialog = showFocusTemplatesDialog,
         onDismissFocusTemplatesDialog = { showFocusTemplatesDialog = false },
+        onRetrySync = viewModel::retrySync,
     )
 }
 

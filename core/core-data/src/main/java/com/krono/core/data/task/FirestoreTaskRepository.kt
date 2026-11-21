@@ -2,6 +2,7 @@ package com.krono.core.data.task
 
 import com.krono.core.common.KronoResult
 import com.krono.core.data.auth.AuthRemoteDataSource
+import com.krono.core.data.firestore.WriteConfirmationResult
 import com.krono.core.data.firestore.awaitConfirmationOrQueued
 import com.krono.core.data.local.room.TaskDao
 import com.krono.core.data.local.room.TaskEntity
@@ -9,6 +10,7 @@ import com.krono.core.data.local.room.toEntity
 import com.krono.core.data.timer.ActiveTimerDto
 import com.krono.core.data.timer.TimerRemoteDataSource
 import com.krono.core.domain.auth.User
+import com.krono.core.domain.sync.SyncStatus
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskError
 import com.krono.core.domain.task.TaskField
@@ -63,10 +65,10 @@ class FirestoreTaskRepository @Inject constructor(
         observeForUser(signedOutValue = emptyList()) { user ->
             remoteDataSource.observeTasks(user.id)
                 .onEach { dtoList ->
-                    val domainTasks = dtoList.map { it.toDomain() }
+                    val domainTasks = dtoList.map { it.toDomain().copy(syncStatus = SyncStatus.CONFIRMED) }
                     taskDao.upsertTasks(domainTasks.map { it.toEntity(user.id, TaskEntity.STATUS_CONFIRMED) })
                 }
-                .map { list -> list.map { it.toDomain() } }
+                .map { list -> list.map { it.toDomain().copy(syncStatus = SyncStatus.CONFIRMED) } }
                 .catch { remoteError ->
                     val cachedTasks = taskDao.getTasks(user.id)
                     if (cachedTasks.isNotEmpty()) {
@@ -86,10 +88,11 @@ class FirestoreTaskRepository @Inject constructor(
             remoteDataSource.observeTask(user.id, taskId)
                 .onEach { dto ->
                     if (dto != null) {
-                        taskDao.upsertTask(dto.toDomain().toEntity(user.id, TaskEntity.STATUS_CONFIRMED))
+                        val domain = dto.toDomain().copy(syncStatus = SyncStatus.CONFIRMED)
+                        taskDao.upsertTask(domain.toEntity(user.id, TaskEntity.STATUS_CONFIRMED))
                     }
                 }
-                .map { it?.toDomain() }
+                .map { it?.toDomain()?.copy(syncStatus = SyncStatus.CONFIRMED) }
                 .catch { remoteError ->
                     val cached = taskDao.getTaskById(user.id, taskId)
                     if (cached != null) {
@@ -108,7 +111,7 @@ class FirestoreTaskRepository @Inject constructor(
         try {
             val dto = remoteDataSource.getTask(userId, taskId)
             if (dto != null) {
-                val domain = dto.toDomain()
+                val domain = dto.toDomain().copy(syncStatus = SyncStatus.CONFIRMED)
                 taskDao.upsertTask(domain.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
                 domain
             } else {
@@ -130,8 +133,18 @@ class FirestoreTaskRepository @Inject constructor(
     override suspend fun upsertTask(task: Task): KronoResult<Unit> = runCatchingTask {
         val userId = requireUser().id
         taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_PENDING_SYNC))
-        awaitConfirmationOrQueued { remoteDataSource.saveTask(userId, task.toDto()) }
-        taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
+        val confirmation = try {
+            awaitConfirmationOrQueued { remoteDataSource.saveTask(userId, task.toDto()) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (t: Throwable) {
+            taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_FAILED))
+            throw t
+        }
+
+        if (confirmation is WriteConfirmationResult.Confirmed) {
+            taskDao.upsertTask(task.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
+        }
     }
 
     /**
@@ -141,21 +154,32 @@ class FirestoreTaskRepository @Inject constructor(
     override suspend fun updateTaskFields(task: Task, fields: Set<TaskField>): KronoResult<Unit> =
         runCatchingTask {
             val userId = requireUser().id
+            val currentCached = taskDao.getTaskById(userId, task.id)
+            val baseTask = currentCached?.toDomain() ?: task
+            var updatedTask = baseTask
+            if (TaskField.TITLE in fields) updatedTask = updatedTask.copy(title = task.title)
+            if (TaskField.CATEGORY in fields) updatedTask = updatedTask.copy(category = task.category)
+            if (TaskField.PRIORITY in fields) updatedTask = updatedTask.copy(priority = task.priority)
+            if (TaskField.DUE_DATE in fields) updatedTask = updatedTask.copy(dueDate = task.dueDate)
+            if (TaskField.ESTIMATED_DURATION in fields) updatedTask = updatedTask.copy(estimatedDuration = task.estimatedDuration)
+            if (TaskField.IS_COMPLETED in fields) updatedTask = updatedTask.copy(isCompleted = task.isCompleted)
+            if (TaskField.NOTE in fields) updatedTask = updatedTask.copy(note = task.note)
+            if (TaskField.SUBTASKS in fields) updatedTask = updatedTask.copy(subtasks = task.subtasks)
+
+            taskDao.upsertTask(updatedTask.toEntity(userId, TaskEntity.STATUS_PENDING_SYNC))
+
             val partial = task.toDto().toPartialMap(fields)
-            awaitConfirmationOrQueued { remoteDataSource.updateTaskFields(userId, task.id, partial) }
+            val confirmation = try {
+                awaitConfirmationOrQueued { remoteDataSource.updateTaskFields(userId, task.id, partial) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                taskDao.upsertTask(updatedTask.toEntity(userId, TaskEntity.STATUS_FAILED))
+                throw t
+            }
 
-            taskDao.getTaskById(userId, task.id)?.let { cached ->
-                var updated = cached.toDomain()
-                if (TaskField.TITLE in fields) updated = updated.copy(title = task.title)
-                if (TaskField.CATEGORY in fields) updated = updated.copy(category = task.category)
-                if (TaskField.PRIORITY in fields) updated = updated.copy(priority = task.priority)
-                if (TaskField.DUE_DATE in fields) updated = updated.copy(dueDate = task.dueDate)
-                if (TaskField.ESTIMATED_DURATION in fields) updated = updated.copy(estimatedDuration = task.estimatedDuration)
-                if (TaskField.IS_COMPLETED in fields) updated = updated.copy(isCompleted = task.isCompleted)
-                if (TaskField.NOTE in fields) updated = updated.copy(note = task.note)
-                if (TaskField.SUBTASKS in fields) updated = updated.copy(subtasks = task.subtasks)
-
-                taskDao.upsertTask(updated.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
+            if (confirmation is WriteConfirmationResult.Confirmed) {
+                taskDao.upsertTask(updatedTask.toEntity(userId, TaskEntity.STATUS_CONFIRMED))
             }
         }
 

@@ -14,6 +14,13 @@
     <string name="profile_ai_sync_label">Sincronización KRONO AI</string>
     <string name="profile_ai_sync_active">Activa</string>
     <string name="profile_ai_sync_completed" formatted="false">100% al día</string>
+    <string name="profile_ai_sync_pending">Sincronización pendiente</string>
+    <string name="profile_ai_sync_error">Error de sincronización</string>
+    <string name="profile_ai_sync_retry">Reintentar</string>
+    <string name="profile_ai_sync_cd_retry">Reintentar sincronización con la nube</string>
+    <string name="profile_ai_sync_cd_status_confirmed" formatted="false">Estado de sincronización: 100% al día</string>
+    <string name="profile_ai_sync_cd_status_pending">Estado de sincronización: cambios pendientes de sincronizar</string>
+    <string name="profile_ai_sync_cd_status_error">Estado de sincronización: error en la sincronización</string>
     <string name="profile_cd_avatar">Foto de perfil del usuario</string>
     <string name="profile_cd_online_status">Usuario en línea</string>
     <string name="profile_cd_edit_profile">Editar información de perfil</string>
@@ -85,6 +92,18 @@
     <string name="edit_profile_role_part_time_worker">Trabajador tiempo parcial</string>
     <string name="edit_profile_cd_role_selector">Seleccionar rol académico y profesional</string>
     <string name="edit_profile_cd_lock_email">Campo de correo bloqueado para edición</string>
+    <string name="edit_profile_sync_pending_desc">Hay cambios locales guardados que están pendientes de sincronizar con la nube.</string>
+    <string name="edit_profile_sync_rejected_desc">No fue posible sincronizar tu perfil con la nube. Comprueba tu conexión a internet.</string>
+    <string name="edit_profile_sync_retry_action">Reintentar</string>
+    <string name="edit_profile_cd_sync_pending">Aviso de sincronización pendiente</string>
+    <string name="edit_profile_cd_sync_rejected">Aviso de error de sincronización</string>
+    <string name="edit_profile_cd_retry_sync">Reintentar sincronización del perfil con la nube</string>
+
+    <!-- Banners de sincronización de Ajustes -->
+    <string name="settings_sync_banner_pending">Hay cambios locales pendientes de sincronizar con la nube.</string>
+    <string name="settings_sync_banner_rejected">Error al sincronizar con la nube. Comprueba tu conexión.</string>
+    <string name="settings_cd_retry_sync">Reintentar sincronización con la nube</string>
+    <string name="settings_action_retry">Reintentar</string>
 
     <!-- Zona de Seguridad (F-21 CA-1, CA-2) -->
     <string name="security_zone_title">Zona de Seguridad</string>

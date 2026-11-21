@@ -444,4 +444,16 @@ class TaskDetailViewModelTest {
         assertEquals(sampleTask, state.task)
         assertEquals(2, fakeRepository.observeTaskByIdSubscriptions)
     }
+
+    @Test
+    fun uiStateCargaTareaPreservandoEstadosDeSincronizacion() = runTest {
+        val pendingTask = sampleTask.copy(id = "task-pending", syncStatus = com.krono.core.domain.sync.SyncStatus.PENDING_SYNC)
+        fakeRepository.givenTasks(pendingTask)
+        val viewModel = createViewModel("task-pending")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNotNull(state.task)
+        assertEquals(com.krono.core.domain.sync.SyncStatus.PENDING_SYNC, state.task?.syncStatus)
+    }
 }

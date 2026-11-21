@@ -1,5 +1,6 @@
 package com.krono.feature.profile.edit
 
+import com.krono.feature.profile.domain.SyncState
 import com.krono.feature.profile.ui.ProfileSaveError
 
 /**
@@ -29,6 +30,7 @@ sealed interface EditProfileEvent {
  * @property isSaving Indica si la operación de guardado se encuentra en curso (bloquea envíos concurrentes).
  * @property saveError Causa tipada del fallo de guardado (la UI la traduce a copy), o `null` si no hay.
  * @property isSuccess Indica si la persistencia se completó exitosamente.
+ * @property syncState Estado explícito de sincronización remota con Cloud Firestore.
  */
 data class EditProfileUiState(
     val name: String = "Usuario",
@@ -45,6 +47,7 @@ data class EditProfileUiState(
     val isSaving: Boolean = false,
     val saveError: ProfileSaveError? = null,
     val isSuccess: Boolean = false,
+    val syncState: SyncState = SyncState.CONFIRMED,
 ) {
     /**
      * Iniciales calculadas a partir del nombre para el avatar con halo degradado.

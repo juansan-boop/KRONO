@@ -26,17 +26,19 @@ class WriteConfirmationTest {
     fun escrituraConfirmadaDevuelveSinError() = runTest {
         var confirmed = false
 
-        awaitWriteOrQueued(TIMEOUT) { confirmed = true }
+        val result = awaitWriteOrQueued(TIMEOUT) { confirmed = true }
 
         assertTrue(confirmed)
+        assertEquals(ProfileWriteConfirmation.Confirmed, result)
     }
 
     @Test
     fun escrituraSinConfirmacionDelServidorTerminaAlVencerElLimiteSinError() = runTest {
         val neverConfirmed = CompletableDeferred<Unit>()
         var finished = false
+        var confirmationResult: ProfileWriteConfirmation? = null
         val job = launch {
-            awaitWriteOrQueued(TIMEOUT) { neverConfirmed.await() }
+            confirmationResult = awaitWriteOrQueued(TIMEOUT) { neverConfirmed.await() }
             finished = true
         }
 
@@ -47,6 +49,7 @@ class WriteConfirmationTest {
 
         assertTrue("Al vencer el límite la escritura se da por encolada", finished)
         assertTrue(job.isCompleted)
+        assertEquals(ProfileWriteConfirmation.PendingSync, confirmationResult)
     }
 
     @Test

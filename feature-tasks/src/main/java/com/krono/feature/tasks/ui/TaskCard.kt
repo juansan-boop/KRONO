@@ -29,9 +29,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextDecoration
+import com.krono.core.domain.sync.SyncStatus
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
 import com.krono.core.domain.task.TaskPriority
+import com.krono.core.ui.icons.KronoIcons
+import com.krono.core.ui.theme.ErrorColor
+import com.krono.core.ui.theme.KronoGlass
 import com.krono.core.ui.theme.KronoSizes
 import com.krono.core.ui.theme.KronoSpacing
 import com.krono.core.ui.theme.OnSurface
@@ -77,14 +81,20 @@ fun TaskCard(
             .glassSurface(borderColor = borderColor)
             .padding(KronoSpacing.md),
     ) {
-        // Fila superior: Categoría y Prioridad
+        // Fila superior: Categoría, Estado de sincronización y Prioridad
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CategoryBadge(category = task.category)
-            PriorityBadge(priority = task.priority)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(KronoSpacing.xs),
+            ) {
+                TaskSyncBadge(syncStatus = task.syncStatus)
+                PriorityBadge(priority = task.priority)
+            }
         }
 
         Spacer(modifier = Modifier.height(KronoSpacing.sm))
@@ -211,6 +221,76 @@ private fun PriorityBadge(priority: TaskPriority) {
             style = MaterialTheme.typography.labelSmall,
             color = tintColor,
         )
+    }
+}
+
+/**
+ * Insignia sutil estilo Lumina Glass para reflejar el estado de sincronización remota de la tarea.
+ */
+@Composable
+private fun TaskSyncBadge(syncStatus: SyncStatus) {
+    when (syncStatus) {
+        SyncStatus.CONFIRMED -> {
+            // Ausente para mantener la UI limpia según Lumina Glass
+        }
+        SyncStatus.PENDING_SYNC -> {
+            val badgeShape = RoundedCornerShape(KronoSizes.minTouchTarget)
+            val color = SecondaryCyan
+            Row(
+                modifier = Modifier
+                    .clip(badgeShape)
+                    .background(color.copy(alpha = BADGE_ALPHA))
+                    .border(
+                        width = KronoGlass.borderWidth,
+                        color = color.copy(alpha = BADGE_BORDER_ALPHA),
+                        shape = badgeShape,
+                    )
+                    .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs / 2),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(KronoIcons.Sync),
+                    contentDescription = stringResource(R.string.cd_sync_status_pending),
+                    tint = color,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Spacer(modifier = Modifier.width(KronoSpacing.xs))
+                Text(
+                    text = stringResource(R.string.sync_status_pending),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color,
+                )
+            }
+        }
+        SyncStatus.FAILED, SyncStatus.REJECTED -> {
+            val badgeShape = RoundedCornerShape(KronoSizes.minTouchTarget)
+            val color = ErrorColor
+            Row(
+                modifier = Modifier
+                    .clip(badgeShape)
+                    .background(color.copy(alpha = BADGE_ALPHA))
+                    .border(
+                        width = KronoGlass.borderWidth,
+                        color = color.copy(alpha = BADGE_BORDER_ALPHA),
+                        shape = badgeShape,
+                    )
+                    .padding(horizontal = KronoSpacing.sm, vertical = KronoSpacing.xs / 2),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painter = painterResource(KronoIcons.Error),
+                    contentDescription = stringResource(R.string.cd_sync_status_error),
+                    tint = color,
+                    modifier = Modifier.size(KronoSizes.iconSmall),
+                )
+                Spacer(modifier = Modifier.width(KronoSpacing.xs))
+                Text(
+                    text = stringResource(R.string.sync_status_error),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = color,
+                )
+            }
+        }
     }
 }
 

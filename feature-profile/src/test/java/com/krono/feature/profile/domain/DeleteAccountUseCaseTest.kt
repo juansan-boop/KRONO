@@ -4,6 +4,7 @@ import com.krono.core.common.KronoResult
 import com.krono.feature.profile.data.ConnectivityChecker
 import com.krono.feature.profile.data.NoOpProfileRemoteDataSource
 import com.krono.feature.profile.data.ProfileLocalStore
+import com.krono.feature.profile.data.ProfileRepositoryImpl
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,7 +21,8 @@ class DeleteAccountUseCaseTest {
         saveProfile(MODIFIED_NAME, MODIFIED_ROLE)
     }
 
-    private fun useCase() = DeleteAccountUseCase(store, remote, ConnectivityChecker { online })
+    private fun createRepository() = ProfileRepositoryImpl(store, remote, ConnectivityChecker { online })
+    private fun useCase() = DeleteAccountUseCase(createRepository())
 
     @Test
     fun sinRedFallaConNetworkUnavailableSinReautenticarNiBorrar() = runTest {
