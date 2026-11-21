@@ -239,4 +239,50 @@ class ProfileRepositoryImplTest {
         assertTrue(result is KronoResult.Error)
         assertEquals(SyncState.REJECTED, repository.syncState.value)
     }
+
+    @Test
+    fun retrySync_cuandoOnlinePeroRemotoLanzaNetworkUnavailable_establecePendingSync() = runTest {
+        // En caso de que falle con NetworkUnavailableException durante el retry
+        isOnline = true
+        remoteDataSource.shouldFail = NetworkUnavailableException()
+
+        val result = repository.retrySync()
+
+        assertTrue(result is KronoResult.Error)
+        assertEquals(SyncState.PENDING_SYNC, repository.syncState.value)
+    }
+
+    @Test
+    fun resetUserData_purgaTareasEnTaskRepository() = runTest {
+        val fakeTaskRepo = com.krono.core.domain.task.FakeTaskRepository()
+        val repoWithTask = ProfileRepositoryImpl(
+            localStore = localStore,
+            remoteDataSource = remoteDataSource,
+            connectivityChecker = ConnectivityChecker { isOnline },
+            taskRepository = fakeTaskRepo,
+        )
+
+        val result = repoWithTask.resetUserData()
+
+        assertTrue(result is KronoResult.Success)
+        assertEquals(1, fakeTaskRepo.clearTasksForUserCalls)
+        assertEquals("user_test", fakeTaskRepo.lastClearedUserId)
+    }
+
+    @Test
+    fun deleteAccount_purgaTareasEnTaskRepository() = runTest {
+        val fakeTaskRepo = com.krono.core.domain.task.FakeTaskRepository()
+        val repoWithTask = ProfileRepositoryImpl(
+            localStore = localStore,
+            remoteDataSource = remoteDataSource,
+            connectivityChecker = ConnectivityChecker { isOnline },
+            taskRepository = fakeTaskRepo,
+        )
+
+        val result = repoWithTask.deleteAccount("password123")
+
+        assertTrue(result is KronoResult.Success)
+        assertEquals(1, fakeTaskRepo.clearTasksForUserCalls)
+        assertEquals("user_test", fakeTaskRepo.lastClearedUserId)
+    }
 }

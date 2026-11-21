@@ -49,6 +49,14 @@ class FakeTaskRepository : TaskRepository {
     var getTaskByIdCalls: Int = 0
         private set
 
+    /** Contador de invocaciones a [clearTasksForUser]. */
+    var clearTasksForUserCalls: Int = 0
+        private set
+
+    /** Último identificador de usuario cuyas tareas fueron purgadas vía [clearTasksForUser]. */
+    var lastClearedUserId: String? = null
+        private set
+
     /** Cantidad de veces que se empezó a observar la lista de tareas (para probar reintentos). */
     var observeTasksSubscriptions: Int = 0
         private set
@@ -133,6 +141,16 @@ class FakeTaskRepository : TaskRepository {
         val current = tasksState.value.toMutableMap()
         current.remove(taskId)
         tasksState.value = current
+        return KronoResult.Success(Unit)
+    }
+
+    /** Limpia las tareas del usuario en memoria. */
+    override suspend fun clearTasksForUser(userId: String): KronoResult<Unit> {
+        clearTasksForUserCalls++
+        lastClearedUserId = userId
+        awaitGate()
+        failure?.let { return KronoResult.Error(it) }
+        tasksState.value = emptyMap()
         return KronoResult.Success(Unit)
     }
 

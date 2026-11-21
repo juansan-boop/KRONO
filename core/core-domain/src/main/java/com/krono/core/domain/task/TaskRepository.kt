@@ -74,4 +74,27 @@ interface TaskRepository {
      * conexión, o [KronoResult.Error] en caso de fallo.
      */
     suspend fun deleteTask(taskId: String): KronoResult<Unit>
+
+    /**
+     * Limpia las tareas del usuario especificado en la persistencia local/caché estructurada.
+     * Utilizado para garantizar aislamiento multiusuario al cerrar sesión o restablecer datos.
+     *
+     * @param userId Identificador único del usuario cuyas tareas locales se eliminarán.
+     * @return [KronoResult.Success] con [Unit] si se limpiaron, o [KronoResult.Error] en caso de fallo.
+     */
+    suspend fun clearTasksForUser(userId: String): KronoResult<Unit>
 }
+
+/**
+ * Implementación no operativa de [TaskRepository] con comportamientos seguros por defecto.
+ */
+object NoOpTaskRepository : TaskRepository {
+    override fun observeTasks(): Flow<KronoResult<List<Task>>> = kotlinx.coroutines.flow.emptyFlow()
+    override fun observeTaskById(taskId: String): Flow<KronoResult<Task?>> = kotlinx.coroutines.flow.emptyFlow()
+    override suspend fun getTaskById(taskId: String): KronoResult<Task> = KronoResult.Error(TaskError.TaskNotFound)
+    override suspend fun upsertTask(task: Task): KronoResult<Unit> = KronoResult.Success(Unit)
+    override suspend fun updateTaskFields(task: Task, fields: Set<TaskField>): KronoResult<Unit> = KronoResult.Success(Unit)
+    override suspend fun deleteTask(taskId: String): KronoResult<Unit> = KronoResult.Success(Unit)
+    override suspend fun clearTasksForUser(userId: String): KronoResult<Unit> = KronoResult.Success(Unit)
+}
+

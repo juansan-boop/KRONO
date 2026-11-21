@@ -1,6 +1,8 @@
 package com.krono.feature.profile.data
 
 import com.krono.core.common.KronoResult
+import com.krono.core.domain.task.NoOpTaskRepository
+import com.krono.core.domain.task.TaskRepository
 import com.krono.feature.profile.domain.BlankPasswordException
 import com.krono.feature.profile.domain.NetworkUnavailableException
 import com.krono.feature.profile.domain.NotificationPrefs
@@ -24,18 +26,32 @@ class ProfileRepositoryImpl @Inject constructor(
     private val localStore: ProfileLocalStore,
     private val remoteDataSource: ProfileRemoteDataSource,
     private val connectivityChecker: ConnectivityChecker,
+    private val taskRepository: TaskRepository,
 ) : ProfileRepository {
+
+    constructor(
+        localStore: ProfileLocalStore,
+        remoteDataSource: ProfileRemoteDataSource,
+        connectivityChecker: ConnectivityChecker,
+    ) : this(
+        localStore = localStore,
+        remoteDataSource = remoteDataSource,
+        connectivityChecker = connectivityChecker,
+        taskRepository = NoOpTaskRepository,
+    )
 
     constructor(localStore: ProfileLocalStore) : this(
         localStore = localStore,
         remoteDataSource = NoOpProfileRemoteDataSource(),
         connectivityChecker = ConnectivityChecker { true },
+        taskRepository = NoOpTaskRepository,
     )
 
     constructor() : this(
         localStore = ProfileLocalStore(),
         remoteDataSource = NoOpProfileRemoteDataSource(),
         connectivityChecker = ConnectivityChecker { true },
+        taskRepository = NoOpTaskRepository,
     )
 
     private val _syncState = MutableStateFlow(SyncState.CONFIRMED)
@@ -159,7 +175,7 @@ class ProfileRepositoryImpl @Inject constructor(
             avatarUri = localStore.avatarUri.value,
         )
         if (profileResult is KronoResult.Error) {
-            _syncState.value = SyncState.REJECTED
+            _syncState.value = if (profileResult.throwable is NetworkUnavailableException) SyncState.PENDING_SYNC else SyncState.REJECTED
             return profileResult
         }
 
@@ -170,7 +186,7 @@ class ProfileRepositoryImpl @Inject constructor(
             priorityAlerts = localStore.priorityAlertsEnabled.value,
         )
         if (togglesResult is KronoResult.Error) {
-            _syncState.value = SyncState.REJECTED
+            _syncState.value = if (togglesResult.throwable is NetworkUnavailableException) SyncState.PENDING_SYNC else SyncState.REJECTED
             return togglesResult
         }
 
@@ -179,7 +195,7 @@ class ProfileRepositoryImpl @Inject constructor(
             prefs = localStore.getNotificationPrefs(),
         )
         if (notifsResult is KronoResult.Error) {
-            _syncState.value = SyncState.REJECTED
+            _syncState.value = if (notifsResult.throwable is NetworkUnavailableException) SyncState.PENDING_SYNC else SyncState.REJECTED
             return notifsResult
         }
 
@@ -189,8 +205,10 @@ class ProfileRepositoryImpl @Inject constructor(
 
     override suspend fun resetUserData(): KronoResult<Unit> {
         if (!connectivityChecker.isOnline()) return KronoResult.Error(NetworkUnavailableException())
-        val result = remoteDataSource.resetUserData(localStore.activeUserId)
+        val uid = localStore.activeUserId
+        val result = remoteDataSource.resetUserData(uid)
         if (result is KronoResult.Error) return result
+        taskRepository.clearTasksForUser(uid)
         localStore.resetToDefaults()
         _syncState.value = SyncState.CONFIRMED
         return KronoResult.Success(Unit)
@@ -209,9 +227,11 @@ class ProfileRepositoryImpl @Inject constructor(
         val reauth = remoteDataSource.reauthenticate(password)
         if (reauth is KronoResult.Error) return reauth
 
-        val deletion = remoteDataSource.deleteAccount(localStore.activeUserId)
+        val uid = localStore.activeUserId
+        val deletion = remoteDataSource.deleteAccount(uid)
         if (deletion is KronoResult.Error) return deletion
 
+        taskRepository.clearTasksForUser(uid)
         localStore.resetToDefaults()
         _syncState.value = SyncState.CONFIRMED
         return KronoResult.Success(Unit)

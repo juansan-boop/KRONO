@@ -11,6 +11,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.WriteBatch
 import com.krono.core.common.KronoResult
+import com.krono.feature.profile.domain.NetworkUnavailableException
 import com.krono.feature.profile.domain.NotificationPrefs
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
@@ -108,11 +109,14 @@ class FirestoreProfileDataSource(
                     FIELD_AVATAR_URI to avatarUri,
                     FIELD_UPDATED_AT to serverTimestampProvider(),
                 )
-                awaitWriteOrQueued {
+                val confirmation = awaitWriteOrQueued {
                     firestore.collection(COLLECTION_USERS)
                         .document(targetUid)
                         .set(data, SetOptions.merge())
                         .await()
+                }
+                if (confirmation is ProfileWriteConfirmation.PendingSync) {
+                    throw NetworkUnavailableException()
                 }
             }
         }
@@ -144,11 +148,14 @@ class FirestoreProfileDataSource(
                     FIELD_DEADLINE_ENABLED to prefs.deadlineRemindersEnabled,
                     FIELD_UPDATED_AT to serverTimestampProvider(),
                 )
-                awaitWriteOrQueued {
+                val confirmation = awaitWriteOrQueued {
                     firestore.collection(COLLECTION_USERS)
                         .document(targetUid)
                         .set(data, SetOptions.merge())
                         .await()
+                }
+                if (confirmation is ProfileWriteConfirmation.PendingSync) {
+                    throw NetworkUnavailableException()
                 }
             }
         }
@@ -170,11 +177,14 @@ class FirestoreProfileDataSource(
                     FIELD_PRIORITY_ALERTS to priorityAlerts,
                     FIELD_UPDATED_AT to serverTimestampProvider(),
                 )
-                awaitWriteOrQueued {
+                val confirmation = awaitWriteOrQueued {
                     firestore.collection(COLLECTION_USERS)
                         .document(targetUid)
                         .set(data, SetOptions.merge())
                         .await()
+                }
+                if (confirmation is ProfileWriteConfirmation.PendingSync) {
+                    throw NetworkUnavailableException()
                 }
             }
         }
