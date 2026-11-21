@@ -29,6 +29,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.todayIn
 import javax.inject.Inject
 
@@ -49,6 +50,11 @@ class TasksViewModel @Inject constructor(
     /** Proveedor de la fecha actual; modificable en pruebas unitarias para aislar el tiempo. */
     internal var currentDateProvider: () -> LocalDate = {
         Clock.System.todayIn(TimeZone.currentSystemDefault())
+    }
+
+    /** Proveedor de la fecha y hora actual; modificable en pruebas unitarias para aislar el tiempo. */
+    internal var currentDateTimeProvider: () -> LocalDateTime = {
+        Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     }
 
     private val selectedCategory = MutableStateFlow(TaskCategoryFilter.TODAS)
@@ -103,12 +109,22 @@ class TasksViewModel @Inject constructor(
     }
 
     /**
-     * Conmuta el estado de completitud de una tarea y persiste solo ese campo (CA-3), para no
+     * Conmuta el estado de completitud de una tarea y persiste ese campo junto a `completedAt` (CA-3), para no
      * pisar el tiempo real si la tarea de la lista está desactualizada.
+     * Asigna el instante actual a `completedAt` al completar la tarea (si era nulo) o lo limpia a `null` al reabrirla.
      */
     fun onToggleTaskCompletion(task: Task) {
+        val nextCompleted = !task.isCompleted
+        val nextCompletedAt = if (nextCompleted) {
+            task.completedAt ?: currentDateTimeProvider()
+        } else {
+            null
+        }
         launchWrite {
-            updateTaskFieldsUseCase(task.copy(isCompleted = !task.isCompleted), setOf(TaskField.IS_COMPLETED))
+            updateTaskFieldsUseCase(
+                task.copy(isCompleted = nextCompleted, completedAt = nextCompletedAt),
+                setOf(TaskField.IS_COMPLETED, TaskField.COMPLETED_AT)
+            )
         }
     }
 

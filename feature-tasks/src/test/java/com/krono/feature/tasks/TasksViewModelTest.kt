@@ -173,6 +173,29 @@ class TasksViewModelTest {
     }
 
     @Test
+    fun alCompletarTarea_asignaCompletedAt_yAlReabrirla_loLimpiaANulo() = runTest {
+        val now = LocalDateTime(2026, 10, 15, 16, 0)
+        viewModel.currentDateTimeProvider = { now }
+        val task = Task(id = "t1", title = "Tarea prueba", isCompleted = false, completedAt = null)
+        fakeRepository.givenTasks(task)
+
+        viewModel.onToggleTaskCompletion(task)
+        advanceUntilIdle()
+
+        val completedStored = fakeRepository.storedTask("t1")
+        assertTrue(completedStored?.isCompleted == true)
+        assertEquals(now, completedStored?.completedAt)
+
+        // Ahora reabrimos la tarea
+        viewModel.onToggleTaskCompletion(completedStored!!)
+        advanceUntilIdle()
+
+        val reopenedStored = fakeRepository.storedTask("t1")
+        assertTrue(reopenedStored?.isCompleted == false)
+        assertNull(reopenedStored?.completedAt)
+    }
+
+    @Test
     fun cuandoNoHayTareas_emiteEstadoVacio() = runTest {
         viewModel.uiState.test {
             awaitItem() // Loading

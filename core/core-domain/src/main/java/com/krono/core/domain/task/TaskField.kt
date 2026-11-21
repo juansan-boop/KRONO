@@ -32,6 +32,9 @@ enum class TaskField {
 
     /** Lista de subtareas embebidas, que se escribe completa. */
     SUBTASKS,
+
+    /** Momento exacto de finalización de la tarea. */
+    COMPLETED_AT,
     ;
 
     companion object {

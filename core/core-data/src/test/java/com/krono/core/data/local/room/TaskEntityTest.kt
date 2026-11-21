@@ -74,6 +74,7 @@ class TaskEntityTest {
         assertEquals("Revisar índices e integridad referencial", entity.note)
         assertFalse(entity.isDeleted)
         assertEquals(TaskEntity.STATUS_CONFIRMED, entity.syncStatus)
+        assertNull(entity.completedAtIso)
 
         // Verificamos serialización de subtareas embebidas
         assertTrue(entity.subtasksJson.contains("sub-1"))
@@ -232,6 +233,37 @@ class TaskEntityTest {
         assertTrue(domain.subtasks[0].isDone)
         assertEquals(0, domain.subtasks[0].position)
         assertFalse(domain.isDeleted)
+        assertNull(domain.completedAt)
+    }
+
+    @Test
+    fun fromDomain_y_toDomain_preservaCompletedAtConValor() {
+        val completedTime = LocalDateTime(2026, 11, 20, 18, 45, 0)
+        val taskWithCompletedAt = sampleTask.copy(
+            isCompleted = true,
+            completedAt = completedTime,
+        )
+
+        val entity = TaskEntity.fromDomain(taskWithCompletedAt, userId = "user-abc-123")
+        assertEquals("2026-11-20T18:45", entity.completedAtIso)
+
+        val domain = entity.toDomain()
+        assertEquals(completedTime, domain.completedAt)
+        assertTrue(domain.isCompleted)
+    }
+
+    @Test
+    fun fromDomain_y_toDomain_preservaCompletedAtNulo() {
+        val taskWithoutCompletedAt = sampleTask.copy(
+            isCompleted = false,
+            completedAt = null,
+        )
+
+        val entity = TaskEntity.fromDomain(taskWithoutCompletedAt, userId = "user-abc-123")
+        assertNull(entity.completedAtIso)
+
+        val domain = entity.toDomain()
+        assertNull(domain.completedAt)
     }
 
     /**

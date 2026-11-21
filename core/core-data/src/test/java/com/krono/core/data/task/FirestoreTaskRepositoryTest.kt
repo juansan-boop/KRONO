@@ -6,6 +6,7 @@ import com.krono.core.data.auth.FakeAuthRemoteDataSource
 import com.krono.core.data.timer.ActiveTimerDto
 import com.krono.core.data.timer.FakeTimerRemoteDataSource
 import com.krono.core.domain.auth.User
+import com.krono.core.domain.sync.SyncStatus
 import com.krono.core.domain.task.Subtask
 import com.krono.core.domain.task.Task
 import com.krono.core.domain.task.TaskCategory
@@ -207,7 +208,7 @@ class FirestoreTaskRepositoryTest {
         runCurrent()
 
         assertTrue(result.isCompleted)
-        assertEquals(KronoResult.Success(Unit), result.await())
+        assertEquals(KronoResult.Success(SyncStatus.PENDING_SYNC), result.await())
         assertEquals("Sin red", fakeTaskDataSource.storedTask(testUser.id, "t1")?.title)
     }
 
@@ -223,7 +224,7 @@ class FirestoreTaskRepositoryTest {
         advanceTimeBy(FAST_CONFIRMATION)
 
         assertTrue(result.isCompleted)
-        assertEquals(KronoResult.Success(Unit), result.await())
+        assertEquals(KronoResult.Success(SyncStatus.CONFIRMED), result.await())
     }
 
     @Test

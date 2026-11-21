@@ -67,7 +67,7 @@ class EstimateTaskDurationUseCase {
         // Adaptación online: calcula la razón duracion_real / pred_m1 en tareas recientes
         val recentMeasured = tasks
             .filter { it.isCompleted && !it.isDeleted && it.category == category && it.actualDuration > Duration.ZERO }
-            .sortedWith(compareByDescending(nullsFirst(naturalOrder<LocalDateTime>())) { it.dueDate })
+            .sortedWith(compareByDescending(nullsFirst(naturalOrder<LocalDateTime>())) { it.completedAt ?: it.dueDate })
             .take(HYBRID_WINDOW)
 
         val ratios = recentMeasured.mapNotNull { pastTask ->
@@ -123,13 +123,13 @@ class EstimateTaskDurationUseCase {
      * Tareas completadas de la categoría con tiempo real medido, de la más reciente a la
      * más antigua.
      *
-     * `Task` no guarda la fecha en que se completó, así que la fecha de entrega se usa como
-     * aproximación de "más reciente"; las tareas sin fecha quedan al final.
+     * Se usa `completedAt` como fecha de finalización real; si no se dispone de ella, se usa la
+     * fecha de entrega (`dueDate`) como fallback; las tareas sin fecha quedan al final.
      */
     private fun latestMeasuredTasks(category: TaskCategory, tasks: List<Task>): List<Task> =
         tasks
             .filter { it.isCompleted && it.category == category && it.actualDuration > Duration.ZERO }
-            .sortedWith(compareByDescending(nullsFirst(naturalOrder<LocalDateTime>())) { it.dueDate })
+            .sortedWith(compareByDescending(nullsFirst(naturalOrder<LocalDateTime>())) { it.completedAt ?: it.dueDate })
             .take(MAX_SAMPLE_SIZE)
 
     private fun roundToStep(minutes: Double): Duration {

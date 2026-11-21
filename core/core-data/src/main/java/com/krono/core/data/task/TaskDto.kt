@@ -22,6 +22,7 @@ data class TaskDto(
     val isCompleted: Boolean = false,
     val note: String? = null,
     val subtasks: List<Map<String, Any?>> = emptyList(),
+    val completedAtIso: String? = null,
 ) {
     /** Convierte el DTO al modelo de dominio [Task]. */
     fun toDomain(): Task = Task(
@@ -36,6 +37,7 @@ data class TaskDto(
         note = note,
         subtasks = subtasks.map { SubtaskDto.fromMap(it).toDomain() }
             .sortedBy { it.position },
+        completedAt = completedAtIso?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() },
     )
 
     /** Serializa el DTO a un mapa compatible con Cloud Firestore. */
@@ -50,6 +52,7 @@ data class TaskDto(
         FIELD_IS_COMPLETED to isCompleted,
         FIELD_NOTE to note,
         FIELD_SUBTASKS to subtasks,
+        FIELD_COMPLETED_AT to completedAtIso,
     )
 
     /**
@@ -72,6 +75,7 @@ data class TaskDto(
         const val FIELD_IS_COMPLETED = "isCompleted"
         const val FIELD_NOTE = "note"
         const val FIELD_SUBTASKS = "subtasks"
+        const val FIELD_COMPLETED_AT = "completedAt"
 
         /** Nombre en el documento de Firestore del campo de dominio [field]. */
         fun documentKey(field: TaskField): String = when (field) {
@@ -83,6 +87,7 @@ data class TaskDto(
             TaskField.IS_COMPLETED -> FIELD_IS_COMPLETED
             TaskField.NOTE -> FIELD_NOTE
             TaskField.SUBTASKS -> FIELD_SUBTASKS
+            TaskField.COMPLETED_AT -> FIELD_COMPLETED_AT
         }
 
         /** Crea un [TaskDto] a partir del modelo de dominio [Task]. */
@@ -97,6 +102,7 @@ data class TaskDto(
             isCompleted = task.isCompleted,
             note = task.note,
             subtasks = task.subtasks.map { SubtaskDto.fromDomain(it).toMap() },
+            completedAtIso = task.completedAt?.toString(),
         )
 
         /** Reconstruye un [TaskDto] a partir de los datos de un documento de Firestore. */
@@ -112,6 +118,7 @@ data class TaskDto(
             isCompleted = map[FIELD_IS_COMPLETED] as? Boolean ?: false,
             note = map[FIELD_NOTE] as? String,
             subtasks = (map[FIELD_SUBTASKS] as? List<*>)?.mapNotNull { it as? Map<String, Any?> }.orEmpty(),
+            completedAtIso = map[FIELD_COMPLETED_AT] as? String,
         )
     }
 }

@@ -55,6 +55,41 @@ class TaskDtoTest {
         assertEquals(1, domain.subtasks.size)
         assertEquals("s1", domain.subtasks[0].id)
         assertTrue(domain.subtasks[0].isDone)
+        assertNull(domain.completedAt)
+    }
+
+    @Test
+    fun toDomain_y_fromDomain_preservaCompletedAtConValor() {
+        val completedTime = LocalDateTime(2026, 10, 15, 15, 0)
+        val task = Task(
+            id = "t-completed",
+            title = "Tarea finalizada",
+            isCompleted = true,
+            completedAt = completedTime,
+        )
+
+        val dto = task.toDto()
+        assertEquals("2026-10-15T15:00", dto.completedAtIso)
+
+        val domain = dto.toDomain()
+        assertEquals(completedTime, domain.completedAt)
+        assertTrue(domain.isCompleted)
+    }
+
+    @Test
+    fun toDomain_y_fromDomain_preservaCompletedAtNulo() {
+        val task = Task(
+            id = "t-pending",
+            title = "Tarea pendiente",
+            isCompleted = false,
+            completedAt = null,
+        )
+
+        val dto = task.toDto()
+        assertNull(dto.completedAtIso)
+
+        val domain = dto.toDomain()
+        assertNull(domain.completedAt)
     }
 
     @Test
