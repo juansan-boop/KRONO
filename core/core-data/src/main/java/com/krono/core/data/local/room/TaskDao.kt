@@ -91,3 +91,19 @@ interface TaskDao {
     @Query("DELETE FROM tasks_cache WHERE userId = :userId AND id = :taskId")
     suspend fun deleteTask(userId: String, taskId: String)
 }
+
+/**
+ * Implementación no operativa de [TaskDao] empleada en pruebas o contextos donde no se requiere
+ * instanciar una base de datos SQLite en disco.
+ */
+object NoOpTaskDao : TaskDao {
+    override fun observeTasks(userId: String): Flow<List<TaskEntity>> = kotlinx.coroutines.flow.emptyFlow()
+    override fun observeTaskById(userId: String, taskId: String): Flow<TaskEntity?> = kotlinx.coroutines.flow.emptyFlow()
+    override suspend fun getTasks(userId: String): List<TaskEntity> = emptyList()
+    override suspend fun getTaskById(userId: String, taskId: String): TaskEntity? = null
+    override suspend fun upsertTask(task: TaskEntity) {}
+    override suspend fun upsertTasks(tasks: List<TaskEntity>) {}
+    override suspend fun getPendingSyncTasks(userId: String): List<TaskEntity> = emptyList()
+    override suspend fun clearTasksForUser(userId: String) {}
+    override suspend fun deleteTask(userId: String, taskId: String) {}
+}

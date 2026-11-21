@@ -2,6 +2,8 @@ package com.krono.core.data.auth
 
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.krono.core.common.KronoResult
+import com.krono.core.data.local.room.NoOpTaskDao
+import com.krono.core.data.local.room.TaskDao
 import com.krono.core.domain.auth.AuthRepository
 import com.krono.core.domain.auth.User
 import kotlinx.coroutines.flow.Flow
@@ -17,7 +19,11 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 class FirebaseAuthRepository @Inject constructor(
     private val dataSource: AuthRemoteDataSource,
+    private val taskDao: TaskDao,
 ) : AuthRepository {
+
+    /** Constructor secundario para pruebas unitarias sin base de datos local SQLite. */
+    constructor(dataSource: AuthRemoteDataSource) : this(dataSource, NoOpTaskDao)
 
     /** Emite la sesión actual sin repetir valores iguales consecutivos. */
     override fun observeSession(): Flow<User?> = dataSource.observeUser()
@@ -43,8 +49,14 @@ class FirebaseAuthRepository @Inject constructor(
         }
     }
 
-    /** Cierra la sesión. */
-    override suspend fun logout(): KronoResult<Unit> = runCatchingAuth { dataSource.signOut() }
+    /** Cierra la sesión y purga la caché local de tareas del usuario para garantizar aislamiento multiusuario. */
+    override suspend fun logout(): KronoResult<Unit> = runCatchingAuth {
+        val currentUserId = dataSource.currentUser?.id
+        dataSource.signOut()
+        if (!currentUserId.isNullOrBlank()) {
+            taskDao.clearTasksForUser(currentUserId)
+        }
+    }
 
     private suspend fun <T> runCatchingAuth(
         attemptedPassword: String = "",

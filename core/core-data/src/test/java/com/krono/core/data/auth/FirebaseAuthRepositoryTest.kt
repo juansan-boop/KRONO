@@ -82,6 +82,22 @@ class FirebaseAuthRepositoryTest {
     }
 
     @Test
+    fun cerrarSesionPurgaLaCacheLocalDeTareasParaEseUsuario() = runTest {
+        var purgedUserId: String? = null
+        val customDao = object : com.krono.core.data.local.room.TaskDao by com.krono.core.data.local.room.NoOpTaskDao {
+            override suspend fun clearTasksForUser(userId: String) {
+                purgedUserId = userId
+            }
+        }
+        val repoConDao = FirebaseAuthRepository(dataSource, customDao)
+        repoConDao.login("ana@correo.com", "krono2026!")
+
+        repoConDao.logout()
+
+        assertEquals("uid-ana@correo.com", purgedUserId)
+    }
+
+    @Test
     fun unaFallaAlCerrarSesionSeDevuelveComoErrorInesperadoSinLanzar() = runTest {
         val causa = IllegalStateException("almacenamiento")
         dataSource.failure = causa

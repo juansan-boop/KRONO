@@ -4,6 +4,7 @@ import com.krono.core.common.KronoResult
 import com.krono.core.data.auth.AuthRemoteDataSource
 import com.krono.core.data.firestore.WriteConfirmationResult
 import com.krono.core.data.firestore.awaitConfirmationOrQueued
+import com.krono.core.data.local.room.NoOpTaskDao
 import com.krono.core.data.local.room.TaskDao
 import com.krono.core.data.local.room.TaskEntity
 import com.krono.core.data.local.room.toEntity
@@ -194,6 +195,13 @@ class FirestoreTaskRepository @Inject constructor(
     }
 
     /**
+     * Limpia todas las tareas cacheadas para el usuario especificado en la base de datos Room.
+     */
+    override suspend fun clearTasksForUser(userId: String): KronoResult<Unit> = runCatchingTask {
+        taskDao.clearTasksForUser(userId)
+    }
+
+    /**
      * Tarea que mide el cronómetro en curso, o `null` si no hay o no se puede leer.
      */
     private suspend fun activeTimerTaskIdOrNull(userId: String): String? = try {
@@ -227,18 +235,3 @@ class FirestoreTaskRepository @Inject constructor(
     }
 }
 
-/**
- * Implementación no operativa de [TaskDao] empleada en pruebas donde no se requiere
- * instanciar una base de datos SQLite en disco.
- */
-internal object NoOpTaskDao : TaskDao {
-    override fun observeTasks(userId: String): Flow<List<TaskEntity>> = emptyFlow()
-    override fun observeTaskById(userId: String, taskId: String): Flow<TaskEntity?> = emptyFlow()
-    override suspend fun getTasks(userId: String): List<TaskEntity> = emptyList()
-    override suspend fun getTaskById(userId: String, taskId: String): TaskEntity? = null
-    override suspend fun upsertTask(task: TaskEntity) {}
-    override suspend fun upsertTasks(tasks: List<TaskEntity>) {}
-    override suspend fun getPendingSyncTasks(userId: String): List<TaskEntity> = emptyList()
-    override suspend fun clearTasksForUser(userId: String) {}
-    override suspend fun deleteTask(userId: String, taskId: String) {}
-}
